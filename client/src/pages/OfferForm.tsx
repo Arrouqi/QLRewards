@@ -53,6 +53,9 @@ const formSchema = z.object({
   contactName: z.string().min(2, "Contact name is required"),
   contactEmail: z.string().email("Invalid email address"),
   contactPhone: z.string().min(8, "Phone number is required"),
+  merchantName: z.string().optional(),
+  offerLocation: z.string().optional(),
+  branches: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -98,6 +101,9 @@ export default function OfferForm() {
       contactName: "",
       contactEmail: "",
       contactPhone: "",
+      merchantName: "",
+      offerLocation: "",
+      branches: "",
     },
   });
 
@@ -338,6 +344,53 @@ export default function OfferForm() {
                         ))}
                       </div>
                     )}
+                  </div>
+
+                  <Separator className="my-8" />
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-slate-900">Additional Details (Optional)</h3>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="merchantName"
+                        render={({ field }) => (
+                          <FormItem className="col-span-2">
+                            <FormLabel className="text-slate-700">Merchant Name</FormLabel>
+                            <FormControl>
+                              <Input className="h-11 bg-slate-50" placeholder="Business or Brand Name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="offerLocation"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-slate-700">Location of Offers</FormLabel>
+                            <FormControl>
+                              <Input className="h-11 bg-slate-50" placeholder="e.g. Doha, Lusail, Al Wakrah" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="branches"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-slate-700">Participating Branches</FormLabel>
+                            <FormControl>
+                              <Input className="h-11 bg-slate-50" placeholder="e.g. All branches, City Center only" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
 
                   <Separator className="my-8" />
