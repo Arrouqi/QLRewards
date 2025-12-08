@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   ArrowRight
 } from "lucide-react";
+import { Link } from "wouter";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import bgImage from "@assets/generated_images/minimalist_abstract_business_background_with_blue_and_white_geometric_shapes.png";
+import Header from "@/components/Header";
 
 // Schema for the form
 const formSchema = z.object({
@@ -133,6 +135,7 @@ export default function OfferForm() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <Header />
       {/* Hero Header */}
       <div className="relative h-64 md:h-80 w-full overflow-hidden bg-slate-900">
         <div 

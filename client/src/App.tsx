@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import CreateOffer from "@/pages/CreateOffer";
 import OfferForm from "@/pages/OfferForm";
 import Success from "@/pages/Success";
 
@@ -12,6 +13,7 @@ function Router() {
     <Switch>
       <Route path="/" component={OfferForm} />
       <Route path="/success" component={Success} />
+      <Route path="/create-offer" component={CreateOffer} />
       <Route component={NotFound} />
     </Switch>
   );
