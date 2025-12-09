@@ -49,6 +49,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
+import { useLocation } from "wouter";
+
 // Schema
 const formSchema = z.object({
   isAlaCarte: z.boolean().default(true),
@@ -94,12 +96,29 @@ const RichTextToolbar = () => (
 
 export default function CreateOffer() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [isSpecificDays, setIsSpecificDays] = useState(false);
   const [isLimitedRedemption, setIsLimitedRedemption] = useState(false);
   const [isMultipleItems, setIsMultipleItems] = useState(false);
   const [isDiscount, setIsDiscount] = useState(false);
   const [isBogo, setIsBogo] = useState(false);
   const [isTwoTranches, setIsTwoTranches] = useState(false);
+
+  // Mock file input ref
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      toast({
+        title: "Image Uploaded",
+        description: `Successfully uploaded ${e.target.files[0].name}`,
+      });
+    }
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -130,19 +149,16 @@ export default function CreateOffer() {
 
   const onSubmit = (data: FormValues) => {
     console.log(data);
-    toast({
-      title: "Offer Saved",
-      description: "Your offer has been saved and sent for approval.",
-    });
+    setLocation("/success");
   };
 
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   const claimRulesOptions = [
-    "Offer Valid only for Dine-in (Not valid on Delivery / Take away)",
-    "Offer Valid only for Delivery / Take away",
-    "Offer Valid for Dine-in, Delivery & Take away",
-    "Multiple offers cannot be combined in the same transaction",
+    "Deal Valid only for Dine-in (Not valid on Delivery / Take away)",
+    "Deal Valid only for Delivery / Take away",
+    "Deal Valid for Dine-in, Delivery & Take away",
+    "Multiple deals cannot be combined in the same transaction",
     "One voucher per person per visit",
     "One voucher per table/group/bill"
   ];
@@ -158,8 +174,8 @@ export default function CreateOffer() {
     <div className="min-h-screen bg-[#F5F6FA] flex flex-col font-sans">
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8">
-            <h1 className="text-2xl font-bold text-[#00426D]">Create Offer</h1>
-            <p className="text-slate-500 mt-1">Fill in the details below to create your new offer.</p>
+            <h1 className="text-2xl font-bold text-[#00426D]">Create Deal</h1>
+            <p className="text-slate-500 mt-1">Fill in the details below to create your new deal.</p>
         </div>
 
         <Form {...form}>
@@ -169,9 +185,9 @@ export default function CreateOffer() {
               {/* Left Column - Main Details */}
               <div className="lg:col-span-7 space-y-8">
                 
-                {/* Offer Tier */}
+                {/* Deal Tier */}
                 <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Offer Tier</h2>
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Deal Tier</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
                     <FormField
                       control={form.control}
@@ -187,7 +203,7 @@ export default function CreateOffer() {
                             />
                           </FormControl>
                           <FormLabel htmlFor="alacarte" className="font-medium text-slate-700 cursor-pointer">
-                            This is an A La Carte offer
+                            This is an A La Carte deal
                           </FormLabel>
                         </FormItem>
                       )}
@@ -195,9 +211,9 @@ export default function CreateOffer() {
                   </div>
                 </section>
 
-                {/* Offer Details and Pricing */}
+                {/* Deal Details and Pricing */}
                 <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Offer Details and Pricing</h2>
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Deal Details and Pricing</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
                     <p className="text-sm text-slate-500 italic mb-4">
                       • Choose the most suitable category to ensure your reward is listed correctly.
@@ -251,7 +267,7 @@ export default function CreateOffer() {
                       name="offerType"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Offer Type <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Deal Type <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                               {offerTypes.map((type) => {
@@ -287,7 +303,7 @@ export default function CreateOffer() {
                       name="offerDuration"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Offer Duration <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Deal Duration <span className="text-red-500">*</span></FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger className="h-11 bg-slate-50">
@@ -295,8 +311,8 @@ export default function CreateOffer() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="monthly">Monthly Offer</SelectItem>
-                              <SelectItem value="yearly">Yearly Offer</SelectItem>
+                              <SelectItem value="monthly">Monthly Deal</SelectItem>
+                              <SelectItem value="yearly">Yearly Deal</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
@@ -359,7 +375,7 @@ export default function CreateOffer() {
                                 />
                               </FormControl>
                               <FormLabel className="font-medium text-slate-700">
-                                Is this offer valid for two tranches?
+                                Is this deal valid for two tranches?
                               </FormLabel>
                             </FormItem>
                           )}
@@ -410,7 +426,7 @@ export default function CreateOffer() {
                               />
                             </FormControl>
                             <FormLabel className="font-medium text-slate-700">
-                              This Offer is for Multiple Items
+                              This Deal is for Multiple Items
                             </FormLabel>
                           </FormItem>
                         )}
@@ -424,7 +440,7 @@ export default function CreateOffer() {
                            </div>
                            <Info className="h-5 w-5 text-[#F57F17] flex-shrink-0" />
                            <p className="text-[#5D4037] text-sm">
-                             If your offer is for multiple items, the price won't show on the offer card and details page.
+                             If your deal is for multiple items, the price won't show on the deal card and details page.
                            </p>
                         </div>
                       )}
@@ -495,7 +511,7 @@ export default function CreateOffer() {
                                 Available on specific days only
                               </FormLabel>
                               <p className="text-xs text-slate-500">
-                                If your offer is valid only on specific days, please select them. Otherwise, it will be active every day.
+                                If your deal is valid only on specific days, please select them. Otherwise, it will be active every day.
                               </p>
                             </div>
                           </FormItem>
@@ -522,9 +538,9 @@ export default function CreateOffer() {
                   </div>
                 </section>
 
-                {/* Offer Description */}
+                {/* Deal Description */}
                 <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Offer Description</h2>
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Deal Description</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
                     <FormField
                       control={form.control}
@@ -544,7 +560,7 @@ export default function CreateOffer() {
 
                     <div className="space-y-2">
                       <Label className="text-xs text-slate-500">
-                        • Clearly mention the offer, validity, and terms so users understand what's included.
+                        • Clearly mention the deal, validity, and terms so users understand what's included.
                       </Label>
                       <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
                         <RichTextToolbar />
@@ -621,7 +637,7 @@ export default function CreateOffer() {
                           <FormLabel className="text-xs font-bold text-slate-500 uppercase">General Rules <span className="font-normal normal-case text-slate-400">(Must choose one at least)</span></FormLabel>
                           <div className="grid gap-3 mt-2">
                             {[
-                              "Offer is not applicable on public holidays & all special events",
+                              "Deal is not applicable on public holidays & all special events",
                               "Advance booking or reservation requirement",
                               "Cannot be applied to already discounted items",
                               "Cannot be combined with employee discounts"
@@ -734,14 +750,14 @@ export default function CreateOffer() {
               {/* Right Column - Upload Photos */}
               <div className="lg:col-span-5 space-y-8">
                 <section>
-                   <h2 className="text-lg font-bold text-[#00426D] mb-4">Upload Offer Photos</h2>
+                   <h2 className="text-lg font-bold text-[#00426D] mb-4">Upload Deal Photos</h2>
                    <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
                       <div className="flex items-start gap-3 mb-6 bg-slate-50 p-3 rounded text-xs text-slate-600">
                         <Info className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
                         <p>
-                          Upload at least 3 photos (maximum 5) photos to attract shoppers to your offer. Use landscape orientation (horizontal) for optimal photo display.
+                          Upload at least 3 photos (maximum 5) photos to attract shoppers to your deal. Use landscape orientation (horizontal) for optimal photo display.
                           <br/><br/>
-                          Use clear, relevant, and unique images that represent the actual offer. Avoid promotional banners or pixelated visuals.
+                          Use clear, relevant, and unique images that represent the actual deal. Avoid promotional banners or pixelated visuals.
                         </p>
                       </div>
 
@@ -749,9 +765,20 @@ export default function CreateOffer() {
                         <span>Hold and drag to reorder</span>
                       </div>
 
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={handleFileChange}
+                      />
+
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         {/* Cover Photo Slot */}
-                        <div className="col-span-1 aspect-square relative group cursor-pointer">
+                        <div 
+                          className="col-span-1 aspect-square relative group cursor-pointer"
+                          onClick={handleImageClick}
+                        >
                           <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
                             Cover Photo
                           </div>
@@ -763,7 +790,11 @@ export default function CreateOffer() {
 
                         {/* Other Slots */}
                         {[1, 2, 3].map((i) => (
-                           <div key={i} className="col-span-1 aspect-square relative group cursor-pointer">
+                           <div 
+                            key={i} 
+                            className="col-span-1 aspect-square relative group cursor-pointer"
+                            onClick={handleImageClick}
+                           >
                             <div className="w-full h-full border-2 border-dashed border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center p-2 text-center">
                               <Plus className="h-6 w-6 text-slate-400 mb-1" />
                               <span className="text-xs text-slate-500">Upload</span>
@@ -772,7 +803,10 @@ export default function CreateOffer() {
                         ))}
 
                         {/* Add More */}
-                         <div className="col-span-1 aspect-square relative group cursor-pointer">
+                         <div 
+                          className="col-span-1 aspect-square relative group cursor-pointer"
+                          onClick={handleImageClick}
+                         >
                             <div className="w-full h-full border border-slate-200 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors flex flex-col items-center justify-center p-2 text-center">
                               <span className="text-xs font-medium text-slate-600">Add More Photos</span>
                             </div>

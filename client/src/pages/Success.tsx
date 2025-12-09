@@ -25,7 +25,7 @@ export default function Success() {
             transition={{ delay: 0.2 }}
             className="text-2xl font-bold text-slate-900 mb-2"
           >
-            Request Submitted!
+            Deal Submitted Successfully!
           </motion.h1>
           
           <motion.p 
@@ -34,7 +34,7 @@ export default function Success() {
             transition={{ delay: 0.3 }}
             className="text-slate-600 mb-8 leading-relaxed"
           >
-            Thank you for submitting your offer request. Our deals support team will review your submission and contact you within 24-48 hours.
+            Thanks for submitting your deal. The Living Deals team will review your submission and contact you shortly.
           </motion.p>
           
           <motion.div 
