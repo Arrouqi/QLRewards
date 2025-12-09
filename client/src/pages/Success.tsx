@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CheckCircle2, Home, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,18 +41,14 @@ export default function Success() {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="w-full space-y-3"
+            className="w-full"
           >
             <Link href="/">
-              <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white h-11">
-                <Home className="mr-2 h-4 w-4" />
-                Return to Home
+              <Button className="w-full bg-[#00426D] hover:bg-[#003557] text-white h-11" data-testid="button-submit-another">
+                Submit Another Deal
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
-            <Button variant="ghost" className="w-full text-slate-500 hover:text-slate-900 h-11">
-              View Status
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
           </motion.div>
         </CardContent>
       </Card>
