@@ -1,0 +1,83 @@
+# Qatar Living Deals - Merchant Portal
+
+## Overview
+
+This is a merchant portal for the Qatar Living Deals platform where businesses can submit and manage promotional offers. The application features a public-facing deal submission form and an admin dashboard for reviewing and approving deals. Built as a full-stack TypeScript application with React frontend and Express backend.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React with TypeScript, using Vite as the build tool
+- **Routing**: Wouter for client-side routing (lightweight alternative to React Router)
+- **State Management**: TanStack React Query for server state management
+- **UI Components**: shadcn/ui component library built on Radix UI primitives
+- **Styling**: Tailwind CSS v4 with CSS variables for theming
+- **Form Handling**: React Hook Form with Zod validation
+- **Animations**: Framer Motion for page transitions and micro-interactions
+
+### Backend Architecture
+- **Runtime**: Node.js with Express
+- **Language**: TypeScript with tsx for development execution
+- **Session Management**: express-session with PostgreSQL session store (connect-pg-simple)
+- **Authentication**: Custom session-based auth with bcryptjs for password hashing
+- **API Pattern**: RESTful JSON API under `/api/*` routes
+
+### Data Storage
+- **Database**: PostgreSQL
+- **ORM**: Drizzle ORM with drizzle-zod for schema validation
+- **Schema Location**: `shared/schema.ts` contains all database table definitions
+- **Migrations**: Drizzle Kit for schema management (`npm run db:push`)
+
+### Key Data Models
+- **deals**: Stores merchant deal submissions with fields for category, pricing, discount info, rules, and approval status
+- **adminUsers**: Stores admin credentials for the dashboard
+- **session**: PostgreSQL session store table (auto-created)
+
+### Project Structure
+```
+├── client/           # React frontend
+│   ├── src/
+│   │   ├── components/ui/  # shadcn/ui components
+│   │   ├── pages/         # Page components
+│   │   ├── hooks/         # Custom React hooks
+│   │   └── lib/           # Utilities and API client
+├── server/           # Express backend
+│   ├── index.ts      # Server entry point
+│   ├── routes.ts     # API route definitions
+│   ├── storage.ts    # Database access layer
+│   └── db.ts         # Database connection
+├── shared/           # Shared code between client/server
+│   └── schema.ts     # Drizzle schema definitions
+└── migrations/       # Database migrations
+```
+
+### Build System
+- Development: Vite dev server with HMR for frontend, tsx for backend
+- Production: Custom build script using esbuild for server bundling, Vite for client
+- Output: `dist/` directory with `index.cjs` (server) and `public/` (static assets)
+
+## External Dependencies
+
+### Database
+- **PostgreSQL**: Primary database, connection via `DATABASE_URL` environment variable
+- Session store uses the same PostgreSQL database
+
+### Required Environment Variables
+- `DATABASE_URL`: PostgreSQL connection string (required)
+- `SESSION_SECRET`: Secret for session encryption (optional, has default)
+
+### Third-Party UI Libraries
+- Radix UI primitives for accessible components
+- Lucide React for icons
+- date-fns for date formatting
+- Framer Motion for animations
+- Embla Carousel for carousel components
+- Vaul for drawer component
+
+### Development Tools
+- Replit-specific Vite plugins for development experience (cartographer, dev-banner, runtime-error-modal)
+- Custom meta images plugin for OpenGraph tags
