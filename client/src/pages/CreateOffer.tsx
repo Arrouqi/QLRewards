@@ -42,7 +42,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -53,7 +52,6 @@ import { useLocation } from "wouter";
 
 // Schema
 const formSchema = z.object({
-  isAlaCarte: z.boolean().default(true),
   category: z.string(),
   subCategory: z.string(),
   offerType: z.string(),
@@ -103,8 +101,8 @@ export default function CreateOffer() {
   const [isDiscount, setIsDiscount] = useState(false);
   const [isBogo, setIsBogo] = useState(false);
   const [isTwoTranches, setIsTwoTranches] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
 
-  // Mock file input ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageClick = () => {
@@ -113,17 +111,39 @@ export default function CreateOffer() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      if (uploadedImages.length >= 5) {
+        toast({
+          title: "Maximum images reached",
+          description: "You can only upload up to 5 images",
+          variant: "destructive",
+        });
+        return;
+      }
+      const preview = URL.createObjectURL(file);
+      setUploadedImages(prev => [...prev, { file, preview }]);
       toast({
         title: "Image Uploaded",
-        description: `Successfully uploaded ${e.target.files[0].name}`,
+        description: `Successfully uploaded ${file.name}`,
       });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
+  };
+
+  const removeImage = (index: number) => {
+    setUploadedImages(prev => {
+      const newImages = [...prev];
+      URL.revokeObjectURL(newImages[index].preview);
+      newImages.splice(index, 1);
+      return newImages;
+    });
   };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      isAlaCarte: true,
       specificDays: false,
       isMultipleItems: false,
       isTwoTranches: false,
@@ -150,7 +170,6 @@ export default function CreateOffer() {
   const onSubmit = async (data: FormValues) => {
     try {
       const dealData = {
-        isAlaCarte: data.isAlaCarte,
         category: data.category,
         subCategory: data.subCategory,
         dealType: data.offerType,
@@ -232,32 +251,6 @@ export default function CreateOffer() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Left Column - Main Details */}
               <div className="lg:col-span-7 space-y-8">
-                
-                {/* Deal Tier */}
-                <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Deal Tier</h2>
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-                    <FormField
-                      control={form.control}
-                      name="isAlaCarte"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              id="alacarte"
-                              className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                            />
-                          </FormControl>
-                          <FormLabel htmlFor="alacarte" className="font-medium text-slate-700 cursor-pointer">
-                            This is an A La Carte deal
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </section>
 
                 {/* Deal Details and Pricing */}
                 <section>
@@ -822,43 +815,49 @@ export default function CreateOffer() {
                       />
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        {/* Cover Photo Slot */}
-                        <div 
-                          className="col-span-1 aspect-square relative group cursor-pointer"
-                          onClick={handleImageClick}
-                        >
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
-                            Cover Photo
+                        {/* Render uploaded images */}
+                        {uploadedImages.map((img, index) => (
+                          <div 
+                            key={index}
+                            className="col-span-1 aspect-square relative group"
+                          >
+                            {index === 0 && (
+                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
+                                Cover Photo
+                              </div>
+                            )}
+                            <img 
+                              src={img.preview} 
+                              alt={`Upload ${index + 1}`}
+                              className="w-full h-full object-cover rounded-lg border-2 border-slate-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(index)}
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
                           </div>
-                          <div className="w-full h-full border-2 border-dashed border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center p-2 text-center">
-                            <Plus className="h-6 w-6 text-slate-400 mb-1" />
-                            <span className="text-xs text-slate-500">Upload</span>
-                          </div>
-                        </div>
+                        ))}
 
-                        {/* Other Slots */}
-                        {[1, 2, 3].map((i) => (
-                           <div 
-                            key={i} 
+                        {/* Empty slots for remaining uploads */}
+                        {uploadedImages.length < 5 && (
+                          <div 
                             className="col-span-1 aspect-square relative group cursor-pointer"
                             onClick={handleImageClick}
-                           >
+                          >
+                            {uploadedImages.length === 0 && (
+                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
+                                Cover Photo
+                              </div>
+                            )}
                             <div className="w-full h-full border-2 border-dashed border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center p-2 text-center">
                               <Plus className="h-6 w-6 text-slate-400 mb-1" />
                               <span className="text-xs text-slate-500">Upload</span>
                             </div>
                           </div>
-                        ))}
-
-                        {/* Add More */}
-                         <div 
-                          className="col-span-1 aspect-square relative group cursor-pointer"
-                          onClick={handleImageClick}
-                         >
-                            <div className="w-full h-full border border-slate-200 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors flex flex-col items-center justify-center p-2 text-center">
-                              <span className="text-xs font-medium text-slate-600">Add More Photos</span>
-                            </div>
-                          </div>
+                        )}
                       </div>
                    </div>
                 </section>
