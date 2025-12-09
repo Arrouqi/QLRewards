@@ -9,6 +9,7 @@ import OfferForm from "@/pages/OfferForm";
 import Success from "@/pages/Success";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
+import AdminConfig from "@/pages/AdminConfig";
 import DealDetail from "@/pages/DealDetail";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/offer-request" component={OfferForm} />
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/config" component={AdminConfig} />
       <Route path="/admin/deals/:id" component={DealDetail} />
       <Route component={NotFound} />
     </Switch>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -80,15 +80,26 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-bold text-[#00426D]">Admin Dashboard</h1>
             <p className="text-slate-500 mt-1">Manage all deal submissions</p>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            data-testid="button-logout"
-            className="flex items-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/admin/config")}
+              data-testid="button-config"
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Categories
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              data-testid="button-logout"
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
