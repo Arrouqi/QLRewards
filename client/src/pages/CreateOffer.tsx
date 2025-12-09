@@ -84,7 +84,7 @@ const formSchema = z.object({
   claimRules: z.array(z.string()).min(1, "Select at least one claim rule"),
   generalRules: z.array(z.string()).min(1, "Select at least one general rule"),
   otherRules: z.string().optional(),
-  branch: z.string().min(1, "Branch is required"),
+  branches: z.array(z.string()).min(1, "At least one branch is required"),
   agreement: z.boolean().refine(val => val === true, "You must agree to the terms"),
 });
 
@@ -116,6 +116,7 @@ export default function CreateOffer() {
   const [isBogo, setIsBogo] = useState(false);
   const [isTwoTranches, setIsTwoTranches] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
+  const [branchInput, setBranchInput] = useState("");
 
   const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[]>({
     queryKey: ["categories"],
@@ -206,7 +207,7 @@ export default function CreateOffer() {
       title: "",
       description: "",
       otherRules: "",
-      branch: "",
+      branches: [],
       specificDays: false,
       isMultipleItems: false,
       isTwoTranches: false,
@@ -266,7 +267,7 @@ export default function CreateOffer() {
         claimRules: data.claimRules,
         generalRules: data.generalRules,
         otherRules: data.otherRules,
-        branch: data.branch,
+        branches: data.branches,
       };
 
       const response = await fetch("/api/deals", {
@@ -862,22 +863,59 @@ export default function CreateOffer() {
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
                     <FormField
                       control={form.control}
-                      name="branch"
+                      name="branches"
                       render={({ field }) => (
                         <FormItem>
-                           <FormLabel className="text-xs font-bold text-slate-500 uppercase">Branches <span className="text-red-500">*</span></FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-11 bg-slate-50">
-                                <SelectValue placeholder="Al Dafna Branch, Al Aziziya" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="dafna">Al Dafna Branch</SelectItem>
-                              <SelectItem value="aziziya">Al Aziziya Branch</SelectItem>
-                              <SelectItem value="all">All Branches</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Branches <span className="text-red-500">*</span></FormLabel>
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap gap-2 min-h-[44px] p-2 bg-slate-50 border border-slate-200 rounded-md">
+                              {field.value?.map((branch, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-sm text-slate-700"
+                                >
+                                  {branch}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newBranches = field.value?.filter((_, i) => i !== index) || [];
+                                      field.onChange(newBranches);
+                                    }}
+                                    className="ml-1 text-slate-400 hover:text-red-500"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </span>
+                              ))}
+                              <input
+                                type="text"
+                                value={branchInput}
+                                onChange={(e) => setBranchInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ',') {
+                                    e.preventDefault();
+                                    const trimmedValue = branchInput.trim();
+                                    if (trimmedValue && !field.value?.includes(trimmedValue)) {
+                                      field.onChange([...(field.value || []), trimmedValue]);
+                                      setBranchInput("");
+                                    }
+                                  }
+                                }}
+                                onBlur={() => {
+                                  const trimmedValue = branchInput.trim();
+                                  if (trimmedValue && !field.value?.includes(trimmedValue)) {
+                                    field.onChange([...(field.value || []), trimmedValue]);
+                                    setBranchInput("");
+                                  }
+                                }}
+                                placeholder={field.value?.length ? "" : "Type branch name and press Enter"}
+                                className="flex-1 min-w-[200px] bg-transparent border-none outline-none text-sm placeholder:text-slate-400"
+                                data-testid="input-branch"
+                              />
+                            </div>
+                            <p className="text-xs text-slate-500">Type a branch name and press Enter to add it</p>
+                          </div>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
