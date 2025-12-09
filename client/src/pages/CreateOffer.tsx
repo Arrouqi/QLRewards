@@ -608,29 +608,39 @@ export default function CreateOffer() {
                           <FormLabel className="text-xs font-bold text-slate-500 uppercase">Title <span className="text-red-500">*</span></FormLabel>
                           <div className="relative">
                             <FormControl>
-                              <Input className="h-11 bg-slate-50" {...field} />
+                              <Input className="h-11 bg-slate-50" maxLength={60} {...field} />
                             </FormControl>
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">0/60</div>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{field.value?.length || 0}/60</div>
                           </div>
                         </FormItem>
                       )}
                     />
 
-                    <div className="space-y-2">
-                      <Label className="text-xs text-slate-500">
-                        • Clearly mention the deal, validity, and terms so users understand what's included.
-                      </Label>
-                      <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
-                        <RichTextToolbar />
-                        <textarea 
-                          className="w-full h-32 p-3 bg-white focus:outline-none resize-none text-sm" 
-                          placeholder="Description"
-                        ></textarea>
-                        <div className="bg-slate-50 px-2 py-1 text-right text-xs text-slate-400 border-t border-slate-100">
-                          0/300
-                        </div>
-                      </div>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2">
+                          <Label className="text-xs text-slate-500">
+                            • Clearly mention the deal, validity, and terms so users understand what's included.
+                          </Label>
+                          <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                            <RichTextToolbar />
+                            <FormControl>
+                              <textarea 
+                                className="w-full h-32 p-3 bg-white focus:outline-none resize-none text-sm" 
+                                placeholder="Description"
+                                maxLength={300}
+                                {...field}
+                              />
+                            </FormControl>
+                            <div className="bg-slate-50 px-2 py-1 text-right text-xs text-slate-400 border-t border-slate-100">
+                              {field.value?.length || 0}/300
+                            </div>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </section>
 
@@ -737,18 +747,28 @@ export default function CreateOffer() {
                       )}
                     />
 
-                    <div className="space-y-2 pt-4">
-                      <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
-                        <RichTextToolbar />
-                        <textarea 
-                          className="w-full h-24 p-3 bg-white focus:outline-none resize-none text-sm" 
-                          placeholder="Other Rules"
-                        ></textarea>
-                         <div className="bg-slate-50 px-2 py-1 text-right text-xs text-slate-400 border-t border-slate-100">
-                          0/300
-                        </div>
-                      </div>
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="otherRules"
+                      render={({ field }) => (
+                        <FormItem className="space-y-2 pt-4">
+                          <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                            <RichTextToolbar />
+                            <FormControl>
+                              <textarea 
+                                className="w-full h-24 p-3 bg-white focus:outline-none resize-none text-sm" 
+                                placeholder="Other Rules"
+                                maxLength={300}
+                                {...field}
+                              />
+                            </FormControl>
+                            <div className="bg-slate-50 px-2 py-1 text-right text-xs text-slate-400 border-t border-slate-100">
+                              {field.value?.length || 0}/300
+                            </div>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
 
                   </div>
                 </section>
@@ -888,7 +908,7 @@ export default function CreateOffer() {
                 <Button type="button" variant="outline" className="min-w-[100px] border-slate-300 text-slate-600 hover:bg-slate-50">
                   Close
                 </Button>
-                <Button type="submit" className="min-w-[140px] bg-slate-300 text-slate-500 hover:bg-slate-400" disabled>
+                <Button type="submit" className="min-w-[140px] bg-[#00426D] text-white hover:bg-[#003557]">
                   Save & Publish
                 </Button>
               </div>
