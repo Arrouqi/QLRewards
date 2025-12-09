@@ -11,9 +11,9 @@ import Success from "@/pages/Success";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={OfferForm} />
+      <Route path="/" component={CreateOffer} />
       <Route path="/success" component={Success} />
-      <Route path="/create-offer" component={CreateOffer} />
+      <Route path="/offer-request" component={OfferForm} />
       <Route component={NotFound} />
     </Switch>
   );

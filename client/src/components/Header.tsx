@@ -56,7 +56,13 @@ export default function Header() {
           
           <div className="h-8 w-[1px] bg-blue-500/50 hidden md:block"></div>
 
-          <Link href="/create-offer">
+          <Link href="/offer-request">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md px-6 hidden sm:flex items-center gap-2">
+              Offer Request
+            </Button>
+          </Link>
+
+          <Link href="/">
             <Button className="bg-[#F47920] hover:bg-[#d66a1c] text-white font-semibold rounded-md px-6 hidden sm:flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Post Ad
