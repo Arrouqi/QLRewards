@@ -111,8 +111,10 @@ export default function CreateOffer() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      if (uploadedImages.length >= 5) {
+      const files = Array.from(e.target.files);
+      const remaining = 5 - uploadedImages.length;
+      
+      if (remaining <= 0) {
         toast({
           title: "Maximum images reached",
           description: "You can only upload up to 5 images",
@@ -120,12 +122,27 @@ export default function CreateOffer() {
         });
         return;
       }
-      const preview = URL.createObjectURL(file);
-      setUploadedImages(prev => [...prev, { file, preview }]);
+
+      const filesToUpload = files.slice(0, remaining);
+      const newImages = filesToUpload.map(file => ({
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+      
+      setUploadedImages(prev => [...prev, ...newImages]);
       toast({
-        title: "Image Uploaded",
-        description: `Successfully uploaded ${file.name}`,
+        title: "Images Uploaded",
+        description: `Successfully uploaded ${filesToUpload.length} image(s)`,
       });
+      
+      if (files.length > remaining) {
+        toast({
+          title: "Some images skipped",
+          description: `Only ${remaining} more image(s) allowed (max 5)`,
+          variant: "destructive",
+        });
+      }
+      
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -811,6 +828,7 @@ export default function CreateOffer() {
                         ref={fileInputRef} 
                         className="hidden" 
                         accept="image/*"
+                        multiple
                         onChange={handleFileChange}
                       />
 
