@@ -593,7 +593,7 @@ export default function CreateOffer() {
                         name="originalPrice"
                         render={({ field }) => (
                           <FormItem className="flex-1">
-                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">Original Price <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">{offerType === "voucher" ? "Voucher Amount" : "Original Price"} <span className="text-red-500">*</span></FormLabel>
                             <div className="relative">
                               <FormControl>
                                 <Input 
