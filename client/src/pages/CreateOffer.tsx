@@ -17,7 +17,11 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  Plus
+  Plus,
+  Gift,
+  Percent,
+  Tag,
+  ShoppingBag
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,8 +46,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Schema
 const formSchema = z.object({
@@ -143,22 +147,19 @@ export default function CreateOffer() {
     "One voucher per table/group/bill"
   ];
 
+  const offerTypes = [
+    { id: "bogo", label: "Buy 1 Get 1", icon: Gift },
+    { id: "discount", label: "Discount", icon: Percent },
+    { id: "voucher", label: "Voucher", icon: Tag },
+    { id: "bundle", label: "Bundle", icon: ShoppingBag },
+  ];
+
   return (
     <div className="min-h-screen bg-[#F5F6FA] flex flex-col font-sans">
-      <Header />
-
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
-        {/* Breadcrumb mock */}
-        <div className="text-sm text-slate-500 mb-6 flex items-center gap-2">
-          <span>Home</span> &gt; <span>Rewards</span> &gt; <span className="text-slate-900 font-medium">Create Offer</span>
-        </div>
-
-        {/* Warning Banner */}
-        <div className="bg-[#FFF8E1] border border-[#FFE082] rounded-lg p-4 mb-8 flex items-start gap-3">
-          <Info className="h-5 w-5 text-[#F57F17] mt-0.5 flex-shrink-0" />
-          <p className="text-[#5D4037] text-sm leading-relaxed">
-            The offer will be sent to the ministry for approval and is expected to be published on 01 January 2026, depending on the ministry approval.
-          </p>
+        <div className="mb-8">
+            <h1 className="text-2xl font-bold text-[#00426D]">Create Offer</h1>
+            <p className="text-slate-500 mt-1">Fill in the details below to create your new offer.</p>
         </div>
 
         <Form {...form}>
@@ -251,17 +252,32 @@ export default function CreateOffer() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-bold text-slate-500 uppercase">Offer Type <span className="text-red-500">*</span></FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-11 bg-slate-50">
-                                <SelectValue placeholder="Select Offer Type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="discount">Discount</SelectItem>
-                              <SelectItem value="bogo">Buy 1 Get 1</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {offerTypes.map((type) => {
+                                const Icon = type.icon;
+                                const isSelected = field.value === type.id;
+                                return (
+                                  <div
+                                    key={type.id}
+                                    className={cn(
+                                      "cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center gap-3 transition-all",
+                                      isSelected 
+                                        ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-500" 
+                                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                                    )}
+                                    onClick={() => field.onChange(type.id)}
+                                  >
+                                    <Icon className={cn("h-6 w-6", isSelected ? "text-blue-600" : "text-slate-900")} />
+                                    <span className={cn("text-xs font-medium", isSelected ? "text-blue-700" : "text-slate-900")}>
+                                      {type.label}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -776,7 +792,6 @@ export default function CreateOffer() {
                 <Button type="submit" className="min-w-[140px] bg-slate-300 text-slate-500 hover:bg-slate-400" disabled>
                   Save & Publish
                 </Button>
-                {/* Note: Save & Publish is disabled in screenshot until valid? */}
               </div>
             </div>
             <div className="h-16" /> {/* Spacer for fixed footer */}
@@ -784,26 +799,6 @@ export default function CreateOffer() {
           </form>
         </Form>
       </main>
-
-      <footer className="bg-[#003050] text-white py-12 mt-12">
-        <div className="container mx-auto px-4 text-center">
-           <div className="flex justify-center items-center gap-2 mb-8">
-             <span className="text-2xl font-bold">Qatar</span>
-             <span className="text-xl font-light text-blue-300">LIVING</span>
-           </div>
-           <div className="flex flex-wrap justify-center gap-6 text-sm text-blue-200 mb-8">
-             <a href="#" className="hover:text-white">Properties</a>
-             <a href="#" className="hover:text-white">Vehicles</a>
-             <a href="#" className="hover:text-white">Classifieds</a>
-             <a href="#" className="hover:text-white">Services</a>
-             <a href="#" className="hover:text-white">Jobs</a>
-             <a href="#" className="hover:text-white">Rewards</a>
-           </div>
-           <div className="text-xs text-blue-400/60 border-t border-blue-900/50 pt-8">
-             Copyright © 2025 Qatar Living. All rights reserved.
-           </div>
-        </div>
-      </footer>
     </div>
   );
 }
