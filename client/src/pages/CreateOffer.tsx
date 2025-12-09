@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Calendar,
   ChevronDown, 
@@ -21,8 +22,21 @@ import {
   Gift,
   Percent,
   Tag,
-  ShoppingBag
+  ShoppingBag,
+  Loader2
 } from "lucide-react";
+
+interface SubCategory {
+  id: string;
+  categoryId: string;
+  name: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  subCategories: SubCategory[];
+}
 
 import { Button } from "@/components/ui/button";
 import {
@@ -102,6 +116,25 @@ export default function CreateOffer() {
   const [isBogo, setIsBogo] = useState(false);
   const [isTwoTranches, setIsTwoTranches] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
+
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await fetch("/api/categories");
+      if (!res.ok) throw new Error("Failed to fetch categories");
+      return res.json();
+    },
+  });
+
+  useEffect(() => {
+    if (categoriesError) {
+      toast({
+        title: "Error loading categories",
+        description: "Please refresh the page to try again",
+        variant: "destructive",
+      });
+    }
+  }, [categoriesError, toast]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -198,6 +231,10 @@ export default function CreateOffer() {
   // Watchers for dynamic behavior
   const offerType = form.watch("offerType");
   const redemptionType = form.watch("redemption");
+  const watchedCategory = form.watch("category");
+  
+  const selectedCategory = categories.find(c => c.name === watchedCategory);
+  const availableSubCategories = selectedCategory?.subCategories || [];
 
   useEffect(() => {
     setIsDiscount(offerType === "discount");
@@ -307,16 +344,31 @@ export default function CreateOffer() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-bold text-slate-500 uppercase">Category <span className="text-red-500">*</span></FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select 
+                            onValueChange={(categoryName) => {
+                              field.onChange(categoryName);
+                              form.setValue("subCategory", "");
+                            }} 
+                            value={field.value}
+                          >
                             <FormControl>
-                              <SelectTrigger className="h-11 bg-slate-50">
-                                <SelectValue placeholder="Select Category" />
+                              <SelectTrigger className="h-11 bg-slate-50" data-testid="select-category">
+                                {categoriesLoading ? (
+                                  <div className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>Loading...</span>
+                                  </div>
+                                ) : (
+                                  <SelectValue placeholder="Select Category" />
+                                )}
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="hotel">Hotel & Resorts</SelectItem>
-                              <SelectItem value="dining">Dining</SelectItem>
-                              <SelectItem value="wellness">Wellness</SelectItem>
+                              {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.name} data-testid={`option-category-${category.id}`}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </FormItem>
@@ -329,15 +381,22 @@ export default function CreateOffer() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-bold text-slate-500 uppercase">Sub-Category <span className="text-red-500">*</span></FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value}
+                            disabled={!watchedCategory || availableSubCategories.length === 0}
+                          >
                             <FormControl>
-                              <SelectTrigger className="h-11 bg-slate-50">
-                                <SelectValue placeholder="Select Sub-Category" />
+                              <SelectTrigger className="h-11 bg-slate-50" data-testid="select-subcategory">
+                                <SelectValue placeholder={watchedCategory ? "Select Sub-Category" : "Select a category first"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="pool">Pool & Beach Access</SelectItem>
-                              <SelectItem value="staycation">Staycation</SelectItem>
+                              {availableSubCategories.map((sub) => (
+                                <SelectItem key={sub.id} value={sub.name} data-testid={`option-subcategory-${sub.id}`}>
+                                  {sub.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </FormItem>
