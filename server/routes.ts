@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDealSchema, insertAdminUserSchema } from "@shared/schema";
+import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -147,6 +147,58 @@ export async function registerRoutes(
       });
     } else {
       res.status(401).json({ authenticated: false });
+    }
+  });
+
+  app.get("/api/categories", async (req, res) => {
+    try {
+      const allCategories = await storage.getAllCategories();
+      const allSubCategories = await storage.getAllSubCategories();
+      const categoriesWithSubs = allCategories.map(cat => ({
+        ...cat,
+        subCategories: allSubCategories.filter(sub => sub.categoryId === cat.id)
+      }));
+      res.json(categoriesWithSubs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/categories", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertCategorySchema.parse(req.body);
+      const category = await storage.createCategory(validatedData);
+      res.status(201).json(category);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/categories/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteCategory(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/subcategories", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertSubCategorySchema.parse(req.body);
+      const subCategory = await storage.createSubCategory(validatedData);
+      res.status(201).json(subCategory);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/subcategories/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteSubCategory(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

@@ -1,4 +1,10 @@
-import { type Deal, type InsertDeal, type AdminUser, type InsertAdminUser, deals, adminUsers } from "@shared/schema";
+import { 
+  type Deal, type InsertDeal, 
+  type AdminUser, type InsertAdminUser, 
+  type Category, type InsertCategory,
+  type SubCategory, type InsertSubCategory,
+  deals, adminUsers, categories, subCategories 
+} from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
@@ -10,6 +16,13 @@ export interface IStorage {
   approveDeal(id: string): Promise<Deal | undefined>;
   getAdminUser(username: string): Promise<AdminUser | undefined>;
   createAdminUser(user: InsertAdminUser): Promise<AdminUser>;
+  createCategory(category: InsertCategory): Promise<Category>;
+  getAllCategories(): Promise<Category[]>;
+  deleteCategory(id: string): Promise<void>;
+  createSubCategory(subCategory: InsertSubCategory): Promise<SubCategory>;
+  getSubCategoriesByCategoryId(categoryId: string): Promise<SubCategory[]>;
+  getAllSubCategories(): Promise<SubCategory[]>;
+  deleteSubCategory(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -56,6 +69,37 @@ export class DatabaseStorage implements IStorage {
   async createAdminUser(user: InsertAdminUser): Promise<AdminUser> {
     const [newUser] = await db.insert(adminUsers).values(user).returning();
     return newUser;
+  }
+
+  async createCategory(category: InsertCategory): Promise<Category> {
+    const [newCategory] = await db.insert(categories).values(category).returning();
+    return newCategory;
+  }
+
+  async getAllCategories(): Promise<Category[]> {
+    return await db.select().from(categories);
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    await db.delete(subCategories).where(eq(subCategories.categoryId, id));
+    await db.delete(categories).where(eq(categories.id, id));
+  }
+
+  async createSubCategory(subCategory: InsertSubCategory): Promise<SubCategory> {
+    const [newSubCategory] = await db.insert(subCategories).values(subCategory).returning();
+    return newSubCategory;
+  }
+
+  async getSubCategoriesByCategoryId(categoryId: string): Promise<SubCategory[]> {
+    return await db.select().from(subCategories).where(eq(subCategories.categoryId, categoryId));
+  }
+
+  async getAllSubCategories(): Promise<SubCategory[]> {
+    return await db.select().from(subCategories);
+  }
+
+  async deleteSubCategory(id: string): Promise<void> {
+    await db.delete(subCategories).where(eq(subCategories.id, id));
   }
 }
 
