@@ -52,25 +52,25 @@ import { useLocation } from "wouter";
 
 // Schema
 const formSchema = z.object({
-  category: z.string(),
-  subCategory: z.string(),
-  offerType: z.string(),
-  offerDuration: z.string(),
-  redemption: z.string(),
+  category: z.string().min(1, "Category is required"),
+  subCategory: z.string().min(1, "Sub-category is required"),
+  offerType: z.string().min(1, "Deal type is required"),
+  offerDuration: z.string().min(1, "Duration is required"),
+  redemption: z.string().min(1, "Redemption is required"),
   limitPerUser: z.string().optional(),
-  originalPrice: z.string(),
+  originalPrice: z.string().optional(),
   isMultipleItems: z.boolean().default(false),
   discountPercentage: z.string().optional(),
   isTwoTranches: z.boolean().default(false),
   trancheValidity: z.string().optional(),
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
-  title: z.string().min(5, "Title is required"),
-  description: z.string(),
-  claimRules: z.array(z.string()).min(1, "Must choose at least one claim rule"),
-  generalRules: z.array(z.string()).min(1, "Must choose at least one general rule"),
+  title: z.string().min(5, "Title must be at least 5 characters"),
+  description: z.string().optional(),
+  claimRules: z.array(z.string()).min(1, "Select at least one claim rule"),
+  generalRules: z.array(z.string()).min(1, "Select at least one general rule"),
   otherRules: z.string().optional(),
-  branch: z.string(),
+  branch: z.string().min(1, "Branch is required"),
   agreement: z.boolean().refine(val => val === true, "You must agree to the terms"),
 });
 
@@ -161,6 +161,19 @@ export default function CreateOffer() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      category: "",
+      subCategory: "",
+      offerType: "",
+      offerDuration: "",
+      redemption: "",
+      limitPerUser: "",
+      originalPrice: "",
+      discountPercentage: "",
+      trancheValidity: "",
+      title: "",
+      description: "",
+      otherRules: "",
+      branch: "",
       specificDays: false,
       isMultipleItems: false,
       isTwoTranches: false,
@@ -170,6 +183,17 @@ export default function CreateOffer() {
       agreement: false,
     },
   });
+
+  const onFormError = (errors: any) => {
+    const errorMessages = Object.entries(errors)
+      .map(([field, error]: [string, any]) => `${field}: ${error?.message}`)
+      .join(", ");
+    toast({
+      title: "Please fix the following errors",
+      description: errorMessages,
+      variant: "destructive",
+    });
+  };
 
   // Watchers for dynamic behavior
   const offerType = form.watch("offerType");
@@ -263,7 +287,7 @@ export default function CreateOffer() {
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit, onFormError)} className="space-y-8">
             
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               {/* Left Column - Main Details */}
