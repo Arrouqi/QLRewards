@@ -147,9 +147,57 @@ export default function CreateOffer() {
     setIsLimitedRedemption(redemptionType === "limited");
   }, [redemptionType]);
 
-  const onSubmit = (data: FormValues) => {
-    console.log(data);
-    setLocation("/success");
+  const onSubmit = async (data: FormValues) => {
+    try {
+      const dealData = {
+        isAlaCarte: data.isAlaCarte,
+        category: data.category,
+        subCategory: data.subCategory,
+        dealType: data.offerType,
+        duration: data.offerDuration,
+        redemption: data.redemption,
+        limitPerUser: data.limitPerUser,
+        originalPrice: data.originalPrice,
+        isMultipleItems: data.isMultipleItems,
+        discountPercentage: data.discountPercentage,
+        isTwoTranches: data.isTwoTranches,
+        trancheValidity: data.trancheValidity,
+        specificDays: data.specificDays,
+        days: data.days,
+        title: data.title,
+        description: data.description,
+        claimRules: data.claimRules,
+        generalRules: data.generalRules,
+        otherRules: data.otherRules,
+        branch: data.branch,
+      };
+
+      const response = await fetch("/api/deals", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(dealData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to submit deal");
+      }
+
+      toast({
+        title: "Success",
+        description: "Your deal has been submitted successfully!",
+      });
+
+      setLocation("/success");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to submit deal",
+        variant: "destructive",
+      });
+    }
   };
 
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
