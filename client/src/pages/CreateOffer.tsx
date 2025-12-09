@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,19 +47,24 @@ import { useToast } from "@/hooks/use-toast";
 
 // Schema
 const formSchema = z.object({
-  tier: z.string().default("alacarte"),
+  isAlaCarte: z.boolean().default(true),
   category: z.string(),
   subCategory: z.string(),
   offerType: z.string(),
   offerDuration: z.string(),
   redemption: z.string(),
+  limitPerUser: z.string().optional(),
   originalPrice: z.string(),
+  isMultipleItems: z.boolean().default(false),
+  discountPercentage: z.string().optional(),
+  isTwoTranches: z.boolean().default(false),
+  trancheValidity: z.string().optional(),
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
   title: z.string().min(5, "Title is required"),
   description: z.string(),
-  claimRule: z.string(),
-  generalRules: z.array(z.string()),
+  claimRules: z.array(z.string()).min(1, "Must choose at least one claim rule"),
+  generalRules: z.array(z.string()).min(1, "Must choose at least one general rule"),
   otherRules: z.string().optional(),
   branch: z.string(),
   agreement: z.boolean().refine(val => val === true, "You must agree to the terms"),
@@ -86,17 +91,38 @@ const RichTextToolbar = () => (
 export default function CreateOffer() {
   const { toast } = useToast();
   const [isSpecificDays, setIsSpecificDays] = useState(false);
+  const [isLimitedRedemption, setIsLimitedRedemption] = useState(false);
+  const [isMultipleItems, setIsMultipleItems] = useState(false);
+  const [isDiscount, setIsDiscount] = useState(false);
+  const [isBogo, setIsBogo] = useState(false);
+  const [isTwoTranches, setIsTwoTranches] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      tier: "alacarte",
+      isAlaCarte: true,
       specificDays: false,
+      isMultipleItems: false,
+      isTwoTranches: false,
       days: [],
+      claimRules: [],
       generalRules: [],
       agreement: false,
     },
   });
+
+  // Watchers for dynamic behavior
+  const offerType = form.watch("offerType");
+  const redemptionType = form.watch("redemption");
+
+  useEffect(() => {
+    setIsDiscount(offerType === "discount");
+    setIsBogo(offerType === "bogo");
+  }, [offerType]);
+
+  useEffect(() => {
+    setIsLimitedRedemption(redemptionType === "limited");
+  }, [redemptionType]);
 
   const onSubmit = (data: FormValues) => {
     console.log(data);
@@ -107,6 +133,15 @@ export default function CreateOffer() {
   };
 
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  const claimRulesOptions = [
+    "Offer Valid only for Dine-in (Not valid on Delivery / Take away)",
+    "Offer Valid only for Delivery / Take away",
+    "Offer Valid for Dine-in, Delivery & Take away",
+    "Multiple offers cannot be combined in the same transaction",
+    "One voucher per person per visit",
+    "One voucher per table/group/bill"
+  ];
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] flex flex-col font-sans">
@@ -137,10 +172,25 @@ export default function CreateOffer() {
                 <section>
                   <h2 className="text-lg font-bold text-[#00426D] mb-4">Offer Tier</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-                    <RadioGroup defaultValue="alacarte" className="flex items-center space-x-2">
-                      <RadioGroupItem value="alacarte" id="alacarte" className="text-blue-600" />
-                      <Label htmlFor="alacarte" className="font-medium text-slate-700">This is an A La Carte offer</Label>
-                    </RadioGroup>
+                    <FormField
+                      control={form.control}
+                      name="isAlaCarte"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              id="alacarte"
+                              className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                            />
+                          </FormControl>
+                          <FormLabel htmlFor="alacarte" className="font-medium text-slate-700 cursor-pointer">
+                            This is an A La Carte offer
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </section>
 
@@ -216,6 +266,58 @@ export default function CreateOffer() {
                       )}
                     />
 
+                    {isBogo && (
+                      <div className="bg-slate-50 p-4 rounded-md border border-slate-100">
+                        <FormField
+                          control={form.control}
+                          name="isTwoTranches"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => {
+                                    field.onChange(checked);
+                                    setIsTwoTranches(!!checked);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-medium text-slate-700">
+                                Is this offer valid for two tranches?
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        {isTwoTranches && (
+                          <div className="mt-4 ml-7">
+                            <FormField
+                              control={form.control}
+                              name="trancheValidity"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-bold text-slate-500 uppercase">Tranche Validity</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger className="h-11 bg-white">
+                                        <SelectValue placeholder="Select Weeks" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">1 Week</SelectItem>
+                                      <SelectItem value="2">2 Weeks</SelectItem>
+                                      <SelectItem value="3">3 Weeks</SelectItem>
+                                      <SelectItem value="4">4 Weeks</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <FormField
                       control={form.control}
                       name="offerDuration"
@@ -252,38 +354,106 @@ export default function CreateOffer() {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="unlimited">Unlimited</SelectItem>
-                                <SelectItem value="once">One Time</SelectItem>
+                                <SelectItem value="limited">Limited</SelectItem>
                               </SelectContent>
                             </Select>
                           </FormItem>
                         )}
                       />
-                      <div className="space-y-2">
-                        <Label className="text-xs font-bold text-slate-500 uppercase">Join for free</Label>
-                        <Select>
-                          <SelectTrigger className="h-11 bg-slate-50">
-                            <SelectValue placeholder="Choose" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="yes">Yes</SelectItem>
-                            <SelectItem value="no">No</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      
+                      {isLimitedRedemption && (
+                        <FormField
+                          control={form.control}
+                          name="limitPerUser"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">Limit Per User <span className="text-red-500">*</span></FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="e.g. 1" className="h-11 bg-slate-50" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {!isLimitedRedemption && (
+                        <div className="space-y-2">
+                          <Label className="text-xs font-bold text-slate-500 uppercase">Join for free</Label>
+                          <Select>
+                            <SelectTrigger className="h-11 bg-slate-50">
+                              <SelectValue placeholder="Choose" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="yes">Yes</SelectItem>
+                              <SelectItem value="no">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                      <FormField
+                        control={form.control}
+                        name="originalPrice"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">Original Price <span className="text-red-500">*</span></FormLabel>
+                            <div className="relative">
+                              <FormControl>
+                                <Input 
+                                  placeholder="0.00" 
+                                  className="h-11 bg-slate-50 pr-12 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                  {...field} 
+                                  disabled={isMultipleItems}
+                                />
+                              </FormControl>
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      {isDiscount && (
+                        <FormField
+                          control={form.control}
+                          name="discountPercentage"
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount Percentage <span className="text-red-500">*</span></FormLabel>
+                              <div className="relative">
+                                <FormControl>
+                                  <Input 
+                                    placeholder="0" 
+                                    className="h-11 bg-slate-50 pr-12" 
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">%</div>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      )}
                     </div>
 
                     <FormField
                       control={form.control}
-                      name="originalPrice"
+                      name="isMultipleItems"
                       render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Original Price <span className="text-red-500">*</span></FormLabel>
-                          <div className="relative">
-                            <FormControl>
-                              <Input placeholder="0.00" className="h-11 bg-slate-50 pr-12" {...field} />
-                            </FormControl>
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
-                          </div>
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                setIsMultipleItems(!!checked);
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-medium text-slate-700">
+                            This offer for multiple items
+                          </FormLabel>
                         </FormItem>
                       )}
                     />
@@ -380,35 +550,45 @@ export default function CreateOffer() {
                     
                     <FormField
                       control={form.control}
-                      name="claimRule"
-                      render={({ field }) => (
-                        <FormItem className="space-y-3">
+                      name="claimRules"
+                      render={() => (
+                        <FormItem>
                           <FormLabel className="text-xs font-bold text-slate-500 uppercase">Claim Rules <span className="font-normal normal-case text-slate-400">(Must choose one at least)</span></FormLabel>
-                          <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              className="flex flex-col space-y-2"
-                            >
-                              {[
-                                "Offer Valid only for Dine-in (Not valid on Delivery / Take away)",
-                                "Offer Valid only for Delivery / Take away",
-                                "Offer Valid for Dine-in, Delivery & Take away",
-                                "Multiple offers cannot be combined in the same transaction",
-                                "One voucher per person per visit",
-                                "One voucher per table/group/bill"
-                              ].map((item) => (
-                                <FormItem key={item} className="flex items-center space-x-3 space-y-0">
-                                  <FormControl>
-                                    <RadioGroupItem value={item} />
-                                  </FormControl>
-                                  <FormLabel className="font-normal text-slate-700">
-                                    {item}
-                                  </FormLabel>
-                                </FormItem>
-                              ))}
-                            </RadioGroup>
-                          </FormControl>
+                          <div className="flex flex-col space-y-3 mt-2">
+                            {claimRulesOptions.map((item) => (
+                              <FormField
+                                key={item}
+                                control={form.control}
+                                name="claimRules"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={item}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(item)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([...field.value, item])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value) => value !== item
+                                                  )
+                                                )
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-slate-700">
+                                        {item}
+                                      </FormLabel>
+                                    </FormItem>
+                                  )
+                                }}
+                              />
+                            ))}
+                          </div>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -429,15 +609,37 @@ export default function CreateOffer() {
                               "Cannot be applied to already discounted items",
                               "Cannot be combined with employee discounts"
                             ].map((item) => (
-                              <div key={item} className="flex items-center space-x-2">
-                                <Checkbox id={item} />
-                                <label
-                                  htmlFor={item}
-                                  className="text-sm font-normal text-slate-700 leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                  {item}
-                                </label>
-                              </div>
+                              <FormField
+                                key={item}
+                                control={form.control}
+                                name="generalRules"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={item}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(item)}
+                                          onCheckedChange={(checked) => {
+                                            return checked
+                                              ? field.onChange([...field.value, item])
+                                              : field.onChange(
+                                                  field.value?.filter(
+                                                    (value) => value !== item
+                                                  )
+                                                )
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-slate-700">
+                                        {item}
+                                      </FormLabel>
+                                    </FormItem>
+                                  )
+                                }}
+                              />
                             ))}
                           </div>
                         </FormItem>
