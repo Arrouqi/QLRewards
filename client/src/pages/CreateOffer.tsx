@@ -266,58 +266,6 @@ export default function CreateOffer() {
                       )}
                     />
 
-                    {isBogo && (
-                      <div className="bg-slate-50 p-4 rounded-md border border-slate-100">
-                        <FormField
-                          control={form.control}
-                          name="isTwoTranches"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={(checked) => {
-                                    field.onChange(checked);
-                                    setIsTwoTranches(!!checked);
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-medium text-slate-700">
-                                Is this offer valid for two tranches?
-                              </FormLabel>
-                            </FormItem>
-                          )}
-                        />
-
-                        {isTwoTranches && (
-                          <div className="mt-4 ml-7">
-                            <FormField
-                              control={form.control}
-                              name="trancheValidity"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs font-bold text-slate-500 uppercase">Tranche Validity</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger className="h-11 bg-white">
-                                        <SelectValue placeholder="Select Weeks" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="1">1 Week</SelectItem>
-                                      <SelectItem value="2">2 Weeks</SelectItem>
-                                      <SelectItem value="3">3 Weeks</SelectItem>
-                                      <SelectItem value="4">4 Weeks</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
                     <FormField
                       control={form.control}
                       name="offerDuration"
@@ -375,19 +323,93 @@ export default function CreateOffer() {
                           )}
                         />
                       )}
+                    </div>
 
-                      {!isLimitedRedemption && (
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold text-slate-500 uppercase">Join for free</Label>
-                          <Select>
-                            <SelectTrigger className="h-11 bg-slate-50">
-                              <SelectValue placeholder="Choose" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="yes">Yes</SelectItem>
-                              <SelectItem value="no">No</SelectItem>
-                            </SelectContent>
-                          </Select>
+                    {isBogo && (
+                      <div className="bg-orange-50/50 p-4 rounded-md border border-orange-100">
+                        <FormField
+                          control={form.control}
+                          name="isTwoTranches"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => {
+                                    field.onChange(checked);
+                                    setIsTwoTranches(!!checked);
+                                  }}
+                                  className="data-[state=checked]:bg-[#F47920] data-[state=checked]:border-[#F47920]"
+                                />
+                              </FormControl>
+                              <FormLabel className="font-medium text-slate-700">
+                                Is this offer valid for two tranches?
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        {isTwoTranches && (
+                          <div className="mt-4 ml-7">
+                            <FormField
+                              control={form.control}
+                              name="trancheValidity"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-bold text-slate-500 uppercase">Tranche Validity</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger className="h-11 bg-white">
+                                        <SelectValue placeholder="Choose" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">1 Week</SelectItem>
+                                      <SelectItem value="2">2 Weeks</SelectItem>
+                                      <SelectItem value="3">3 Weeks</SelectItem>
+                                      <SelectItem value="4">4 Weeks</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="isMultipleItems"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={(checked) => {
+                                  field.onChange(checked);
+                                  setIsMultipleItems(!!checked);
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-medium text-slate-700">
+                              This Offer is for Multiple Items
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      {isMultipleItems && (
+                        <div className="bg-[#FFF8E1] border border-[#FFE082] rounded-md p-3 flex items-start gap-3">
+                           <div className="bg-[#FFF8E1] rounded-full p-1 mt-0.5">
+                             <div className="bg-[#F57F17] rounded-full w-1 h-1"></div>
+                             <div className="bg-[#F57F17] w-0.5 h-2 mx-auto mt-0.5"></div>
+                           </div>
+                           <Info className="h-5 w-5 text-[#F57F17] flex-shrink-0" />
+                           <p className="text-[#5D4037] text-sm">
+                             If your offer is for multiple items, the price won't show on the offer card and details page.
+                           </p>
                         </div>
                       )}
                     </div>
@@ -436,27 +458,6 @@ export default function CreateOffer() {
                         />
                       )}
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name="isMultipleItems"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={(checked) => {
-                                field.onChange(checked);
-                                setIsMultipleItems(!!checked);
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-medium text-slate-700">
-                            This offer for multiple items
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
 
                     <div className="bg-slate-50 p-4 rounded-md border border-slate-100">
                       <FormField
