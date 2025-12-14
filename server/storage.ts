@@ -7,7 +7,7 @@ import {
   deals, adminUsers, categories, subCategories, terms 
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 
 export interface IStorage {
   createDeal(deal: InsertDeal): Promise<Deal>;
@@ -15,6 +15,7 @@ export interface IStorage {
   getDealById(id: string): Promise<Deal | undefined>;
   updateDeal(id: string, deal: Partial<InsertDeal>): Promise<Deal | undefined>;
   approveDeal(id: string): Promise<Deal | undefined>;
+  bulkApproveDeals(ids: string[]): Promise<number>;
   archiveDeal(id: string): Promise<Deal | undefined>;
   updateDealCategories(oldName: string, newName: string): Promise<void>;
   getAdminUser(username: string): Promise<AdminUser | undefined>;
@@ -71,6 +72,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(deals.id, id))
       .returning();
     return approved;
+  }
+
+  async bulkApproveDeals(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const result = await db
+      .update(deals)
+      .set({ status: "approved" })
+      .where(and(inArray(deals.id, ids), eq(deals.status, "pending")))
+      .returning();
+    return result.length;
   }
 
   async archiveDeal(id: string): Promise<Deal | undefined> {

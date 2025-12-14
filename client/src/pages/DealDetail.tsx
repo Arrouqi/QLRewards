@@ -3,7 +3,7 @@ import { useLocation, useRoute } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, CheckCircle, Save, MessageSquare, Printer } from "lucide-react";
+import { ArrowLeft, CheckCircle, Save, MessageSquare, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -246,10 +246,10 @@ export default function DealDetail() {
               variant="outline"
               onClick={() => setLocation(`/admin/deals/${params?.id}/print`)}
               className="flex items-center gap-2"
-              data-testid="button-print-view"
+              data-testid="button-download-pdf"
             >
-              <Printer className="h-4 w-4" />
-              Print View
+              <FileDown className="h-4 w-4" />
+              Download PDF
             </Button>
           </div>
           <div className="flex justify-between items-start">

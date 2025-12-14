@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Search, ChevronLeft, ChevronRight, Database, Archive } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Archive, FileDown, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
 import { cn } from "@/lib/utils";
@@ -28,8 +29,9 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isSeeding, setIsSeeding] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   useEffect(() => {
     checkAuthAndFetchDeals();
@@ -61,29 +63,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSeedDeals = async () => {
-    setIsSeeding(true);
-    try {
-      const response = await fetch("/api/seed-deals", { method: "POST" });
-      if (!response.ok) {
-        throw new Error("Failed to seed deals");
-      }
-      const result = await response.json();
-      toast({
-        title: "Success",
-        description: `Created ${result.count} sample deals`,
-      });
-      await checkAuthAndFetchDeals();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to seed deals",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSeeding(false);
-    }
-  };
 
   const filteredDeals = deals.filter((deal) => {
     const query = searchQuery.toLowerCase();
@@ -119,6 +98,50 @@ export default function AdminDashboard() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedDeals = filteredDeals.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
+  const pendingDealsOnPage = paginatedDeals.filter(d => d.status === "pending");
+  const allPendingSelected = pendingDealsOnPage.length > 0 && pendingDealsOnPage.every(d => selectedDeals.has(d.id));
+
+  const toggleSelectAll = () => {
+    const newSelected = new Set(selectedDeals);
+    if (allPendingSelected) {
+      pendingDealsOnPage.forEach(d => newSelected.delete(d.id));
+    } else {
+      pendingDealsOnPage.forEach(d => newSelected.add(d.id));
+    }
+    setSelectedDeals(newSelected);
+  };
+
+  const toggleSelectDeal = (dealId: string, checked: boolean) => {
+    const newSelected = new Set(selectedDeals);
+    if (checked) {
+      newSelected.add(dealId);
+    } else {
+      newSelected.delete(dealId);
+    }
+    setSelectedDeals(newSelected);
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedDeals.size === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      const response = await fetch("/api/deals/bulk-approve", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dealIds: Array.from(selectedDeals) }),
+      });
+      if (!response.ok) throw new Error("Failed to approve deals");
+      const result = await response.json();
+      toast({ title: "Success", description: `${result.count} deals sent to moderation` });
+      setSelectedDeals(new Set());
+      await checkAuthAndFetchDeals();
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to approve deals", variant: "destructive" });
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter]);
@@ -136,20 +159,9 @@ export default function AdminDashboard() {
   return (
     <AdminLayout>
       <div className="p-4 md:p-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-[#00426D]">Deal Requests</h1>
-            <p className="text-slate-500 text-sm md:text-base mt-1">Manage all deal submissions</p>
-          </div>
-          <Button
-            onClick={handleSeedDeals}
-            disabled={isSeeding}
-            className="bg-[#F47920] hover:bg-[#E06910] w-full sm:w-auto"
-            data-testid="button-seed-deals"
-          >
-            <Database className="h-4 w-4 mr-2" />
-            {isSeeding ? "Creating..." : "Add Sample Deals"}
-          </Button>
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-xl md:text-2xl font-bold text-[#00426D]">Deal Requests</h1>
+          <p className="text-slate-500 text-sm md:text-base mt-1">Manage all deal submissions</p>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
@@ -174,7 +186,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-          <div className="p-4 border-b border-slate-200">
+          <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
@@ -185,14 +197,33 @@ export default function AdminDashboard() {
                 data-testid="input-search"
               />
             </div>
+            {selectedDeals.size > 0 && (
+              <Button
+                onClick={handleBulkApprove}
+                disabled={isBulkProcessing}
+                className="bg-green-600 hover:bg-green-700 whitespace-nowrap"
+                data-testid="button-bulk-approve"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isBulkProcessing ? "Processing..." : `Send to Moderation (${selectedDeals.size})`}
+              </Button>
+            )}
           </div>
 
           <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={allPendingSelected}
+                    onCheckedChange={toggleSelectAll}
+                    disabled={pendingDealsOnPage.length === 0}
+                    data-testid="checkbox-select-all"
+                  />
+                </TableHead>
                 <TableHead>Title</TableHead>
+                <TableHead>Merchant</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Deal Type</TableHead>
                 <TableHead>Status</TableHead>
@@ -203,7 +234,7 @@ export default function AdminDashboard() {
             <TableBody>
               {paginatedDeals.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-slate-500 py-8">
+                  <TableCell colSpan={8} className="text-center text-slate-500 py-8">
                     {searchQuery || statusFilter !== "all" ? "No deals match your filters" : "No deals found"}
                   </TableCell>
                 </TableRow>
@@ -215,10 +246,17 @@ export default function AdminDashboard() {
                     onClick={() => setLocation(`/admin/deals/${deal.id}`)}
                     data-testid={`row-deal-${deal.id}`}
                   >
-                    <TableCell className="font-mono text-sm">
-                      {deal.id.substring(0, 8)}
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      {deal.status === "pending" ? (
+                        <Checkbox
+                          checked={selectedDeals.has(deal.id)}
+                          onCheckedChange={(checked) => toggleSelectDeal(deal.id, !!checked)}
+                          data-testid={`checkbox-deal-${deal.id}`}
+                        />
+                      ) : null}
                     </TableCell>
                     <TableCell className="font-medium">{deal.title}</TableCell>
+                    <TableCell>{deal.merchantName || "-"}</TableCell>
                     <TableCell>{deal.category}</TableCell>
                     <TableCell className="capitalize">{deal.dealType}</TableCell>
                     <TableCell>
@@ -237,17 +275,31 @@ export default function AdminDashboard() {
                       {format(new Date(deal.createdAt), "MMM dd, yyyy")}
                     </TableCell>
                     <TableCell>
-                      {deal.status !== "archived" && (
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => handleArchive(deal.id, e)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocation(`/admin/deals/${deal.id}/print`);
+                          }}
                           className="text-slate-500 hover:text-slate-700"
-                          data-testid={`button-archive-${deal.id}`}
+                          data-testid={`button-pdf-${deal.id}`}
                         >
-                          <Archive className="h-4 w-4" />
+                          <FileDown className="h-4 w-4" />
                         </Button>
-                      )}
+                        {deal.status !== "archived" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => handleArchive(deal.id, e)}
+                            className="text-slate-500 hover:text-slate-700"
+                            data-testid={`button-archive-${deal.id}`}
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -117,6 +117,19 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/deals/bulk-approve", requireAuth, async (req, res) => {
+    try {
+      const { dealIds } = req.body;
+      if (!Array.isArray(dealIds) || dealIds.length === 0) {
+        return res.status(400).json({ error: "dealIds array is required" });
+      }
+      const count = await storage.bulkApproveDeals(dealIds);
+      res.json({ success: true, count });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -342,59 +355,6 @@ export async function registerRoutes(
     try {
       await storage.deleteSubCategory(req.params.id);
       res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/seed-deals", requireAuth, async (req, res) => {
-    try {
-      const dealTemplates = [
-        { title: "50% Off All Pasta Dishes", category: "Food & Dining", subCategory: "Italian", dealType: "discount", discountPercentage: "50" },
-        { title: "Buy 1 Get 1 Free Pizza", category: "Food & Dining", subCategory: "Italian", dealType: "bogo", discountPercentage: "" },
-        { title: "QAR 100 Spa Voucher", category: "Beauty & Wellness", subCategory: "Spa", dealType: "voucher", discountPercentage: "" },
-        { title: "30% Off Gym Membership", category: "Health & Fitness", subCategory: "Gym", dealType: "discount", discountPercentage: "30" },
-        { title: "Family Bundle Meal Deal", category: "Food & Dining", subCategory: "Fast Food", dealType: "bundle", discountPercentage: "" },
-        { title: "20% Off Car Wash", category: "Automotive", subCategory: "Car Care", dealType: "discount", discountPercentage: "20" },
-        { title: "Buy 1 Get 1 Coffee", category: "Food & Dining", subCategory: "Cafe", dealType: "bogo", discountPercentage: "" },
-        { title: "QAR 200 Shopping Voucher", category: "Shopping", subCategory: "Mall", dealType: "voucher", discountPercentage: "" },
-        { title: "40% Off Haircut", category: "Beauty & Wellness", subCategory: "Salon", dealType: "discount", discountPercentage: "40" },
-        { title: "Kids Play Area Bundle", category: "Entertainment", subCategory: "Kids", dealType: "bundle", discountPercentage: "" },
-        { title: "25% Off Hotel Stay", category: "Travel", subCategory: "Hotels", dealType: "discount", discountPercentage: "25" },
-        { title: "Buy 1 Get 1 Movie Ticket", category: "Entertainment", subCategory: "Cinema", dealType: "bogo", discountPercentage: "" },
-        { title: "QAR 50 Bookstore Voucher", category: "Shopping", subCategory: "Books", dealType: "voucher", discountPercentage: "" },
-        { title: "35% Off Electronics", category: "Shopping", subCategory: "Electronics", dealType: "discount", discountPercentage: "35" },
-        { title: "Dessert Combo Bundle", category: "Food & Dining", subCategory: "Desserts", dealType: "bundle", discountPercentage: "" },
-        { title: "15% Off Dry Cleaning", category: "Services", subCategory: "Laundry", dealType: "discount", discountPercentage: "15" },
-        { title: "Buy 1 Get 1 Juice", category: "Food & Dining", subCategory: "Cafe", dealType: "bogo", discountPercentage: "" },
-        { title: "QAR 150 Furniture Voucher", category: "Shopping", subCategory: "Home", dealType: "voucher", discountPercentage: "" },
-        { title: "45% Off Yoga Classes", category: "Health & Fitness", subCategory: "Yoga", dealType: "discount", discountPercentage: "45" },
-        { title: "Weekend Brunch Bundle", category: "Food & Dining", subCategory: "Brunch", dealType: "bundle", discountPercentage: "" },
-      ];
-
-      const createdDeals = [];
-      for (const template of dealTemplates) {
-        const deal = await storage.createDeal({
-          category: template.category,
-          subCategory: template.subCategory,
-          dealType: template.dealType,
-          duration: "monthly",
-          redemption: "unlimited",
-          originalPrice: String(Math.floor(Math.random() * 500) + 50),
-          isMultipleItems: false,
-          discountPercentage: template.discountPercentage || undefined,
-          isTwoTranches: false,
-          specificDays: false,
-          title: template.title,
-          description: `Enjoy this amazing ${template.dealType} deal! Limited time offer.`,
-          claimRules: ["Deal Valid for Dine-in, Delivery & Take away"],
-          generalRules: ["Deal is not applicable on public holidays & all special events"],
-          branches: ["Main Branch", "City Center Branch"],
-        });
-        createdDeals.push(deal);
-      }
-
-      res.json({ success: true, count: createdDeals.length });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
