@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { LayoutDashboard, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Settings, LogOut, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       label: "Category Management",
       icon: Settings,
       href: "/admin/config",
+    },
+    {
+      label: "Terms Management",
+      icon: FileText,
+      href: "/admin/terms",
     },
   ];
 

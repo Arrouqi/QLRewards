@@ -179,6 +179,24 @@ export default function CreateOffer() {
     },
   });
 
+  const { data: claimTerms = [] } = useQuery<{ id: number; type: string; text: string }[]>({
+    queryKey: ["terms", "claim"],
+    queryFn: async () => {
+      const res = await fetch("/api/terms/claim");
+      if (!res.ok) throw new Error("Failed to fetch claim terms");
+      return res.json();
+    },
+  });
+
+  const { data: generalTerms = [] } = useQuery<{ id: number; type: string; text: string }[]>({
+    queryKey: ["terms", "general"],
+    queryFn: async () => {
+      const res = await fetch("/api/terms/general");
+      if (!res.ok) throw new Error("Failed to fetch general terms");
+      return res.json();
+    },
+  });
+
   useEffect(() => {
     if (categoriesError) {
       toast({
@@ -460,14 +478,8 @@ export default function CreateOffer() {
 
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-  const claimRulesOptions = [
-    "Deal Valid only for Dine-in (Not valid on Delivery / Take away)",
-    "Deal Valid only for Delivery / Take away",
-    "Deal Valid for Dine-in, Delivery & Take away",
-    "Multiple deals cannot be combined in the same transaction",
-    "One voucher per person per visit",
-    "One voucher per table/group/bill"
-  ];
+  const claimRulesOptions = claimTerms.map(term => term.text);
+  const generalRulesOptions = generalTerms.map(term => term.text);
 
   const offerTypes = [
     { id: "bogo", label: "Buy 1 Get 1", icon: Gift },
@@ -947,12 +959,7 @@ export default function CreateOffer() {
                         <FormItem>
                           <FormLabel className="text-xs font-bold text-slate-500 uppercase">General Rules <span className="font-normal normal-case text-slate-400">(Must choose one at least)</span></FormLabel>
                           <div className="grid gap-3 mt-2">
-                            {[
-                              "Deal is not applicable on public holidays & all special events",
-                              "Advance booking or reservation requirement",
-                              "Cannot be applied to already discounted items",
-                              "Cannot be combined with employee discounts"
-                            ].map((item) => (
+                            {generalRulesOptions.map((item) => (
                               <FormField
                                 key={item}
                                 control={form.control}
