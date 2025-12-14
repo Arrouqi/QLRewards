@@ -19,6 +19,8 @@ export interface IStorage {
   updateDealCategories(oldName: string, newName: string): Promise<void>;
   getAdminUser(username: string): Promise<AdminUser | undefined>;
   createAdminUser(user: InsertAdminUser): Promise<AdminUser>;
+  getAllAdminUsers(): Promise<AdminUser[]>;
+  updateDealAdminFields(id: string, adminComment: string | null, assignedTo: string | null): Promise<Deal | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
   getAllCategories(): Promise<Category[]>;
   updateCategory(id: string, name: string): Promise<Category | undefined>;
@@ -88,6 +90,19 @@ export class DatabaseStorage implements IStorage {
   async createAdminUser(user: InsertAdminUser): Promise<AdminUser> {
     const [newUser] = await db.insert(adminUsers).values(user).returning();
     return newUser;
+  }
+
+  async getAllAdminUsers(): Promise<AdminUser[]> {
+    return await db.select().from(adminUsers);
+  }
+
+  async updateDealAdminFields(id: string, adminComment: string | null, assignedTo: string | null): Promise<Deal | undefined> {
+    const [updated] = await db
+      .update(deals)
+      .set({ adminComment, assignedTo })
+      .where(eq(deals.id, id))
+      .returning();
+    return updated;
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {

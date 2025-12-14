@@ -124,6 +124,9 @@ const formSchema = z.object({
   claimRules: z.array(z.string()).min(1, "Select at least one claim rule"),
   generalRules: z.array(z.string()).min(1, "Select at least one general rule"),
   otherRules: z.string().optional(),
+  merchantName: z.string().optional(),
+  merchantEmail: z.string().email("Please enter a valid email").optional().or(z.literal("")),
+  merchantPhone: z.string().optional(),
   branches: z.array(z.string()).min(1, "At least one branch is required"),
   agreement: z.boolean().refine(val => val === true, "You must agree to the terms"),
 });
@@ -376,6 +379,9 @@ export default function CreateOffer() {
       title: "",
       description: "",
       otherRules: "",
+      merchantName: "",
+      merchantEmail: "",
+      merchantPhone: "",
       branches: [],
       specificDays: false,
       isMultipleItems: false,
@@ -445,6 +451,9 @@ export default function CreateOffer() {
         claimRules: data.claimRules,
         generalRules: data.generalRules,
         otherRules: data.otherRules,
+        merchantName: data.merchantName,
+        merchantEmail: data.merchantEmail,
+        merchantPhone: data.merchantPhone,
         branches: data.branches,
       };
 
@@ -1020,6 +1029,75 @@ export default function CreateOffer() {
                       )}
                     />
 
+                  </div>
+                </section>
+
+                {/* Merchant Details */}
+                <section>
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Merchant Details</h2>
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-4">
+                    <p className="text-sm text-slate-500 italic mb-4">
+                      Optional: Provide your contact details so we can reach you about your deal.
+                    </p>
+
+                    <FormField
+                      control={form.control}
+                      name="merchantName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Contact Name</FormLabel>
+                          <FormControl>
+                            <Input 
+                              className="h-11 bg-slate-50" 
+                              placeholder="Enter contact name"
+                              data-testid="input-merchant-name"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="merchantEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Email Address</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="email"
+                              className="h-11 bg-slate-50" 
+                              placeholder="Enter email address"
+                              data-testid="input-merchant-email"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="merchantPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Phone Number</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="tel"
+                              className="h-11 bg-slate-50" 
+                              placeholder="Enter phone number"
+                              data-testid="input-merchant-phone"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </section>
 

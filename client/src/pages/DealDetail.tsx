@@ -3,7 +3,7 @@ import { useLocation, useRoute } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, CheckCircle, Save } from "lucide-react";
+import { ArrowLeft, CheckCircle, Save, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,7 +24,13 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Deal } from "@shared/schema";
+import type { Deal, AdminUser } from "@shared/schema";
+
+interface AdminUserSafe {
+  id: string;
+  username: string;
+  role: string;
+}
 
 const dealSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -46,6 +52,9 @@ export default function DealDetail() {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<AdminUserSafe[]>([]);
+  const [adminComment, setAdminComment] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
 
   const form = useForm<DealValues>({
     resolver: zodResolver(dealSchema),
@@ -72,6 +81,14 @@ export default function DealDetail() {
 
       const data = await dealResponse.json();
       setDeal(data);
+      setAdminComment(data.adminComment || "");
+      setAssignedTo(data.assignedTo || "");
+
+      const adminUsersResponse = await fetch("/api/admin-users");
+      if (adminUsersResponse.ok) {
+        const users = await adminUsersResponse.json();
+        setAdminUsers(users);
+      }
 
       form.reset({
         title: data.title,
@@ -163,6 +180,42 @@ export default function DealDetail() {
     }
   };
 
+  const saveAdminFields = async () => {
+    if (!params?.id) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/deals/${params.id}/admin-fields`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ adminComment, assignedTo }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save admin fields");
+      }
+
+      const updatedDeal = await response.json();
+      setDeal(updatedDeal);
+
+      toast({
+        title: "Success",
+        description: "Admin notes saved successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save admin fields",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
@@ -201,7 +254,7 @@ export default function DealDetail() {
                   : "bg-yellow-100 text-yellow-800"
               }
             >
-              {deal.status}
+              {deal.status === "approved" ? "Sent to Moderation" : deal.status}
             </Badge>
           </div>
         </div>
@@ -381,12 +434,64 @@ export default function DealDetail() {
                     data-testid="button-approve"
                   >
                     <CheckCircle className="h-4 w-4" />
-                    Approve Deal
+                    Forward To Moderation
                   </Button>
                 )}
               </div>
             </form>
           </Form>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mt-6">
+          <h2 className="text-lg font-bold text-[#00426D] mb-4 flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Admin Notes
+          </h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Assign To
+              </label>
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger data-testid="select-assigned-to">
+                  <SelectValue placeholder="Select admin user" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {adminUsers.map((user) => (
+                    <SelectItem key={user.id} value={user.username}>
+                      {user.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Admin Comment
+              </label>
+              <Textarea
+                value={adminComment}
+                onChange={(e) => setAdminComment(e.target.value)}
+                placeholder="Add internal notes about this deal..."
+                rows={4}
+                data-testid="textarea-admin-comment"
+              />
+            </div>
+
+            <Button
+              type="button"
+              onClick={saveAdminFields}
+              disabled={isSaving}
+              className="bg-[#00426D] hover:bg-[#003152]"
+              data-testid="button-save-admin-notes"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {isSaving ? "Saving..." : "Save Admin Notes"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

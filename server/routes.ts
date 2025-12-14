@@ -162,6 +162,29 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin-users", requireAuth, async (req, res) => {
+    try {
+      const users = await storage.getAllAdminUsers();
+      const sanitizedUsers = users.map(({ password, ...user }) => user);
+      res.json(sanitizedUsers);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/deals/:id/admin-fields", requireAuth, async (req, res) => {
+    try {
+      const { adminComment, assignedTo } = req.body;
+      const deal = await storage.updateDealAdminFields(req.params.id, adminComment || null, assignedTo || null);
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found" });
+      }
+      res.json(deal);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/categories", async (req, res) => {
     try {
       const allCategories = await storage.getAllCategories();

@@ -153,21 +153,24 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex gap-2 mb-4">
-          {(["all", "pending", "approved", "archived"] as StatusFilter[]).map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={cn(
-                "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
-                statusFilter === status
-                  ? "bg-[#00426D] text-white"
-                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
-              )}
-              data-testid={`filter-${status}`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})
-            </button>
-          ))}
+          {(["all", "pending", "approved", "archived"] as StatusFilter[]).map((status) => {
+            const displayLabel = status === "approved" ? "Sent to Moderation" : status.charAt(0).toUpperCase() + status.slice(1);
+            return (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={cn(
+                  "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
+                  statusFilter === status
+                    ? "bg-[#00426D] text-white"
+                    : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                )}
+                data-testid={`filter-${status}`}
+              >
+                {displayLabel} ({statusCounts[status]})
+              </button>
+            );
+          })}
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
@@ -226,7 +229,7 @@ export default function AdminDashboard() {
                           deal.status === "archived" && "bg-slate-100 text-slate-600 hover:bg-slate-100"
                         )}
                       >
-                        {deal.status}
+                        {deal.status === "approved" ? "Sent to Moderation" : deal.status}
                       </Badge>
                     </TableCell>
                     <TableCell>

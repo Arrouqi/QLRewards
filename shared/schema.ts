@@ -25,6 +25,11 @@ export const deals = pgTable("deals", {
   generalRules: text("general_rules").array().notNull(),
   otherRules: text("other_rules"),
   branches: text("branches").array().notNull(),
+  merchantName: text("merchant_name"),
+  merchantEmail: text("merchant_email"),
+  merchantPhone: text("merchant_phone"),
+  adminComment: text("admin_comment"),
+  assignedTo: text("assigned_to"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -33,6 +38,8 @@ export const insertDealSchema = createInsertSchema(deals).omit({
   id: true,
   status: true,
   createdAt: true,
+  adminComment: true,
+  assignedTo: true,
 });
 
 export type InsertDeal = z.infer<typeof insertDealSchema>;
@@ -42,6 +49,7 @@ export const adminUsers = pgTable("admin_users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role").notNull().default("user"),
 });
 
 export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
