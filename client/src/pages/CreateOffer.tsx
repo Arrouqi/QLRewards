@@ -197,7 +197,10 @@ export default function CreateOffer() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      if (uploadedImages.length >= MAX_PHOTOS) {
+      const files = Array.from(e.target.files);
+      const remaining = MAX_PHOTOS - uploadedImages.length;
+      
+      if (remaining <= 0) {
         toast({
           title: "Maximum images reached",
           description: `You can only upload up to ${MAX_PHOTOS} images`,
@@ -206,15 +209,25 @@ export default function CreateOffer() {
         return;
       }
 
-      const file = e.target.files[0];
-      setOriginalFile(file);
-      setEditingIndex(null);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImageToCrop(reader.result as string);
-        setShowCropper(true);
-      };
-      reader.readAsDataURL(file);
+      const filesToUpload = files.slice(0, remaining);
+      const newImages = filesToUpload.map(file => ({
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+      
+      setUploadedImages(prev => [...prev, ...newImages]);
+      toast({
+        title: "Images uploaded",
+        description: `Successfully added ${filesToUpload.length} image(s)`,
+      });
+      
+      if (files.length > remaining) {
+        toast({
+          title: "Some images skipped",
+          description: `Only ${remaining} more image(s) allowed (max ${MAX_PHOTOS})`,
+          variant: "destructive",
+        });
+      }
       
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -1135,6 +1148,7 @@ export default function CreateOffer() {
                         ref={fileInputRef} 
                         className="hidden" 
                         accept="image/*"
+                        multiple
                         onChange={handleFileChange}
                         data-testid="input-image-upload"
                       />

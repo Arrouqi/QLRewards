@@ -79,3 +79,18 @@ export const insertSubCategorySchema = createInsertSchema(subCategories).omit({
 
 export type InsertSubCategory = z.infer<typeof insertSubCategorySchema>;
 export type SubCategory = typeof subCategories.$inferSelect;
+
+export const terms = pgTable("terms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(),
+  text: text("text").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTermSchema = createInsertSchema(terms).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTerm = z.infer<typeof insertTermSchema>;
+export type Term = typeof terms.$inferSelect;

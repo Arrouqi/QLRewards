@@ -3,7 +3,8 @@ import {
   type AdminUser, type InsertAdminUser, 
   type Category, type InsertCategory,
   type SubCategory, type InsertSubCategory,
-  deals, adminUsers, categories, subCategories 
+  type Term, type InsertTerm,
+  deals, adminUsers, categories, subCategories, terms 
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -27,6 +28,11 @@ export interface IStorage {
   getAllSubCategories(): Promise<SubCategory[]>;
   updateSubCategory(id: string, name: string): Promise<SubCategory | undefined>;
   deleteSubCategory(id: string): Promise<void>;
+  createTerm(term: InsertTerm): Promise<Term>;
+  getAllTerms(): Promise<Term[]>;
+  getTermsByType(type: string): Promise<Term[]>;
+  updateTerm(id: string, text: string): Promise<Term | undefined>;
+  deleteTerm(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -138,6 +144,32 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSubCategory(id: string): Promise<void> {
     await db.delete(subCategories).where(eq(subCategories.id, id));
+  }
+
+  async createTerm(term: InsertTerm): Promise<Term> {
+    const [newTerm] = await db.insert(terms).values(term).returning();
+    return newTerm;
+  }
+
+  async getAllTerms(): Promise<Term[]> {
+    return await db.select().from(terms);
+  }
+
+  async getTermsByType(type: string): Promise<Term[]> {
+    return await db.select().from(terms).where(eq(terms.type, type));
+  }
+
+  async updateTerm(id: string, text: string): Promise<Term | undefined> {
+    const [updated] = await db
+      .update(terms)
+      .set({ text })
+      .where(eq(terms.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTerm(id: string): Promise<void> {
+    await db.delete(terms).where(eq(terms.id, id));
   }
 }
 

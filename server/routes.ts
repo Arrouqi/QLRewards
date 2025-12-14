@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema } from "@shared/schema";
+import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -297,6 +297,60 @@ export async function registerRoutes(
       }
 
       res.json({ success: true, count: createdDeals.length });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Terms management routes
+  app.get("/api/terms", async (req, res) => {
+    try {
+      const allTerms = await storage.getAllTerms();
+      res.json(allTerms);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/terms/:type", async (req, res) => {
+    try {
+      const typeTerms = await storage.getTermsByType(req.params.type);
+      res.json(typeTerms);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/terms", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertTermSchema.parse(req.body);
+      const term = await storage.createTerm(validatedData);
+      res.status(201).json(term);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/terms/:id", requireAuth, async (req, res) => {
+    try {
+      const { text } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "Text is required" });
+      }
+      const term = await storage.updateTerm(req.params.id, text);
+      if (!term) {
+        return res.status(404).json({ error: "Term not found" });
+      }
+      res.json(term);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/terms/:id", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteTerm(req.params.id);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
