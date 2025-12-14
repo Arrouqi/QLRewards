@@ -27,7 +27,8 @@ import {
   ShoppingBag,
   Loader2,
   Crop as CropIcon,
-  Check
+  Check,
+  Pencil
 } from "lucide-react";
 
 interface SubCategory {
@@ -72,6 +73,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { useLocation } from "wouter";
 
@@ -154,10 +161,14 @@ export default function CreateOffer() {
   const [showCropper, setShowCropper] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>("");
   const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  const MIN_PHOTOS = 4;
+  const MAX_PHOTOS = 10;
 
   const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[]>({
     queryKey: ["categories"],
@@ -186,12 +197,10 @@ export default function CreateOffer() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const remaining = 5 - uploadedImages.length;
-      
-      if (remaining <= 0) {
+      if (uploadedImages.length >= MAX_PHOTOS) {
         toast({
           title: "Maximum images reached",
-          description: "You can only upload up to 5 images",
+          description: `You can only upload up to ${MAX_PHOTOS} images`,
           variant: "destructive",
         });
         return;
@@ -199,6 +208,7 @@ export default function CreateOffer() {
 
       const file = e.target.files[0];
       setOriginalFile(file);
+      setEditingIndex(null);
       const reader = new FileReader();
       reader.onload = () => {
         setImageToCrop(reader.result as string);
@@ -210,6 +220,14 @@ export default function CreateOffer() {
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  const handleEditImage = (index: number) => {
+    const img = uploadedImages[index];
+    setEditingIndex(index);
+    setOriginalFile(img.file);
+    setImageToCrop(img.preview);
+    setShowCropper(true);
   };
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -267,15 +285,29 @@ export default function CreateOffer() {
   const handleCropConfirm = async () => {
     const croppedImage = await getCroppedImage();
     if (croppedImage) {
-      setUploadedImages(prev => [...prev, croppedImage]);
-      toast({
-        title: "Image cropped",
-        description: "Image has been cropped and added successfully",
-      });
+      if (editingIndex !== null) {
+        setUploadedImages(prev => {
+          const newImages = [...prev];
+          URL.revokeObjectURL(newImages[editingIndex].preview);
+          newImages[editingIndex] = croppedImage;
+          return newImages;
+        });
+        toast({
+          title: "Image updated",
+          description: "Image has been re-cropped successfully",
+        });
+      } else {
+        setUploadedImages(prev => [...prev, croppedImage]);
+        toast({
+          title: "Image added",
+          description: "Image has been cropped and added successfully",
+        });
+      }
     }
     setShowCropper(false);
     setImageToCrop("");
     setOriginalFile(null);
+    setEditingIndex(null);
     setCrop(undefined);
     setCompletedCrop(undefined);
   };
@@ -284,6 +316,7 @@ export default function CreateOffer() {
     setShowCropper(false);
     setImageToCrop("");
     setOriginalFile(null);
+    setEditingIndex(null);
     setCrop(undefined);
     setCompletedCrop(undefined);
   };
@@ -352,6 +385,15 @@ export default function CreateOffer() {
   }, [redemptionType]);
 
   const onSubmit = async (data: FormValues) => {
+    if (uploadedImages.length < MIN_PHOTOS) {
+      toast({
+        title: "Not enough photos",
+        description: `Please upload at least ${MIN_PHOTOS} photos`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const dealData = {
         category: data.category,
@@ -1055,10 +1097,10 @@ export default function CreateOffer() {
                 <section>
                    <h2 className="text-lg font-bold text-[#00426D] mb-4">Upload Deal Photos</h2>
                    <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-                      <div className="flex items-start gap-3 mb-6 bg-slate-50 p-3 rounded text-xs text-slate-600">
+                      <div className="flex items-start gap-3 mb-4 bg-slate-50 p-3 rounded text-xs text-slate-600">
                         <Info className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
                         <p>
-                          Upload at least 3 photos (maximum 5) photos to attract shoppers to your deal. Use landscape orientation (horizontal) for optimal photo display.
+                          Upload at least {MIN_PHOTOS} photos (maximum {MAX_PHOTOS}) to attract shoppers to your deal. Use landscape orientation (horizontal) for optimal photo display.
                           <br/><br/>
                           Use clear, relevant, and unique images that represent the actual deal. Avoid promotional banners or pixelated visuals.
                         </p>
@@ -1066,6 +1108,26 @@ export default function CreateOffer() {
 
                       <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
                         <span>Hold and drag to reorder</span>
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="flex items-center gap-1 cursor-help text-blue-500 hover:text-blue-600">
+                                <Info className="h-3 w-3" />
+                                <span>1280 x 800 - recommended size</span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>For best display quality, upload images with 1280 x 800 pixels (16:10 aspect ratio)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+
+                      <div className="text-xs text-slate-500 mb-3">
+                        {uploadedImages.length} / {MAX_PHOTOS} photos uploaded
+                        {uploadedImages.length < MIN_PHOTOS && (
+                          <span className="text-amber-600 ml-2">(minimum {MIN_PHOTOS} required)</span>
+                        )}
                       </div>
 
                       <input 
@@ -1077,12 +1139,13 @@ export default function CreateOffer() {
                         data-testid="input-image-upload"
                       />
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-5 gap-3">
                         {/* Render uploaded images */}
                         {uploadedImages.map((img, index) => (
                           <div 
                             key={index}
-                            className="col-span-1 aspect-square relative group"
+                            className="aspect-[16/10] relative group"
+                            data-testid={`image-preview-${index}`}
                           >
                             {index === 0 && (
                               <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
@@ -1094,33 +1157,46 @@ export default function CreateOffer() {
                               alt={`Upload ${index + 1}`}
                               className="w-full h-full object-cover rounded-lg border-2 border-slate-200"
                             />
-                            <button
-                              type="button"
-                              onClick={() => removeImage(index)}
-                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleEditImage(index)}
+                                className="bg-white text-slate-700 rounded-full p-1.5 hover:bg-blue-50 transition-colors"
+                                data-testid={`button-edit-image-${index}`}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="bg-white text-red-500 rounded-full p-1.5 hover:bg-red-50 transition-colors"
+                                data-testid={`button-remove-image-${index}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
                           </div>
                         ))}
 
-                        {/* Empty slots for remaining uploads */}
-                        {uploadedImages.length < 5 && (
+                        {/* Show up to 5 empty upload tiles */}
+                        {uploadedImages.length < MAX_PHOTOS && Array.from({ length: Math.min(5, MAX_PHOTOS - uploadedImages.length) }).map((_, idx) => (
                           <div 
-                            className="col-span-1 aspect-square relative group cursor-pointer"
+                            key={`empty-${idx}`}
+                            className="aspect-[16/10] relative group cursor-pointer"
                             onClick={handleImageClick}
+                            data-testid={`upload-tile-${idx}`}
                           >
-                            {uploadedImages.length === 0 && (
+                            {uploadedImages.length === 0 && idx === 0 && (
                               <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
                                 Cover Photo
                               </div>
                             )}
                             <div className="w-full h-full border-2 border-dashed border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center p-2 text-center">
-                              <Plus className="h-6 w-6 text-slate-400 mb-1" />
-                              <span className="text-xs text-slate-500">Upload</span>
+                              <Plus className="h-5 w-5 text-slate-400 mb-1" />
+                              <span className="text-[10px] text-slate-500">Upload</span>
                             </div>
                           </div>
-                        )}
+                        ))}
                       </div>
                    </div>
                 </section>
@@ -1149,7 +1225,7 @@ export default function CreateOffer() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CropIcon className="h-5 w-5" />
-              Crop Image (16:10)
+              {editingIndex !== null ? "Edit Image" : "Crop Image"} (16:10)
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center gap-4">
