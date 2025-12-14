@@ -48,21 +48,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: LayoutDashboard,
       href: "/admin/dashboard",
     },
-    {
-      label: "Category Management",
-      icon: Settings,
-      href: "/admin/config",
-    },
-    {
-      label: "Terms Management",
-      icon: FileText,
-      href: "/admin/terms",
-    },
-    ...(session?.role === "admin" ? [{
-      label: "User Management",
-      icon: Users,
-      href: "/admin/users",
-    }] : []),
+    ...(session?.role === "admin" ? [
+      {
+        label: "Category Management",
+        icon: Settings,
+        href: "/admin/config",
+      },
+      {
+        label: "Terms Management",
+        icon: FileText,
+        href: "/admin/terms",
+      },
+      {
+        label: "User Management",
+        icon: Users,
+        href: "/admin/users",
+      },
+    ] : []),
   ];
 
   return (
@@ -138,6 +140,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         <div className="p-4 border-t border-white/10">
+          {session?.username && (
+            <div className="mb-3 px-2">
+              <p className="text-sm text-white/60">Logged in as</p>
+              <p className="text-white font-medium" data-testid="text-username">{session.username}</p>
+            </div>
+          )}
           <Button
             variant="ghost"
             onClick={handleLogout}
