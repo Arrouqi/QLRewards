@@ -14,14 +14,17 @@ export interface IStorage {
   getDealById(id: string): Promise<Deal | undefined>;
   updateDeal(id: string, deal: Partial<InsertDeal>): Promise<Deal | undefined>;
   approveDeal(id: string): Promise<Deal | undefined>;
+  updateDealCategories(oldName: string, newName: string): Promise<void>;
   getAdminUser(username: string): Promise<AdminUser | undefined>;
   createAdminUser(user: InsertAdminUser): Promise<AdminUser>;
   createCategory(category: InsertCategory): Promise<Category>;
   getAllCategories(): Promise<Category[]>;
+  updateCategory(id: string, name: string): Promise<Category | undefined>;
   deleteCategory(id: string): Promise<void>;
   createSubCategory(subCategory: InsertSubCategory): Promise<SubCategory>;
   getSubCategoriesByCategoryId(categoryId: string): Promise<SubCategory[]>;
   getAllSubCategories(): Promise<SubCategory[]>;
+  updateSubCategory(id: string, name: string): Promise<SubCategory | undefined>;
   deleteSubCategory(id: string): Promise<void>;
 }
 
@@ -80,9 +83,25 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(categories);
   }
 
+  async updateCategory(id: string, name: string): Promise<Category | undefined> {
+    const [updated] = await db
+      .update(categories)
+      .set({ name })
+      .where(eq(categories.id, id))
+      .returning();
+    return updated;
+  }
+
   async deleteCategory(id: string): Promise<void> {
     await db.delete(subCategories).where(eq(subCategories.categoryId, id));
     await db.delete(categories).where(eq(categories.id, id));
+  }
+
+  async updateDealCategories(oldName: string, newName: string): Promise<void> {
+    await db
+      .update(deals)
+      .set({ category: newName })
+      .where(eq(deals.category, oldName));
   }
 
   async createSubCategory(subCategory: InsertSubCategory): Promise<SubCategory> {
@@ -96,6 +115,15 @@ export class DatabaseStorage implements IStorage {
 
   async getAllSubCategories(): Promise<SubCategory[]> {
     return await db.select().from(subCategories);
+  }
+
+  async updateSubCategory(id: string, name: string): Promise<SubCategory | undefined> {
+    const [updated] = await db
+      .update(subCategories)
+      .set({ name })
+      .where(eq(subCategories.id, id))
+      .returning();
+    return updated;
   }
 
   async deleteSubCategory(id: string): Promise<void> {

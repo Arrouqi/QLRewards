@@ -513,7 +513,6 @@ export default function CreateOffer() {
                                     field.onChange(checked);
                                     setIsTwoTranches(!!checked);
                                   }}
-                                  className="data-[state=checked]:bg-[#F47920] data-[state=checked]:border-[#F47920]"
                                 />
                               </FormControl>
                               <FormLabel className="font-medium text-slate-700">

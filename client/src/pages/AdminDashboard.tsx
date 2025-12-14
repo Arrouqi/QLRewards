@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { LogOut, Settings } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -13,13 +14,19 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import AdminLayout from "@/components/AdminLayout";
 import type { Deal } from "@shared/schema";
+
+const ITEMS_PER_PAGE = 10;
 
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   useEffect(() => {
     checkAuthAndFetchDeals();
@@ -51,58 +58,93 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleSeedDeals = async () => {
+    setIsSeeding(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      setLocation("/admin/login");
+      const response = await fetch("/api/seed-deals", { method: "POST" });
+      if (!response.ok) {
+        throw new Error("Failed to seed deals");
+      }
+      const result = await response.json();
+      toast({
+        title: "Success",
+        description: `Created ${result.count} sample deals`,
+      });
+      await checkAuthAndFetchDeals();
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to logout",
+        description: error instanceof Error ? error.message : "Failed to seed deals",
         variant: "destructive",
       });
+    } finally {
+      setIsSeeding(false);
     }
   };
 
+  const filteredDeals = deals.filter((deal) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      deal.title.toLowerCase().includes(query) ||
+      deal.category.toLowerCase().includes(query) ||
+      deal.dealType.toLowerCase().includes(query) ||
+      deal.status.toLowerCase().includes(query)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredDeals.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedDeals = filteredDeals.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-        <div className="text-slate-500">Loading...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-slate-500">Loading...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA]">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <AdminLayout>
+      <div className="p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#00426D]">Admin Dashboard</h1>
+            <h1 className="text-2xl font-bold text-[#00426D]">Deal Requests</h1>
             <p className="text-slate-500 mt-1">Manage all deal submissions</p>
           </div>
-          <div className="flex items-center gap-2">
+          {deals.length === 0 && (
             <Button
-              variant="outline"
-              onClick={() => setLocation("/admin/config")}
-              data-testid="button-config"
-              className="flex items-center gap-2"
+              onClick={handleSeedDeals}
+              disabled={isSeeding}
+              className="bg-[#F47920] hover:bg-[#E06910]"
+              data-testid="button-seed-deals"
             >
-              <Settings className="h-4 w-4" />
-              Categories
+              <Database className="h-4 w-4 mr-2" />
+              {isSeeding ? "Creating..." : "Create Sample Deals"}
             </Button>
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-              data-testid="button-logout"
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          </div>
+          )}
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+          <div className="p-4 border-b border-slate-200">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search by title, category, type, or status..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+                data-testid="input-search"
+              />
+            </div>
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -115,14 +157,14 @@ export default function AdminDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {deals.length === 0 ? (
+              {paginatedDeals.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-slate-500 py-8">
-                    No deals found
+                    {searchQuery ? "No deals match your search" : "No deals found"}
                   </TableCell>
                 </TableRow>
               ) : (
-                deals.map((deal) => (
+                paginatedDeals.map((deal) => (
                   <TableRow
                     key={deal.id}
                     className="cursor-pointer hover:bg-slate-50"
@@ -155,8 +197,52 @@ export default function AdminDashboard() {
               )}
             </TableBody>
           </Table>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
+              <div className="text-sm text-slate-500">
+                Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredDeals.length)} of {filteredDeals.length} results
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  data-testid="button-prev-page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={currentPage === page ? "bg-[#00426D]" : ""}
+                      data-testid={`button-page-${page}`}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  data-testid="button-next-page"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

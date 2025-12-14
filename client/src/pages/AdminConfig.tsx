@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Plus, Trash2, Settings } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import AdminLayout from "@/components/AdminLayout";
 
 interface SubCategory {
   id: string;
@@ -43,6 +44,10 @@ export default function AdminConfig() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newSubCategoryName, setNewSubCategoryName] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState("");
+  const [editingSubCategoryId, setEditingSubCategoryId] = useState<string | null>(null);
+  const [editingSubCategoryName, setEditingSubCategoryName] = useState("");
 
   useEffect(() => {
     checkAuthAndFetchCategories();
@@ -78,164 +83,129 @@ export default function AdminConfig() {
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
-      toast({
-        title: "Error",
-        description: "Category name is required",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Category name is required", variant: "destructive" });
       return;
     }
-
     try {
       const response = await fetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newCategoryName.trim() }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to create category");
-      }
-
+      if (!response.ok) throw new Error("Failed to create category");
       setNewCategoryName("");
       await fetchCategories();
-      toast({
-        title: "Success",
-        description: "Category created successfully",
-      });
+      toast({ title: "Success", description: "Category created successfully" });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create category",
-        variant: "destructive",
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to create category", variant: "destructive" });
+    }
+  };
+
+  const handleRenameCategory = async (categoryId: string, oldName: string) => {
+    if (!editingCategoryName.trim()) {
+      toast({ title: "Error", description: "Category name is required", variant: "destructive" });
+      return;
+    }
+    try {
+      const response = await fetch(`/api/categories/${categoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editingCategoryName.trim(), oldName }),
       });
+      if (!response.ok) throw new Error("Failed to rename category");
+      setEditingCategoryId(null);
+      setEditingCategoryName("");
+      await fetchCategories();
+      toast({ title: "Success", description: "Category renamed successfully. All existing deals have been updated." });
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to rename category", variant: "destructive" });
     }
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
     try {
-      const response = await fetch(`/api/categories/${categoryId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete category");
-      }
-
+      const response = await fetch(`/api/categories/${categoryId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete category");
       await fetchCategories();
-      toast({
-        title: "Success",
-        description: "Category deleted successfully",
-      });
+      toast({ title: "Success", description: "Category deleted successfully" });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete category",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to delete category", variant: "destructive" });
     }
   };
 
   const handleAddSubCategory = async () => {
     if (!newSubCategoryName.trim()) {
-      toast({
-        title: "Error",
-        description: "Subcategory name is required",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Subcategory name is required", variant: "destructive" });
       return;
     }
-
     if (!selectedCategoryId) {
-      toast({
-        title: "Error",
-        description: "Please select a category",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Please select a category", variant: "destructive" });
       return;
     }
-
     try {
       const response = await fetch("/api/subcategories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categoryId: selectedCategoryId,
-          name: newSubCategoryName.trim(),
-        }),
+        body: JSON.stringify({ categoryId: selectedCategoryId, name: newSubCategoryName.trim() }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to create subcategory");
-      }
-
+      if (!response.ok) throw new Error("Failed to create subcategory");
       setNewSubCategoryName("");
       setSelectedCategoryId("");
       await fetchCategories();
-      toast({
-        title: "Success",
-        description: "Subcategory created successfully",
-      });
+      toast({ title: "Success", description: "Subcategory created successfully" });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create subcategory",
-        variant: "destructive",
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to create subcategory", variant: "destructive" });
+    }
+  };
+
+  const handleRenameSubCategory = async (subCategoryId: string) => {
+    if (!editingSubCategoryName.trim()) {
+      toast({ title: "Error", description: "Subcategory name is required", variant: "destructive" });
+      return;
+    }
+    try {
+      const response = await fetch(`/api/subcategories/${subCategoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editingSubCategoryName.trim() }),
       });
+      if (!response.ok) throw new Error("Failed to rename subcategory");
+      setEditingSubCategoryId(null);
+      setEditingSubCategoryName("");
+      await fetchCategories();
+      toast({ title: "Success", description: "Subcategory renamed successfully" });
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to rename subcategory", variant: "destructive" });
     }
   };
 
   const handleDeleteSubCategory = async (subCategoryId: string) => {
     try {
-      const response = await fetch(`/api/subcategories/${subCategoryId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete subcategory");
-      }
-
+      const response = await fetch(`/api/subcategories/${subCategoryId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete subcategory");
       await fetchCategories();
-      toast({
-        title: "Success",
-        description: "Subcategory deleted successfully",
-      });
+      toast({ title: "Success", description: "Subcategory deleted successfully" });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete subcategory",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to delete subcategory", variant: "destructive" });
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center">
-        <div className="text-slate-500">Loading...</div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-slate-500">Loading...</div>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA]">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setLocation("/admin/dashboard")}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-[#00426D] flex items-center gap-2">
-              <Settings className="h-6 w-6" />
-              Category Management
-            </h1>
-            <p className="text-slate-500 mt-1">Manage categories and subcategories</p>
-          </div>
+    <AdminLayout>
+      <div className="p-8 max-w-4xl">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-[#00426D]">Category Management</h1>
+          <p className="text-slate-500 mt-1">Manage categories and subcategories</p>
         </div>
 
         <div className="space-y-6">
@@ -250,11 +220,7 @@ export default function AdminConfig() {
                 className="flex-1"
                 onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
               />
-              <Button
-                onClick={handleAddCategory}
-                data-testid="button-add-category"
-                className="bg-[#00426D] hover:bg-[#003557]"
-              >
+              <Button onClick={handleAddCategory} data-testid="button-add-category" className="bg-[#00426D] hover:bg-[#003557]">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Category
               </Button>
@@ -270,9 +236,7 @@ export default function AdminConfig() {
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
+                    <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -284,11 +248,7 @@ export default function AdminConfig() {
                 className="flex-1"
                 onKeyDown={(e) => e.key === "Enter" && handleAddSubCategory()}
               />
-              <Button
-                onClick={handleAddSubCategory}
-                data-testid="button-add-subcategory"
-                className="bg-[#00426D] hover:bg-[#003557]"
-              >
+              <Button onClick={handleAddSubCategory} data-testid="button-add-subcategory" className="bg-[#00426D] hover:bg-[#003557]">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Subcategory
               </Button>
@@ -302,63 +262,113 @@ export default function AdminConfig() {
             ) : (
               <div className="space-y-4">
                 {categories.map((category) => (
-                  <div
-                    key={category.id}
-                    className="border border-slate-200 rounded-lg p-4"
-                    data-testid={`category-${category.id}`}
-                  >
+                  <div key={category.id} className="border border-slate-200 rounded-lg p-4" data-testid={`category-${category.id}`}>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-[#00426D]">{category.name}</h3>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            data-testid={`button-delete-category-${category.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
+                      {editingCategoryId === category.id ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <Input
+                            value={editingCategoryName}
+                            onChange={(e) => setEditingCategoryName(e.target.value)}
+                            className="max-w-xs"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleRenameCategory(category.id, category.name);
+                              if (e.key === "Escape") { setEditingCategoryId(null); setEditingCategoryName(""); }
+                            }}
+                          />
+                          <Button size="icon" variant="ghost" onClick={() => handleRenameCategory(category.id, category.name)} className="text-green-600 hover:text-green-700">
+                            <Check className="h-4 w-4" />
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Category</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete "{category.name}"? This will also delete all subcategories within it. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteCategory(category.id)}
-                              className="bg-red-500 hover:bg-red-600"
+                          <Button size="icon" variant="ghost" onClick={() => { setEditingCategoryId(null); setEditingCategoryName(""); }} className="text-slate-500">
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <h3 className="font-semibold text-[#00426D]">{category.name}</h3>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => { setEditingCategoryId(category.id); setEditingCategoryName(category.name); }}
+                              className="text-slate-500 hover:text-[#00426D]"
+                              data-testid={`button-edit-category-${category.id}`}
                             >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" data-testid={`button-delete-category-${category.id}`}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Category</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{category.name}"? This will also delete all subcategories within it. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteCategory(category.id)} className="bg-red-500 hover:bg-red-600">Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </>
+                      )}
                     </div>
                     {category.subCategories.length === 0 ? (
                       <p className="text-sm text-slate-400 pl-4">No subcategories</p>
                     ) : (
                       <div className="pl-4 space-y-2">
                         {category.subCategories.map((sub) => (
-                          <div
-                            key={sub.id}
-                            className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded"
-                            data-testid={`subcategory-${sub.id}`}
-                          >
-                            <span className="text-slate-700">{sub.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleDeleteSubCategory(sub.id)}
-                              data-testid={`button-delete-subcategory-${sub.id}`}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                          <div key={sub.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded" data-testid={`subcategory-${sub.id}`}>
+                            {editingSubCategoryId === sub.id ? (
+                              <div className="flex items-center gap-2 flex-1">
+                                <Input
+                                  value={editingSubCategoryName}
+                                  onChange={(e) => setEditingSubCategoryName(e.target.value)}
+                                  className="max-w-xs"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleRenameSubCategory(sub.id);
+                                    if (e.key === "Escape") { setEditingSubCategoryId(null); setEditingSubCategoryName(""); }
+                                  }}
+                                />
+                                <Button size="icon" variant="ghost" onClick={() => handleRenameSubCategory(sub.id)} className="text-green-600 hover:text-green-700">
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" onClick={() => { setEditingSubCategoryId(null); setEditingSubCategoryName(""); }} className="text-slate-500">
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <span className="text-slate-700">{sub.name}</span>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-slate-500 hover:text-[#00426D]"
+                                    onClick={() => { setEditingSubCategoryId(sub.id); setEditingSubCategoryName(sub.name); }}
+                                    data-testid={`button-edit-subcategory-${sub.id}`}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => handleDeleteSubCategory(sub.id)}
+                                    data-testid={`button-delete-subcategory-${sub.id}`}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -370,6 +380,6 @@ export default function AdminConfig() {
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
