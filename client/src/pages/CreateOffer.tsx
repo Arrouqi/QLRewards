@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, ChangeEvent } from "react";
+import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
+import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { 
   Calendar,
   ChevronDown, 
@@ -23,7 +25,9 @@ import {
   Percent,
   Tag,
   ShoppingBag,
-  Loader2
+  Loader2,
+  Crop as CropIcon,
+  Check
 } from "lucide-react";
 
 interface SubCategory {
@@ -61,8 +65,37 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 import { useLocation } from "wouter";
+
+const ASPECT_RATIO = 16 / 10;
+
+function centerAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number,
+) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  );
+}
 
 // Schema
 const formSchema = z.object({
@@ -117,6 +150,14 @@ export default function CreateOffer() {
   const [isTwoTranches, setIsTwoTranches] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
   const [branchInput, setBranchInput] = useState("");
+  
+  const [showCropper, setShowCropper] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>("");
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const imgRef = useRef<HTMLImageElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[]>({
     queryKey: ["categories"],
@@ -145,7 +186,6 @@ export default function CreateOffer() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
       const remaining = 5 - uploadedImages.length;
       
       if (remaining <= 0) {
@@ -157,30 +197,95 @@ export default function CreateOffer() {
         return;
       }
 
-      const filesToUpload = files.slice(0, remaining);
-      const newImages = filesToUpload.map(file => ({
-        file,
-        preview: URL.createObjectURL(file)
-      }));
-      
-      setUploadedImages(prev => [...prev, ...newImages]);
-      toast({
-        title: "Images Uploaded",
-        description: `Successfully uploaded ${filesToUpload.length} image(s)`,
-      });
-      
-      if (files.length > remaining) {
-        toast({
-          title: "Some images skipped",
-          description: `Only ${remaining} more image(s) allowed (max 5)`,
-          variant: "destructive",
-        });
-      }
+      const file = e.target.files[0];
+      setOriginalFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageToCrop(reader.result as string);
+        setShowCropper(true);
+      };
+      reader.readAsDataURL(file);
       
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    const initialCrop = centerAspectCrop(width, height, ASPECT_RATIO);
+    setCrop(initialCrop);
+    const pixelCrop = convertToPixelCrop(initialCrop, width, height);
+    setCompletedCrop(pixelCrop);
+  }, []);
+
+  const getCroppedImage = useCallback(async (): Promise<{ file: File; preview: string } | null> => {
+    if (!completedCrop || !imgRef.current || !canvasRef.current || !originalFile) {
+      return null;
+    }
+
+    const image = imgRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return null;
+    }
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(null);
+          return;
+        }
+        const croppedFile = new File([blob], originalFile.name, { type: 'image/jpeg' });
+        const preview = URL.createObjectURL(blob);
+        resolve({ file: croppedFile, preview });
+      }, 'image/jpeg', 0.9);
+    });
+  }, [completedCrop, originalFile]);
+
+  const handleCropConfirm = async () => {
+    const croppedImage = await getCroppedImage();
+    if (croppedImage) {
+      setUploadedImages(prev => [...prev, croppedImage]);
+      toast({
+        title: "Image cropped",
+        description: "Image has been cropped and added successfully",
+      });
+    }
+    setShowCropper(false);
+    setImageToCrop("");
+    setOriginalFile(null);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    setImageToCrop("");
+    setOriginalFile(null);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
   };
 
   const removeImage = (index: number) => {
@@ -968,8 +1073,8 @@ export default function CreateOffer() {
                         ref={fileInputRef} 
                         className="hidden" 
                         accept="image/*"
-                        multiple
                         onChange={handleFileChange}
+                        data-testid="input-image-upload"
                       />
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -1038,6 +1143,60 @@ export default function CreateOffer() {
           </form>
         </Form>
       </main>
+
+      <Dialog open={showCropper} onOpenChange={(open) => !open && handleCropCancel()}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CropIcon className="h-5 w-5" />
+              Crop Image (16:10)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-sm text-slate-500">
+              Adjust the crop area to fit the 16:10 aspect ratio for optimal display.
+            </p>
+            {imageToCrop && (
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={ASPECT_RATIO}
+                className="max-h-[400px]"
+              >
+                <img
+                  ref={imgRef}
+                  src={imageToCrop}
+                  alt="Crop preview"
+                  onLoad={onImageLoad}
+                  className="max-h-[400px] w-auto"
+                />
+              </ReactCrop>
+            )}
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCropCancel}
+              data-testid="button-cancel-crop"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCropConfirm}
+              className="bg-[#00426D] hover:bg-[#003557]"
+              disabled={!completedCrop}
+              data-testid="button-confirm-crop"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Confirm Crop
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
