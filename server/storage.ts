@@ -20,6 +20,9 @@ export interface IStorage {
   getAdminUser(username: string): Promise<AdminUser | undefined>;
   createAdminUser(user: InsertAdminUser): Promise<AdminUser>;
   getAllAdminUsers(): Promise<AdminUser[]>;
+  getAdminUserById(id: string): Promise<AdminUser | undefined>;
+  updateAdminUser(id: string, data: { password?: string; role?: string }): Promise<AdminUser | undefined>;
+  deleteAdminUser(id: string): Promise<void>;
   updateDealAdminFields(id: string, adminComment: string | null, assignedTo: string | null): Promise<Deal | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
   getAllCategories(): Promise<Category[]>;
@@ -94,6 +97,20 @@ export class DatabaseStorage implements IStorage {
 
   async getAllAdminUsers(): Promise<AdminUser[]> {
     return await db.select().from(adminUsers);
+  }
+
+  async getAdminUserById(id: string): Promise<AdminUser | undefined> {
+    const [user] = await db.select().from(adminUsers).where(eq(adminUsers.id, id));
+    return user;
+  }
+
+  async updateAdminUser(id: string, data: { password?: string; role?: string }): Promise<AdminUser | undefined> {
+    const [updated] = await db.update(adminUsers).set(data).where(eq(adminUsers.id, id)).returning();
+    return updated;
+  }
+
+  async deleteAdminUser(id: string): Promise<void> {
+    await db.delete(adminUsers).where(eq(adminUsers.id, id));
   }
 
   async updateDealAdminFields(id: string, adminComment: string | null, assignedTo: string | null): Promise<Deal | undefined> {

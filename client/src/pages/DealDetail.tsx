@@ -3,7 +3,7 @@ import { useLocation, useRoute } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, CheckCircle, Save, MessageSquare } from "lucide-react";
+import { ArrowLeft, CheckCircle, Save, MessageSquare, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -232,15 +232,26 @@ export default function DealDetail() {
     <div className="min-h-screen bg-[#F5F6FA]">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => setLocation("/admin/dashboard")}
-            className="mb-4 flex items-center gap-2"
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => setLocation("/admin/dashboard")}
+              className="flex items-center gap-2"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setLocation(`/admin/deals/${params?.id}/print`)}
+              className="flex items-center gap-2"
+              data-testid="button-print-view"
+            >
+              <Printer className="h-4 w-4" />
+              Print View
+            </Button>
+          </div>
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-bold text-[#00426D]">Deal Details</h1>

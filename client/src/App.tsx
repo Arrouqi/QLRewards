@@ -11,7 +11,9 @@ import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminConfig from "@/pages/AdminConfig";
 import TermsManagement from "@/pages/TermsManagement";
+import UserManagement from "@/pages/UserManagement";
 import DealDetail from "@/pages/DealDetail";
+import PrintDeal from "@/pages/PrintDeal";
 
 function Router() {
   return (
@@ -23,7 +25,9 @@ function Router() {
       <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/config" component={AdminConfig} />
       <Route path="/admin/terms" component={TermsManagement} />
+      <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/deals/:id" component={DealDetail} />
+      <Route path="/admin/deals/:id/print" component={PrintDeal} />
       <Route component={NotFound} />
     </Switch>
   );

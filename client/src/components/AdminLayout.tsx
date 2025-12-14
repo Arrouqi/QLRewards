@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
-import { LayoutDashboard, Settings, LogOut, FileText } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { LayoutDashboard, Settings, LogOut, FileText, Users, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -11,6 +13,16 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const { data: session } = useQuery({
+    queryKey: ["/api/auth/session"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/session");
+      if (!res.ok) return { role: "user" };
+      return res.json();
+    },
+  });
 
   const handleLogout = async () => {
     try {
@@ -23,6 +35,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         variant: "destructive",
       });
     }
+  };
+
+  const handleNavigation = (href: string) => {
+    setLocation(href);
+    setIsSidebarOpen(false);
   };
 
   const menuItems = [
@@ -41,17 +58,60 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: FileText,
       href: "/admin/terms",
     },
+    ...(session?.role === "admin" ? [{
+      label: "User Management",
+      icon: Users,
+      href: "/admin/users",
+    }] : []),
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] flex">
-      <aside className="w-64 bg-[#00426D] text-white flex flex-col">
-        <div className="p-6 border-b border-white/10">
+    <div className="min-h-screen bg-[#F5F6FA] flex flex-col md:flex-row">
+      <div className="md:hidden bg-[#00426D] text-white p-4 flex justify-between items-center">
+        <div>
+          <h1 className="text-lg font-bold">Qatar Living Deals</h1>
+          <p className="text-xs text-white/60">Admin Portal</p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="text-white hover:bg-white/10"
+          data-testid="button-toggle-menu"
+        >
+          {isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </Button>
+      </div>
+
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 w-64 bg-[#00426D] text-white flex flex-col transform transition-transform duration-300 md:relative md:transform-none",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      )}>
+        <div className="p-6 border-b border-white/10 hidden md:block">
           <h1 className="text-xl font-bold">Qatar Living Deals</h1>
           <p className="text-sm text-white/60 mt-1">Admin Portal</p>
         </div>
 
-        <nav className="flex-1 p-4">
+        <div className="md:hidden p-4 border-b border-white/10 flex justify-between items-center">
+          <span className="font-bold">Menu</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsSidebarOpen(false)}
+            className="text-white hover:bg-white/10"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-2">
             {menuItems.map((item) => {
               const isActive = location === item.href;
@@ -59,7 +119,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               return (
                 <li key={item.href}>
                   <button
-                    onClick={() => setLocation(item.href)}
+                    onClick={() => handleNavigation(item.href)}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left",
                       isActive

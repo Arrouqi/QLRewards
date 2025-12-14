@@ -135,16 +135,16 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
-        <div className="flex justify-between items-center mb-8">
+      <div className="p-4 md:p-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-[#00426D]">Deal Requests</h1>
-            <p className="text-slate-500 mt-1">Manage all deal submissions</p>
+            <h1 className="text-xl md:text-2xl font-bold text-[#00426D]">Deal Requests</h1>
+            <p className="text-slate-500 text-sm md:text-base mt-1">Manage all deal submissions</p>
           </div>
           <Button
             onClick={handleSeedDeals}
             disabled={isSeeding}
-            className="bg-[#F47920] hover:bg-[#E06910]"
+            className="bg-[#F47920] hover:bg-[#E06910] w-full sm:w-auto"
             data-testid="button-seed-deals"
           >
             <Database className="h-4 w-4 mr-2" />
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
           </Button>
         </div>
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           {(["all", "pending", "approved", "archived"] as StatusFilter[]).map((status) => {
             const displayLabel = status === "approved" ? "Sent to Moderation" : status.charAt(0).toUpperCase() + status.slice(1);
             return (
@@ -160,7 +160,7 @@ export default function AdminDashboard() {
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={cn(
-                  "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
+                  "px-3 md:px-4 py-2 rounded-lg font-medium text-xs md:text-sm transition-colors",
                   statusFilter === status
                     ? "bg-[#00426D] text-white"
                     : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
@@ -175,10 +175,10 @@ export default function AdminDashboard() {
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
           <div className="p-4 border-b border-slate-200">
-            <div className="relative max-w-md">
+            <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Search by title, category, type, or status..."
+                placeholder="Search deals..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -187,6 +187,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -253,11 +254,12 @@ export default function AdminDashboard() {
               )}
             </TableBody>
           </Table>
+          </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
-              <div className="text-sm text-slate-500">
-                Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredDeals.length)} of {filteredDeals.length} results
+            <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-slate-200 gap-4">
+              <div className="text-sm text-slate-500 text-center sm:text-left">
+                Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, filteredDeals.length)} of {filteredDeals.length}
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -268,21 +270,33 @@ export default function AdminDashboard() {
                   data-testid="button-prev-page"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Previous
+                  <span className="hidden sm:inline">Previous</span>
                 </Button>
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className={currentPage === page ? "bg-[#00426D]" : ""}
-                      data-testid={`button-page-${page}`}
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let page;
+                    if (totalPages <= 5) {
+                      page = i + 1;
+                    } else if (currentPage <= 3) {
+                      page = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      page = totalPages - 4 + i;
+                    } else {
+                      page = currentPage - 2 + i;
+                    }
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className={currentPage === page ? "bg-[#00426D]" : ""}
+                        data-testid={`button-page-${page}`}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
                 </div>
                 <Button
                   variant="outline"
@@ -291,7 +305,7 @@ export default function AdminDashboard() {
                   disabled={currentPage === totalPages}
                   data-testid="button-next-page"
                 >
-                  Next
+                  <span className="hidden sm:inline">Next</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

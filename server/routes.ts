@@ -13,6 +13,7 @@ declare module "express-session" {
   interface SessionData {
     userId: string;
     username: string;
+    role: string;
   }
 }
 
@@ -135,8 +136,9 @@ export async function registerRoutes(
 
       req.session.userId = user.id;
       req.session.username = user.username;
+      req.session.role = user.role;
 
-      res.json({ success: true, username: user.username });
+      res.json({ success: true, username: user.username, role: user.role });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -155,7 +157,8 @@ export async function registerRoutes(
     if (req.session.userId) {
       res.json({ 
         authenticated: true, 
-        username: req.session.username 
+        username: req.session.username,
+        role: req.session.role 
       });
     } else {
       res.status(401).json({ authenticated: false });
@@ -164,9 +167,81 @@ export async function registerRoutes(
 
   app.get("/api/admin-users", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const users = await storage.getAllAdminUsers();
       const sanitizedUsers = users.map(({ password, ...user }) => user);
       res.json(sanitizedUsers);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin-users", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { username, password, role } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password required" });
+      }
+      const existing = await storage.getAdminUser(username);
+      if (existing) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await storage.createAdminUser({ 
+        username, 
+        password: hashedPassword, 
+        role: role || "user" 
+      });
+      const { password: _, ...sanitizedUser } = user;
+      res.status(201).json(sanitizedUser);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin-users/:id", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { password, role } = req.body;
+      const updateData: { password?: string; role?: string } = {};
+      if (password) {
+        updateData.password = await bcrypt.hash(password, 10);
+      }
+      if (role) {
+        updateData.role = role;
+      }
+      const user = await storage.updateAdminUser(req.params.id, updateData);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { password: _, ...sanitizedUser } = user;
+      res.json(sanitizedUser);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin-users/:id", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const user = await storage.getAdminUserById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (user.username === "admin") {
+        return res.status(400).json({ error: "Cannot delete the default admin user" });
+      }
+      await storage.deleteAdminUser(req.params.id);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -390,8 +465,12 @@ async function createDefaultAdminUser() {
       await storage.createAdminUser({
         username: "admin",
         password: hashedPassword,
+        role: "admin",
       });
       console.log("Default admin user created: username=admin, password=admin123");
+    } else if (existingAdmin.role !== "admin") {
+      await storage.updateAdminUser(existingAdmin.id, { role: "admin" });
+      console.log("Updated existing admin user to have admin role");
     }
   } catch (error) {
     console.error("Error creating default admin user:", error);
