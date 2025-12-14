@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -27,6 +28,7 @@ export default function AdminLogin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -51,6 +53,8 @@ export default function AdminLogin() {
         const error = await response.json();
         throw new Error(error.error || "Login failed");
       }
+
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/session"] });
 
       toast({
         title: "Success",
