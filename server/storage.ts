@@ -14,6 +14,7 @@ export interface IStorage {
   getDealById(id: string): Promise<Deal | undefined>;
   updateDeal(id: string, deal: Partial<InsertDeal>): Promise<Deal | undefined>;
   approveDeal(id: string): Promise<Deal | undefined>;
+  archiveDeal(id: string): Promise<Deal | undefined>;
   updateDealCategories(oldName: string, newName: string): Promise<void>;
   getAdminUser(username: string): Promise<AdminUser | undefined>;
   createAdminUser(user: InsertAdminUser): Promise<AdminUser>;
@@ -59,6 +60,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(deals.id, id))
       .returning();
     return approved;
+  }
+
+  async archiveDeal(id: string): Promise<Deal | undefined> {
+    const [archived] = await db
+      .update(deals)
+      .set({ status: "archived" })
+      .where(eq(deals.id, id))
+      .returning();
+    return archived;
   }
 
   async getAdminUser(username: string): Promise<AdminUser | undefined> {

@@ -104,6 +104,18 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/deals/:id/archive", requireAuth, async (req, res) => {
+    try {
+      const deal = await storage.archiveDeal(req.params.id);
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found" });
+      }
+      res.json(deal);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;

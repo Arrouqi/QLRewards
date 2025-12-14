@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Search, ChevronLeft, ChevronRight, Database } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Database, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,9 +15,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
+import { cn } from "@/lib/utils";
 import type { Deal } from "@shared/schema";
 
 const ITEMS_PER_PAGE = 10;
+type StatusFilter = "all" | "pending" | "approved" | "archived";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -27,6 +29,7 @@ export default function AdminDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   useEffect(() => {
     checkAuthAndFetchDeals();
@@ -84,13 +87,33 @@ export default function AdminDashboard() {
 
   const filteredDeals = deals.filter((deal) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = 
       deal.title.toLowerCase().includes(query) ||
       deal.category.toLowerCase().includes(query) ||
       deal.dealType.toLowerCase().includes(query) ||
-      deal.status.toLowerCase().includes(query)
-    );
+      deal.status.toLowerCase().includes(query);
+    const matchesStatus = statusFilter === "all" || deal.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
+
+  const statusCounts = {
+    all: deals.length,
+    pending: deals.filter(d => d.status === "pending").length,
+    approved: deals.filter(d => d.status === "approved").length,
+    archived: deals.filter(d => d.status === "archived").length,
+  };
+
+  const handleArchive = async (dealId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch(`/api/deals/${dealId}/archive`, { method: "PATCH" });
+      if (!response.ok) throw new Error("Failed to archive deal");
+      toast({ title: "Success", description: "Deal archived successfully" });
+      await checkAuthAndFetchDeals();
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to archive deal", variant: "destructive" });
+    }
+  };
 
   const totalPages = Math.ceil(filteredDeals.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -98,7 +121,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, statusFilter]);
 
   if (isLoading) {
     return (
@@ -118,17 +141,33 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-bold text-[#00426D]">Deal Requests</h1>
             <p className="text-slate-500 mt-1">Manage all deal submissions</p>
           </div>
-          {deals.length === 0 && (
-            <Button
-              onClick={handleSeedDeals}
-              disabled={isSeeding}
-              className="bg-[#F47920] hover:bg-[#E06910]"
-              data-testid="button-seed-deals"
+          <Button
+            onClick={handleSeedDeals}
+            disabled={isSeeding}
+            className="bg-[#F47920] hover:bg-[#E06910]"
+            data-testid="button-seed-deals"
+          >
+            <Database className="h-4 w-4 mr-2" />
+            {isSeeding ? "Creating..." : "Add Sample Deals"}
+          </Button>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          {(["all", "pending", "approved", "archived"] as StatusFilter[]).map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={cn(
+                "px-4 py-2 rounded-lg font-medium text-sm transition-colors",
+                statusFilter === status
+                  ? "bg-[#00426D] text-white"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              )}
+              data-testid={`filter-${status}`}
             >
-              <Database className="h-4 w-4 mr-2" />
-              {isSeeding ? "Creating..." : "Create Sample Deals"}
-            </Button>
-          )}
+              {status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})
+            </button>
+          ))}
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
@@ -154,13 +193,14 @@ export default function AdminDashboard() {
                 <TableHead>Deal Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created Date</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedDeals.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-slate-500 py-8">
-                    {searchQuery ? "No deals match your search" : "No deals found"}
+                  <TableCell colSpan={7} className="text-center text-slate-500 py-8">
+                    {searchQuery || statusFilter !== "all" ? "No deals match your filters" : "No deals found"}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -179,18 +219,31 @@ export default function AdminDashboard() {
                     <TableCell className="capitalize">{deal.dealType}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={deal.status === "approved" ? "default" : "secondary"}
-                        className={
-                          deal.status === "approved"
-                            ? "bg-green-100 text-green-800 hover:bg-green-100"
-                            : "bg-yellow-100 text-yellow-800 hover:bg-yellow-100"
-                        }
+                        variant="secondary"
+                        className={cn(
+                          deal.status === "approved" && "bg-green-100 text-green-800 hover:bg-green-100",
+                          deal.status === "pending" && "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
+                          deal.status === "archived" && "bg-slate-100 text-slate-600 hover:bg-slate-100"
+                        )}
                       >
                         {deal.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       {format(new Date(deal.createdAt), "MMM dd, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      {deal.status !== "archived" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleArchive(deal.id, e)}
+                          className="text-slate-500 hover:text-slate-700"
+                          data-testid={`button-archive-${deal.id}`}
+                        >
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
