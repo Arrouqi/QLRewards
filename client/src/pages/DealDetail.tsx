@@ -464,12 +464,12 @@ export default function DealDetail() {
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Assign To
               </label>
-              <Select value={assignedTo} onValueChange={setAssignedTo}>
+              <Select value={assignedTo || "unassigned"} onValueChange={(val) => setAssignedTo(val === "unassigned" ? "" : val)}>
                 <SelectTrigger data-testid="select-assigned-to">
                   <SelectValue placeholder="Select admin user" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {adminUsers.map((user) => (
                     <SelectItem key={user.id} value={user.username}>
                       {user.username}
