@@ -406,7 +406,7 @@ export default function OfferForm() {
                         name="contactName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-slate-700">Contact Person</FormLabel>
+                            <FormLabel className="text-slate-700">Merchant Name</FormLabel>
                             <FormControl>
                               <Input className="h-11 bg-slate-50" placeholder="Full Name" {...field} />
                             </FormControl>
@@ -419,7 +419,7 @@ export default function OfferForm() {
                         name="contactEmail"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-slate-700">Email Address</FormLabel>
+                            <FormLabel className="text-slate-700">Qatar Living Account Email Address</FormLabel>
                             <FormControl>
                               <Input className="h-11 bg-slate-50" placeholder="email@company.com" {...field} />
                             </FormControl>
@@ -432,7 +432,7 @@ export default function OfferForm() {
                         name="contactPhone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-slate-700">Phone Number</FormLabel>
+                            <FormLabel className="text-slate-700">Contact Number</FormLabel>
                             <FormControl>
                               <Input className="h-11 bg-slate-50" placeholder="+974 0000 0000" {...field} />
                             </FormControl>

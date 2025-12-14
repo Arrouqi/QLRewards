@@ -1045,11 +1045,11 @@ export default function CreateOffer() {
                       name="merchantName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Contact Name</FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Merchant Name</FormLabel>
                           <FormControl>
                             <Input 
                               className="h-11 bg-slate-50" 
-                              placeholder="Enter contact name"
+                              placeholder="Enter merchant name"
                               data-testid="input-merchant-name"
                               {...field} 
                             />
@@ -1064,12 +1064,12 @@ export default function CreateOffer() {
                       name="merchantEmail"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Email Address</FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Qatar Living Account Email Address</FormLabel>
                           <FormControl>
                             <Input 
                               type="email"
                               className="h-11 bg-slate-50" 
-                              placeholder="Enter email address"
+                              placeholder="Enter Qatar Living account email"
                               data-testid="input-merchant-email"
                               {...field} 
                             />
@@ -1084,12 +1084,12 @@ export default function CreateOffer() {
                       name="merchantPhone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Phone Number</FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Contact Number</FormLabel>
                           <FormControl>
                             <Input 
                               type="tel"
                               className="h-11 bg-slate-50" 
-                              placeholder="Enter phone number"
+                              placeholder="Enter contact number"
                               data-testid="input-merchant-phone"
                               {...field} 
                             />
@@ -1309,7 +1309,7 @@ export default function CreateOffer() {
                   Close
                 </Button>
                 <Button type="submit" className="min-w-[140px] bg-[#00426D] text-white hover:bg-[#003557]">
-                  Save & Publish
+                  Submit Deal
                 </Button>
               </div>
             </div>

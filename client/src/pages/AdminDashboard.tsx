@@ -73,6 +73,9 @@ export default function AdminDashboard() {
       deal.status.toLowerCase().includes(query);
     const matchesStatus = statusFilter === "all" || deal.status === statusFilter;
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    const statusOrder: Record<string, number> = { pending: 0, approved: 1, archived: 2 };
+    return (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
   });
 
   const statusCounts = {
