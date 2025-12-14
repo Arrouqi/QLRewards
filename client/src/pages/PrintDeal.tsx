@@ -1,15 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import type { Deal } from "@shared/schema";
 import { format } from "date-fns";
-import { Printer } from "lucide-react";
+import { FileDown, ArrowLeft, Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 export default function PrintDeal() {
   const [, params] = useRoute("/admin/deals/:id/print");
   const [, setLocation] = useLocation();
   const [deal, setDeal] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchDeal();
@@ -37,6 +41,76 @@ export default function PrintDeal() {
       setLocation("/admin/dashboard");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current || !deal) return;
+    
+    setIsGenerating(true);
+    try {
+      const canvas = await html2canvas(contentRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+      
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = pdfWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+      
+      if (scaledHeight <= pdfHeight) {
+        const imgData = canvas.toDataURL("image/png");
+        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, scaledHeight);
+      } else {
+        let yPosition = 0;
+        let page = 0;
+        const pageHeightInCanvas = pdfHeight / ratio;
+        
+        while (yPosition < imgHeight) {
+          if (page > 0) {
+            pdf.addPage();
+          }
+          
+          const remainingHeight = imgHeight - yPosition;
+          const sliceHeight = Math.min(pageHeightInCanvas, remainingHeight);
+          
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = imgWidth;
+          tempCanvas.height = sliceHeight;
+          const ctx = tempCanvas.getContext("2d");
+          
+          if (ctx) {
+            ctx.drawImage(
+              canvas,
+              0, yPosition, imgWidth, sliceHeight,
+              0, 0, imgWidth, sliceHeight
+            );
+            const pageData = tempCanvas.toDataURL("image/png");
+            pdf.addImage(pageData, "PNG", 0, 0, pdfWidth, sliceHeight * ratio);
+          }
+          
+          yPosition += pageHeightInCanvas;
+          page++;
+        }
+      }
+      
+      const filename = `deal-${deal.title.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}-${deal.id.slice(0, 8)}.pdf`;
+      pdf.save(filename);
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -80,22 +154,51 @@ export default function PrintDeal() {
         @media print {
           .no-print { display: none !important; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .print-page { padding: 0 !important; margin: 0 !important; }
         }
       `}</style>
       
-      <div className="no-print fixed top-4 right-4 z-50">
+      <div className="no-print fixed top-4 left-4 right-4 z-50 flex justify-between">
         <Button 
-          onClick={handlePrint} 
-          className="bg-[#00426D] hover:bg-[#003152] flex items-center gap-2"
-          data-testid="button-print"
+          variant="outline"
+          onClick={() => setLocation(`/admin/deals/${params?.id}`)} 
+          className="flex items-center gap-2 bg-white"
+          data-testid="button-back"
         >
-          <Printer className="h-4 w-4" />
-          Print
+          <ArrowLeft className="h-4 w-4" />
+          Back
         </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline"
+            onClick={handlePrint}
+            className="flex items-center gap-2 bg-white"
+            data-testid="button-print"
+          >
+            <Printer className="h-4 w-4" />
+            Print
+          </Button>
+          <Button 
+            onClick={handleDownloadPDF}
+            disabled={isGenerating}
+            className="bg-[#00426D] hover:bg-[#003152] flex items-center gap-2"
+            data-testid="button-download-pdf"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileDown className="h-4 w-4" />
+                Download PDF
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
-      <div className="print-page min-h-screen bg-white p-8 max-w-4xl mx-auto">
+      <div ref={contentRef} className="min-h-screen bg-white p-8 max-w-4xl mx-auto mt-16">
         <header className="border-b-4 border-[#00426D] pb-6 mb-8">
           <div className="flex justify-between items-start">
             <div>

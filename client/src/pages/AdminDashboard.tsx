@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Search, ChevronLeft, ChevronRight, Archive, FileDown, Send } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Archive, FileDown, Send, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +12,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +28,14 @@ import type { Deal } from "@shared/schema";
 
 const ITEMS_PER_PAGE = 10;
 type StatusFilter = "all" | "pending" | "approved" | "archived";
+type SortField = "title" | "merchantName" | "category" | "dealType" | "status" | "createdAt";
+type SortDirection = "asc" | "desc";
+
+interface AdminUserSafe {
+  id: string;
+  username: string;
+  role: string;
+}
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -32,6 +47,10 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [assignedToFilter, setAssignedToFilter] = useState<string>("all");
+  const [adminUsers, setAdminUsers] = useState<AdminUserSafe[]>([]);
 
   useEffect(() => {
     checkAuthAndFetchDeals();
@@ -45,13 +64,22 @@ export default function AdminDashboard() {
         return;
       }
 
-      const dealsResponse = await fetch("/api/deals");
+      const [dealsResponse, adminUsersResponse] = await Promise.all([
+        fetch("/api/deals"),
+        fetch("/api/admin-users"),
+      ]);
+
       if (!dealsResponse.ok) {
         throw new Error("Failed to fetch deals");
       }
 
       const data = await dealsResponse.json();
       setDeals(data);
+
+      if (adminUsersResponse.ok) {
+        const users = await adminUsersResponse.json();
+        setAdminUsers(users);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -63,20 +91,67 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
 
-  const filteredDeals = deals.filter((deal) => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = 
-      deal.title.toLowerCase().includes(query) ||
-      deal.category.toLowerCase().includes(query) ||
-      deal.dealType.toLowerCase().includes(query) ||
-      deal.status.toLowerCase().includes(query);
-    const matchesStatus = statusFilter === "all" || deal.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  }).sort((a, b) => {
-    const statusOrder: Record<string, number> = { pending: 0, approved: 1, archived: 2 };
-    return (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
-  });
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    }
+    return sortDirection === "asc" 
+      ? <ArrowUp className="h-4 w-4 ml-1" />
+      : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
+  const filteredDeals = deals
+    .filter((deal) => {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = 
+        deal.title.toLowerCase().includes(query) ||
+        deal.category.toLowerCase().includes(query) ||
+        deal.dealType.toLowerCase().includes(query) ||
+        deal.status.toLowerCase().includes(query) ||
+        (deal.merchantName?.toLowerCase().includes(query) ?? false);
+      const matchesStatus = statusFilter === "all" || deal.status === statusFilter;
+      const matchesAssignedTo = 
+        assignedToFilter === "all" || 
+        (assignedToFilter === "unassigned" && !deal.assignedTo) ||
+        deal.assignedTo === assignedToFilter;
+      return matchesSearch && matchesStatus && matchesAssignedTo;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case "title":
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case "merchantName":
+          comparison = (a.merchantName || "").localeCompare(b.merchantName || "");
+          break;
+        case "category":
+          comparison = a.category.localeCompare(b.category);
+          break;
+        case "dealType":
+          comparison = a.dealType.localeCompare(b.dealType);
+          break;
+        case "status":
+          const statusOrder: Record<string, number> = { pending: 0, approved: 1, archived: 2 };
+          comparison = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
+          break;
+        case "createdAt":
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+      }
+      
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
 
   const statusCounts = {
     all: deals.length,
@@ -147,7 +222,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, assignedToFilter]);
 
   if (isLoading) {
     return (
@@ -189,28 +264,49 @@ export default function AdminDashboard() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-          <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search deals..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                data-testid="input-search"
-              />
+          <div className="p-4 border-b border-slate-200 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="relative w-full md:max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search deals..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                  data-testid="input-search"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-slate-400" />
+                  <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
+                    <SelectTrigger className="w-[180px]" data-testid="select-assigned-filter">
+                      <SelectValue placeholder="Filter by assignee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Assignees</SelectItem>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {adminUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.username}>
+                          {user.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedDeals.size > 0 && (
+                  <Button
+                    onClick={handleBulkApprove}
+                    disabled={isBulkProcessing}
+                    className="bg-green-600 hover:bg-green-700 whitespace-nowrap"
+                    data-testid="button-bulk-approve"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {isBulkProcessing ? "Processing..." : `Send to Moderation (${selectedDeals.size})`}
+                  </Button>
+                )}
+              </div>
             </div>
-            {selectedDeals.size > 0 && (
-              <Button
-                onClick={handleBulkApprove}
-                disabled={isBulkProcessing}
-                className="bg-green-600 hover:bg-green-700 whitespace-nowrap"
-                data-testid="button-bulk-approve"
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {isBulkProcessing ? "Processing..." : `Send to Moderation (${selectedDeals.size})`}
-              </Button>
-            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -225,12 +321,66 @@ export default function AdminDashboard() {
                     data-testid="checkbox-select-all"
                   />
                 </TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Merchant</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Deal Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created Date</TableHead>
+                <TableHead>
+                  <button
+                    onClick={() => handleSort("title")}
+                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
+                    data-testid="sort-title"
+                  >
+                    Title
+                    {getSortIcon("title")}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    onClick={() => handleSort("merchantName")}
+                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
+                    data-testid="sort-merchant"
+                  >
+                    Merchant
+                    {getSortIcon("merchantName")}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    onClick={() => handleSort("category")}
+                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
+                    data-testid="sort-category"
+                  >
+                    Category
+                    {getSortIcon("category")}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    onClick={() => handleSort("dealType")}
+                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
+                    data-testid="sort-dealtype"
+                  >
+                    Deal Type
+                    {getSortIcon("dealType")}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    onClick={() => handleSort("status")}
+                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
+                    data-testid="sort-status"
+                  >
+                    Status
+                    {getSortIcon("status")}
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    onClick={() => handleSort("createdAt")}
+                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
+                    data-testid="sort-created"
+                  >
+                    Created Date
+                    {getSortIcon("createdAt")}
+                  </button>
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -238,7 +388,7 @@ export default function AdminDashboard() {
               {paginatedDeals.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-slate-500 py-8">
-                    {searchQuery || statusFilter !== "all" ? "No deals match your filters" : "No deals found"}
+                    {searchQuery || statusFilter !== "all" || assignedToFilter !== "all" ? "No deals match your filters" : "No deals found"}
                   </TableCell>
                 </TableRow>
               ) : (
