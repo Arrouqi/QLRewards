@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { ImageUploader } from "@/components/ImageUploader";
 import type { Deal, AdminUser } from "@shared/schema";
 
 interface AdminUserSafe {
@@ -94,6 +95,7 @@ export default function DealDetail() {
   const [adminComment, setAdminComment] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [branchInput, setBranchInput] = useState("");
+  const [images, setImages] = useState<string[]>([]);
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
@@ -182,6 +184,7 @@ export default function DealDetail() {
       setDeal(data);
       setAdminComment(data.adminComment || "");
       setAssignedTo(data.assignedTo || "");
+      setImages(data.images || []);
 
       const adminUsersResponse = await fetch("/api/admin-users");
       if (adminUsersResponse.ok) {
@@ -235,7 +238,7 @@ export default function DealDetail() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, images }),
       });
 
       if (!response.ok) {
@@ -858,6 +861,15 @@ export default function DealDetail() {
                       )}
                     />
                   </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Deal Images</h2>
+                  <ImageUploader
+                    images={images}
+                    onChange={setImages}
+                    maxImages={10}
+                  />
                 </div>
 
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
