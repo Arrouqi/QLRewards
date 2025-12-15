@@ -258,29 +258,6 @@ export default function PrintDeal() {
           </div>
         </section>
 
-        {deal.images && deal.images.length > 0 && (
-          <section className="mb-8">
-            <h3 className="text-lg font-bold text-[#00426D] mb-4 border-b pb-2">Deal Images</h3>
-            <div className="grid grid-cols-3 gap-4" data-testid="print-images">
-              {deal.images.map((image, index) => (
-                <div key={index} className="aspect-[4/3] relative">
-                  {index === 0 && (
-                    <div className="absolute top-2 left-2 bg-[#00426D] text-white text-xs px-2 py-1 rounded z-10">
-                      Cover
-                    </div>
-                  )}
-                  <img
-                    src={image}
-                    alt={`Deal image ${index + 1}`}
-                    className="w-full h-full object-cover rounded-lg border border-gray-200"
-                    crossOrigin="anonymous"
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
         {(deal.merchantName || deal.merchantEmail || deal.merchantPhone) && (
           <section className="mb-8">
             <h3 className="text-lg font-bold text-[#00426D] mb-4 border-b pb-2">Merchant Details</h3>

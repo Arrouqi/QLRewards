@@ -1,10 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
+import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { 
+  Calendar,
+  ChevronDown, 
   Info, 
+  Upload, 
+  X,
   Bold,
   Italic,
   Underline,
@@ -14,12 +20,15 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  Plus,
   Gift,
   Percent,
   Tag,
   ShoppingBag,
   Loader2,
-  X
+  Crop as CropIcon,
+  Check,
+  Pencil
 } from "lucide-react";
 
 interface SubCategory {
@@ -57,8 +66,43 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 import { useLocation } from "wouter";
-import { ImageUploader } from "@/components/ImageUploader";
+
+const ASPECT_RATIO = 16 / 10;
+
+function centerAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number,
+) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  );
+}
 
 // Schema
 const formSchema = z.object({
@@ -114,8 +158,17 @@ export default function CreateOffer() {
   const [isDiscount, setIsDiscount] = useState(false);
   const [isBogo, setIsBogo] = useState(false);
   const [isTwoTranches, setIsTwoTranches] = useState(false);
-  const [images, setImages] = useState<string[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
   const [branchInput, setBranchInput] = useState("");
+  
+  const [showCropper, setShowCropper] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>("");
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const imgRef = useRef<HTMLImageElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const MIN_PHOTOS = 4;
   const MAX_PHOTOS = 10;
@@ -156,6 +209,160 @@ export default function CreateOffer() {
       });
     }
   }, [categoriesError, toast]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      const remaining = MAX_PHOTOS - uploadedImages.length;
+      
+      if (remaining <= 0) {
+        toast({
+          title: "Maximum images reached",
+          description: `You can only upload up to ${MAX_PHOTOS} images`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const filesToUpload = files.slice(0, remaining);
+      const newImages = filesToUpload.map(file => ({
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+      
+      setUploadedImages(prev => [...prev, ...newImages]);
+      toast({
+        title: "Images uploaded",
+        description: `Successfully added ${filesToUpload.length} image(s)`,
+      });
+      
+      if (files.length > remaining) {
+        toast({
+          title: "Some images skipped",
+          description: `Only ${remaining} more image(s) allowed (max ${MAX_PHOTOS})`,
+          variant: "destructive",
+        });
+      }
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleEditImage = (index: number) => {
+    const img = uploadedImages[index];
+    setEditingIndex(index);
+    setOriginalFile(img.file);
+    setImageToCrop(img.preview);
+    setShowCropper(true);
+  };
+
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    const initialCrop = centerAspectCrop(width, height, ASPECT_RATIO);
+    setCrop(initialCrop);
+    const pixelCrop = convertToPixelCrop(initialCrop, width, height);
+    setCompletedCrop(pixelCrop);
+  }, []);
+
+  const getCroppedImage = useCallback(async (): Promise<{ file: File; preview: string } | null> => {
+    if (!completedCrop || !imgRef.current || !canvasRef.current || !originalFile) {
+      return null;
+    }
+
+    const image = imgRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return null;
+    }
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(null);
+          return;
+        }
+        const croppedFile = new File([blob], originalFile.name, { type: 'image/jpeg' });
+        const preview = URL.createObjectURL(blob);
+        resolve({ file: croppedFile, preview });
+      }, 'image/jpeg', 0.9);
+    });
+  }, [completedCrop, originalFile]);
+
+  const handleCropConfirm = async () => {
+    const croppedImage = await getCroppedImage();
+    if (croppedImage) {
+      if (editingIndex !== null) {
+        setUploadedImages(prev => {
+          const newImages = [...prev];
+          URL.revokeObjectURL(newImages[editingIndex].preview);
+          newImages[editingIndex] = croppedImage;
+          return newImages;
+        });
+        toast({
+          title: "Image updated",
+          description: "Image has been re-cropped successfully",
+        });
+      } else {
+        setUploadedImages(prev => [...prev, croppedImage]);
+        toast({
+          title: "Image added",
+          description: "Image has been cropped and added successfully",
+        });
+      }
+    }
+    setShowCropper(false);
+    setImageToCrop("");
+    setOriginalFile(null);
+    setEditingIndex(null);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    setImageToCrop("");
+    setOriginalFile(null);
+    setEditingIndex(null);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+  };
+
+  const removeImage = (index: number) => {
+    setUploadedImages(prev => {
+      const newImages = [...prev];
+      URL.revokeObjectURL(newImages[index].preview);
+      newImages.splice(index, 1);
+      return newImages;
+    });
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -215,7 +422,7 @@ export default function CreateOffer() {
   }, [redemptionType]);
 
   const onSubmit = async (data: FormValues) => {
-    if (images.length < MIN_PHOTOS) {
+    if (uploadedImages.length < MIN_PHOTOS) {
       toast({
         title: "Not enough photos",
         description: `Please upload at least ${MIN_PHOTOS} photos`,
@@ -248,7 +455,6 @@ export default function CreateOffer() {
         merchantEmail: data.merchantEmail,
         merchantPhone: data.merchantPhone,
         branches: data.branches,
-        images: images,
       };
 
       const response = await fetch("/api/deals", {
@@ -998,17 +1204,99 @@ export default function CreateOffer() {
                         </p>
                       </div>
 
-                      {images.length < MIN_PHOTOS && (
-                        <div className="text-xs text-amber-600 mb-3">
-                          (minimum {MIN_PHOTOS} photos required)
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+                        <span>Hold and drag to reorder</span>
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="flex items-center gap-1 cursor-help text-blue-500 hover:text-blue-600">
+                                <Info className="h-3 w-3" />
+                                <span>1280 x 800 - recommended size</span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>For best display quality, upload images with 1280 x 800 pixels (16:10 aspect ratio)</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
 
-                      <ImageUploader
-                        images={images}
-                        onChange={setImages}
-                        maxImages={MAX_PHOTOS}
+                      <div className="text-xs text-slate-500 mb-3">
+                        {uploadedImages.length} / {MAX_PHOTOS} photos uploaded
+                        {uploadedImages.length < MIN_PHOTOS && (
+                          <span className="text-amber-600 ml-2">(minimum {MIN_PHOTOS} required)</span>
+                        )}
+                      </div>
+
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="image/*"
+                        multiple
+                        onChange={handleFileChange}
+                        data-testid="input-image-upload"
                       />
+
+                      <div className="grid grid-cols-5 gap-3">
+                        {/* Render uploaded images */}
+                        {uploadedImages.map((img, index) => (
+                          <div 
+                            key={index}
+                            className="aspect-[16/10] relative group"
+                            data-testid={`image-preview-${index}`}
+                          >
+                            {index === 0 && (
+                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
+                                Cover Photo
+                              </div>
+                            )}
+                            <img 
+                              src={img.preview} 
+                              alt={`Upload ${index + 1}`}
+                              className="w-full h-full object-cover rounded-lg border-2 border-slate-200"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleEditImage(index)}
+                                className="bg-white text-slate-700 rounded-full p-1.5 hover:bg-blue-50 transition-colors"
+                                data-testid={`button-edit-image-${index}`}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="bg-white text-red-500 rounded-full p-1.5 hover:bg-red-50 transition-colors"
+                                data-testid={`button-remove-image-${index}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Show up to 5 empty upload tiles */}
+                        {uploadedImages.length < MAX_PHOTOS && Array.from({ length: Math.min(5, MAX_PHOTOS - uploadedImages.length) }).map((_, idx) => (
+                          <div 
+                            key={`empty-${idx}`}
+                            className="aspect-[16/10] relative group cursor-pointer"
+                            onClick={handleImageClick}
+                            data-testid={`upload-tile-${idx}`}
+                          >
+                            {uploadedImages.length === 0 && idx === 0 && (
+                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
+                                Cover Photo
+                              </div>
+                            )}
+                            <div className="w-full h-full border-2 border-dashed border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center p-2 text-center">
+                              <Plus className="h-5 w-5 text-slate-400 mb-1" />
+                              <span className="text-[10px] text-slate-500">Upload</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                    </div>
                 </section>
               </div>
@@ -1030,6 +1318,60 @@ export default function CreateOffer() {
           </form>
         </Form>
       </main>
+
+      <Dialog open={showCropper} onOpenChange={(open) => !open && handleCropCancel()}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CropIcon className="h-5 w-5" />
+              {editingIndex !== null ? "Edit Image" : "Crop Image"} (16:10)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-sm text-slate-500">
+              Adjust the crop area to fit the 16:10 aspect ratio for optimal display.
+            </p>
+            {imageToCrop && (
+              <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={ASPECT_RATIO}
+                className="max-h-[400px]"
+              >
+                <img
+                  ref={imgRef}
+                  src={imageToCrop}
+                  alt="Crop preview"
+                  onLoad={onImageLoad}
+                  className="max-h-[400px] w-auto"
+                />
+              </ReactCrop>
+            )}
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCropCancel}
+              data-testid="button-cancel-crop"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCropConfirm}
+              className="bg-[#00426D] hover:bg-[#003557]"
+              disabled={!completedCrop}
+              data-testid="button-confirm-crop"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Confirm Crop
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
