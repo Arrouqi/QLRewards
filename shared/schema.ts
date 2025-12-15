@@ -28,6 +28,7 @@ export const deals = pgTable("deals", {
   merchantName: text("merchant_name"),
   merchantEmail: text("merchant_email"),
   merchantPhone: text("merchant_phone"),
+  images: text("images").array().notNull().default(sql`'{}'::text[]`),
   adminComment: text("admin_comment"),
   assignedTo: text("assigned_to"),
   status: text("status").notNull().default("pending"),
