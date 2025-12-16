@@ -135,17 +135,17 @@ type FormValues = z.infer<typeof formSchema>;
 
 const RichTextToolbar = () => (
   <div className="flex items-center gap-1 p-2 border-b border-slate-100 bg-slate-50/50">
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500"><Bold className="h-4 w-4" /></Button>
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500"><Italic className="h-4 w-4" /></Button>
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500"><Underline className="h-4 w-4" /></Button>
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" tabIndex={-1}><Bold className="h-4 w-4" /></Button>
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" tabIndex={-1}><Italic className="h-4 w-4" /></Button>
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" tabIndex={-1}><Underline className="h-4 w-4" /></Button>
     <div className="w-[1px] h-4 bg-slate-300 mx-1" />
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500"><AlignLeft className="h-4 w-4" /></Button>
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500"><AlignCenter className="h-4 w-4" /></Button>
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500"><AlignRight className="h-4 w-4" /></Button>
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" tabIndex={-1}><AlignLeft className="h-4 w-4" /></Button>
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" tabIndex={-1}><AlignCenter className="h-4 w-4" /></Button>
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" tabIndex={-1}><AlignRight className="h-4 w-4" /></Button>
     <div className="w-[1px] h-4 bg-slate-300 mx-1" />
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500"><List className="h-4 w-4" /></Button>
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500"><ListOrdered className="h-4 w-4" /></Button>
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500"><LinkIcon className="h-4 w-4" /></Button>
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" tabIndex={-1}><List className="h-4 w-4" /></Button>
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" tabIndex={-1}><ListOrdered className="h-4 w-4" /></Button>
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" tabIndex={-1}><LinkIcon className="h-4 w-4" /></Button>
   </div>
 );
 
