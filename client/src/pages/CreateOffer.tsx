@@ -1234,7 +1234,7 @@ export default function CreateOffer() {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel className="text-sm text-slate-600 font-normal">
-                            I agree to the <a href="#" className="text-blue-600 hover:underline">Rules for Advertising</a> on Qatar Living and the <a href="#" className="text-blue-600 hover:underline">Terms of use</a>.
+                            I agree to the <a href="https://www.qatarliving.com/rules-advertising" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Rules for Advertising</a> on Qatar Living and the <a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Terms of use</a>.
                           </FormLabel>
                           <FormMessage />
                         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Search, ChevronLeft, ChevronRight, Archive, FileDown, Send, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Trash2, FileDown, Send, ArrowUpDown, ArrowUp, ArrowDown, Filter, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,6 +21,16 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
 import { cn } from "@/lib/utils";
@@ -51,6 +61,8 @@ export default function AdminDashboard() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [assignedToFilter, setAssignedToFilter] = useState<string>("all");
   const [adminUsers, setAdminUsers] = useState<AdminUserSafe[]>([]);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [dealToRemove, setDealToRemove] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthAndFetchDeals();
@@ -160,15 +172,24 @@ export default function AdminDashboard() {
     archived: deals.filter(d => d.status === "archived").length,
   };
 
-  const handleArchive = async (dealId: string, e: React.MouseEvent) => {
+  const handleRemoveClick = (dealId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setDealToRemove(dealId);
+    setRemoveDialogOpen(true);
+  };
+
+  const handleRemoveConfirm = async () => {
+    if (!dealToRemove) return;
     try {
-      const response = await fetch(`/api/deals/${dealId}/archive`, { method: "PATCH" });
-      if (!response.ok) throw new Error("Failed to archive deal");
-      toast({ title: "Success", description: "Deal archived successfully" });
+      const response = await fetch(`/api/deals/${dealToRemove}/archive`, { method: "PATCH" });
+      if (!response.ok) throw new Error("Failed to remove deal");
+      toast({ title: "Success", description: "Deal removed successfully" });
       await checkAuthAndFetchDeals();
     } catch (error) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to archive deal", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to remove deal", variant: "destructive" });
+    } finally {
+      setRemoveDialogOpen(false);
+      setDealToRemove(null);
     }
   };
 
@@ -396,7 +417,7 @@ export default function AdminDashboard() {
                   <TableRow
                     key={deal.id}
                     className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => setLocation(`/admin/deals/${deal.id}`)}
+                    onClick={() => window.open(`/admin/deals/${deal.id}`, '_blank')}
                     data-testid={`row-deal-${deal.id}`}
                   >
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -417,11 +438,11 @@ export default function AdminDashboard() {
                         variant="secondary"
                         className={cn(
                           deal.status === "approved" && "bg-green-100 text-green-800 hover:bg-green-100",
-                          deal.status === "pending" && "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
+                          deal.status === "pending" && "bg-blue-100 text-blue-800 hover:bg-blue-100",
                           deal.status === "archived" && "bg-slate-100 text-slate-600 hover:bg-slate-100"
                         )}
                       >
-                        {deal.status === "approved" ? "Sent to Moderation" : deal.status}
+                        {deal.status === "approved" ? "Sent to Moderation" : deal.status === "pending" ? "Pending" : deal.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -434,10 +455,24 @@ export default function AdminDashboard() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setLocation(`/admin/deals/${deal.id}/print`);
+                            window.open(`/admin/deals/${deal.id}`, '_blank');
+                          }}
+                          className="text-slate-500 hover:text-slate-700"
+                          data-testid={`button-edit-${deal.id}`}
+                          title="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`/admin/deals/${deal.id}/print`, '_blank');
                           }}
                           className="text-slate-500 hover:text-slate-700"
                           data-testid={`button-pdf-${deal.id}`}
+                          title="Download PDF"
                         >
                           <FileDown className="h-4 w-4" />
                         </Button>
@@ -445,11 +480,12 @@ export default function AdminDashboard() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={(e) => handleArchive(deal.id, e)}
-                            className="text-slate-500 hover:text-slate-700"
-                            data-testid={`button-archive-${deal.id}`}
+                            onClick={(e) => handleRemoveClick(deal.id, e)}
+                            className="text-red-500 hover:text-red-700"
+                            data-testid={`button-remove-${deal.id}`}
+                            title="Remove"
                           >
-                            <Archive className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
@@ -518,6 +554,23 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to remove this deal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will mark the deal as removed. It will no longer appear in the active deals list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveConfirm} className="bg-red-600 hover:bg-red-700">
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }

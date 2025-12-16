@@ -299,6 +299,9 @@ export default function DealDetail() {
         title: "Success",
         description: "Deal updated successfully",
       });
+      
+      // Redirect back to dashboard after successful save
+      setLocation("/admin/dashboard");
     } catch (error) {
       toast({
         title: "Error",
@@ -329,12 +332,15 @@ export default function DealDetail() {
 
       toast({
         title: "Success",
-        description: "Deal approved successfully",
+        description: "Deal forwarded to moderation successfully",
       });
+      
+      // Redirect back to dashboard after forwarding
+      setLocation("/admin/dashboard");
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to approve deal",
+        description: error instanceof Error ? error.message : "Failed to forward deal",
         variant: "destructive",
       });
     } finally {
