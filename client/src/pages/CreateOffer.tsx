@@ -170,6 +170,9 @@ export default function CreateOffer() {
   const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  
   const MIN_PHOTOS = 4;
   const MAX_PHOTOS = 10;
 
@@ -362,6 +365,43 @@ export default function CreateOffer() {
       newImages.splice(index, 1);
       return newImages;
     });
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+      setUploadedImages(prev => {
+        const newImages = [...prev];
+        const [draggedItem] = newImages.splice(draggedIndex, 1);
+        newImages.splice(dropIndex, 0, draggedItem);
+        return newImages;
+      });
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const form = useForm<FormValues>({
@@ -1257,7 +1297,15 @@ export default function CreateOffer() {
                         {uploadedImages.map((img, index) => (
                           <div 
                             key={index}
-                            className="aspect-[16/10] relative group"
+                            className={`aspect-[16/10] relative group cursor-grab active:cursor-grabbing transition-all ${
+                              draggedIndex === index ? 'opacity-50 scale-95' : ''
+                            } ${dragOverIndex === index ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, index)}
+                            onDragEnd={handleDragEnd}
                             data-testid={`image-preview-${index}`}
                           >
                             {index === 0 && (
@@ -1268,7 +1316,7 @@ export default function CreateOffer() {
                             <img 
                               src={img.preview} 
                               alt={`Upload ${index + 1}`}
-                              className="w-full h-full object-cover rounded-lg border-2 border-slate-200"
+                              className="w-full h-full object-cover rounded-lg border-2 border-slate-200 pointer-events-none"
                             />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                               <button
