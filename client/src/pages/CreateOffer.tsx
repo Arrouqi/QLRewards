@@ -421,6 +421,15 @@ export default function CreateOffer() {
     setIsLimitedRedemption(redemptionType === "limited");
   }, [redemptionType]);
 
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const onSubmit = async (data: FormValues) => {
     if (uploadedImages.length < MIN_PHOTOS) {
       toast({
@@ -432,6 +441,10 @@ export default function CreateOffer() {
     }
 
     try {
+      const imageBase64Array = await Promise.all(
+        uploadedImages.map(img => convertFileToBase64(img.file))
+      );
+
       const dealData = {
         category: data.category,
         subCategory: data.subCategory,
@@ -455,6 +468,7 @@ export default function CreateOffer() {
         merchantEmail: data.merchantEmail,
         merchantPhone: data.merchantPhone,
         branches: data.branches,
+        images: imageBase64Array,
       };
 
       const response = await fetch("/api/deals", {

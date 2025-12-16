@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, ChangeEvent, useCallback } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle, Save, MessageSquare, FileDown, X, Gift, Percent, Tag, ShoppingBag } from "lucide-react";
+import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+import { ArrowLeft, CheckCircle, Save, MessageSquare, FileDown, X, Gift, Percent, Tag, ShoppingBag, Upload, Pencil, Check, Crop as CropIcon, Camera, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -25,9 +27,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { Deal, AdminUser } from "@shared/schema";
+
+const ASPECT_RATIO = 16 / 10;
+
+function centerAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number,
+) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight,
+    ),
+    mediaWidth,
+    mediaHeight,
+  );
+}
 
 interface AdminUserSafe {
   id: string;
@@ -94,6 +125,20 @@ export default function DealDetail() {
   const [adminComment, setAdminComment] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [branchInput, setBranchInput] = useState("");
+  
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [showCropper, setShowCropper] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>("");
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const imgRef = useRef<HTMLImageElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const MIN_PHOTOS = 4;
+  const MAX_PHOTOS = 10;
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
@@ -182,6 +227,7 @@ export default function DealDetail() {
       setDeal(data);
       setAdminComment(data.adminComment || "");
       setAssignedTo(data.assignedTo || "");
+      setUploadedImages(data.images || []);
 
       const adminUsersResponse = await fetch("/api/admin-users");
       if (adminUsersResponse.ok) {
@@ -235,7 +281,7 @@ export default function DealDetail() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, images: uploadedImages }),
       });
 
       if (!response.ok) {
@@ -327,6 +373,158 @@ export default function DealDetail() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      const remaining = MAX_PHOTOS - uploadedImages.length;
+      
+      if (remaining <= 0) {
+        toast({
+          title: "Maximum images reached",
+          description: `You can only upload up to ${MAX_PHOTOS} images`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const filesToUpload = files.slice(0, remaining);
+      
+      filesToUpload.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setUploadedImages(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
+
+      toast({
+        title: "Images uploaded",
+        description: `Successfully added ${filesToUpload.length} image(s)`,
+      });
+      
+      if (files.length > remaining) {
+        toast({
+          title: "Some images skipped",
+          description: `Only ${remaining} more image(s) allowed (max ${MAX_PHOTOS})`,
+          variant: "destructive",
+        });
+      }
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleEditImage = (index: number) => {
+    const img = uploadedImages[index];
+    setEditingIndex(index);
+    setImageToCrop(img);
+    setShowCropper(true);
+  };
+
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    const initialCrop = centerAspectCrop(width, height, ASPECT_RATIO);
+    setCrop(initialCrop);
+    const pixelCrop = convertToPixelCrop(initialCrop, width, height);
+    setCompletedCrop(pixelCrop);
+  }, []);
+
+  const getCroppedImage = useCallback(async (): Promise<string | null> => {
+    if (!completedCrop || !imgRef.current || !canvasRef.current) {
+      return null;
+    }
+
+    const image = imgRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return null;
+    }
+
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
+
+    ctx.drawImage(
+      image,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(null);
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      }, 'image/jpeg', 0.9);
+    });
+  }, [completedCrop]);
+
+  const handleCropConfirm = async () => {
+    const croppedImage = await getCroppedImage();
+    if (croppedImage) {
+      if (editingIndex !== null) {
+        setUploadedImages(prev => {
+          const newImages = [...prev];
+          newImages[editingIndex] = croppedImage;
+          return newImages;
+        });
+        toast({
+          title: "Image updated",
+          description: "Image has been re-cropped successfully",
+        });
+      } else {
+        setUploadedImages(prev => [...prev, croppedImage]);
+        toast({
+          title: "Image added",
+          description: "Image has been cropped and added successfully",
+        });
+      }
+    }
+    setShowCropper(false);
+    setImageToCrop("");
+    setOriginalFile(null);
+    setEditingIndex(null);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    setImageToCrop("");
+    setOriginalFile(null);
+    setEditingIndex(null);
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+  };
+
+  const removeImage = (index: number) => {
+    setUploadedImages(prev => {
+      const newImages = [...prev];
+      newImages.splice(index, 1);
+      return newImages;
+    });
   };
 
   if (isLoading) {
@@ -923,6 +1121,90 @@ export default function DealDetail() {
                   />
                 </div>
 
+                <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4 flex items-center gap-2">
+                    <Camera className="h-5 w-5" />
+                    Deal Photos
+                  </h2>
+                  
+                  <div className="space-y-4">
+                    <div className="text-sm text-slate-600">
+                      Upload {MIN_PHOTOS} to {MAX_PHOTOS} photos of your offer. Recommended size: 1280x800 pixels (16:10 aspect ratio).
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {uploadedImages.map((img, index) => (
+                        <div 
+                          key={index}
+                          className="relative aspect-[16/10] rounded-lg overflow-hidden border-2 border-slate-200 group"
+                          data-testid={`image-preview-${index}`}
+                        >
+                          <img 
+                            src={img} 
+                            alt={`Deal photo ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleEditImage(index)}
+                              className="h-8"
+                              data-testid={`button-edit-image-${index}`}
+                            >
+                              <Pencil className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => removeImage(index)}
+                              className="h-8"
+                              data-testid={`button-remove-image-${index}`}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Remove
+                            </Button>
+                          </div>
+                          <div className="absolute top-2 left-2 bg-[#00426D] text-white text-xs px-2 py-1 rounded">
+                            {index + 1}
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {uploadedImages.length < MAX_PHOTOS && (
+                        <div
+                          onClick={handleImageClick}
+                          className="aspect-[16/10] rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#00426D] hover:bg-slate-50 transition-colors"
+                          data-testid="button-add-image"
+                        >
+                          <Upload className="h-8 w-8 text-slate-400 mb-2" />
+                          <span className="text-sm text-slate-500">Add Photo</span>
+                          <span className="text-xs text-slate-400">{uploadedImages.length}/{MAX_PHOTOS}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileChange}
+                      className="hidden"
+                      data-testid="input-file-upload"
+                    />
+                    
+                    {uploadedImages.length < MIN_PHOTOS && (
+                      <p className="text-sm text-amber-600">
+                        Please upload at least {MIN_PHOTOS - uploadedImages.length} more photo{MIN_PHOTOS - uploadedImages.length > 1 ? 's' : ''}.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex gap-3 pt-4">
                   <Button
                     type="submit"
@@ -1006,6 +1288,52 @@ export default function DealDetail() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showCropper} onOpenChange={setShowCropper}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingIndex !== null ? "Edit Image" : "Crop Image"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4">
+            {imageToCrop && (
+              <ReactCrop
+                crop={crop}
+                onChange={(c) => setCrop(c)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={ASPECT_RATIO}
+                className="max-h-[60vh]"
+              >
+                <img
+                  ref={imgRef}
+                  src={imageToCrop}
+                  alt="Crop preview"
+                  onLoad={onImageLoad}
+                  style={{ maxHeight: '60vh' }}
+                />
+              </ReactCrop>
+            )}
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={handleCropCancel}
+              data-testid="button-crop-cancel"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCropConfirm}
+              className="bg-[#00426D] hover:bg-[#003152]"
+              data-testid="button-crop-confirm"
+            >
+              {editingIndex !== null ? "Save Changes" : "Add Image"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
