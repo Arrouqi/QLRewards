@@ -124,7 +124,7 @@ const formSchema = z.object({
   claimRules: z.array(z.string()).min(1, "Select at least one claim rule"),
   generalRules: z.array(z.string()).min(1, "Select at least one general rule"),
   otherRules: z.string().optional(),
-  merchantName: z.string().optional(),
+  merchantName: z.string().min(1, "Merchant name is required"),
   merchantEmail: z.string().email("Please enter a valid email").optional().or(z.literal("")),
   merchantPhone: z.string().optional(),
   branches: z.array(z.string()).min(1, "At least one branch is required"),
@@ -1059,7 +1059,7 @@ export default function CreateOffer() {
                       name="merchantName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Merchant Name</FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Merchant Name <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
                             <Input 
                               className="h-11 bg-slate-50" 

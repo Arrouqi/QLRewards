@@ -55,7 +55,7 @@ const formSchema = z.object({
   contactName: z.string().min(2, "Contact name is required"),
   contactEmail: z.string().email("Invalid email address"),
   contactPhone: z.string().min(8, "Phone number is required"),
-  merchantName: z.string().optional(),
+  merchantName: z.string().min(1, "Merchant name is required"),
   offerLocation: z.string().optional(),
   branches: z.string().optional(),
 });
