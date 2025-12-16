@@ -250,7 +250,7 @@ export default function PrintDeal() {
               </div>
               <div>
                 <p className="text-sm text-gray-500 uppercase font-semibold">Status</p>
-                <p className={`text-lg font-medium ${deal.status === 'approved' ? 'text-green-600' : deal.status === 'pending' ? 'text-yellow-600' : 'text-gray-600'}`} data-testid="print-status">
+                <p className={`text-lg font-medium ${deal.status === 'approved' ? 'text-green-600' : deal.status === 'pending' ? 'text-blue-600' : 'text-gray-600'}`} data-testid="print-status">
                   {deal.status === 'approved' ? 'Sent to Moderation' : deal.status.charAt(0).toUpperCase() + deal.status.slice(1)}
                 </p>
               </div>

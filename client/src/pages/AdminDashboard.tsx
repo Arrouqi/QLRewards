@@ -138,6 +138,10 @@ export default function AdminDashboard() {
       return matchesSearch && matchesStatus && matchesAssignedTo;
     })
     .sort((a, b) => {
+      // Always put archived deals at the end
+      if (a.status === "archived" && b.status !== "archived") return 1;
+      if (a.status !== "archived" && b.status === "archived") return -1;
+      
       let comparison = 0;
       
       switch (sortField) {

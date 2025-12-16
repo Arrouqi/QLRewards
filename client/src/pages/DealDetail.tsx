@@ -624,10 +624,10 @@ export default function DealDetail() {
                   ? "bg-green-100 text-green-800"
                   : deal.status === "archived"
                   ? "bg-slate-100 text-slate-600"
-                  : "bg-yellow-100 text-yellow-800"
+                  : "bg-blue-100 text-blue-800"
               }
             >
-              {deal.status === "approved" ? "Sent to Moderation" : deal.status}
+              {deal.status === "approved" ? "Sent to Moderation" : deal.status === "pending" ? "Pending" : deal.status}
             </Badge>
           </div>
         </div>
