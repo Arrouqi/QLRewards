@@ -67,6 +67,20 @@ export async function registerRoutes(
     }
   });
 
+  // Bulk approve route must be defined BEFORE parameterized routes like /api/deals/:id
+  app.patch("/api/deals/bulk-approve", requireAuth, async (req, res) => {
+    try {
+      const { dealIds } = req.body;
+      if (!Array.isArray(dealIds) || dealIds.length === 0) {
+        return res.status(400).json({ error: "dealIds array is required" });
+      }
+      const count = await storage.bulkApproveDeals(dealIds);
+      res.json({ success: true, count });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/deals/:id", requireAuth, async (req, res) => {
     try {
       const deal = await storage.getDealById(req.params.id);
@@ -112,19 +126,6 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Deal not found" });
       }
       res.json(deal);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.patch("/api/deals/bulk-approve", requireAuth, async (req, res) => {
-    try {
-      const { dealIds } = req.body;
-      if (!Array.isArray(dealIds) || dealIds.length === 0) {
-        return res.status(400).json({ error: "dealIds array is required" });
-      }
-      const count = await storage.bulkApproveDeals(dealIds);
-      res.json({ success: true, count });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
