@@ -13,6 +13,14 @@ if (!connectionString) {
 const pool = new Pool({
   connectionString,
   ssl: process.env.EXTERNAL_DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+  connectionTimeoutMillis: 30000,
 });
+
+// Set search_path to rewards_external schema for external database
+if (process.env.EXTERNAL_DATABASE_URL) {
+  pool.on('connect', (client) => {
+    client.query('SET search_path TO rewards_external');
+  });
+}
 
 export const db = drizzle(pool, { schema });
