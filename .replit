@@ -9,7 +9,6 @@ packages = ["python311Packages.pandas", "python311Packages.openpyxl"]
 [deployment]
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
-publicDir = "dist/public"
 run = ["npm", "run", "start"]
 
 [[ports]]
