@@ -32,7 +32,9 @@ export async function registerRoutes(
   app.use(
     session({
       store: new PgSession({
-        conString: process.env.DATABASE_URL,
+        conString: process.env.NODE_ENV === "production" 
+          ? (process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL)
+          : process.env.DATABASE_URL,
         createTableIfMissing: true,
       }),
       secret: process.env.SESSION_SECRET || "qatar-living-deals-secret-key",
