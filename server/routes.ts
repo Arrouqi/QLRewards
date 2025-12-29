@@ -29,12 +29,15 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  const isProduction = process.env.NODE_ENV === "production";
+  const sessionDbUrl = isProduction 
+    ? (process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL)
+    : process.env.DATABASE_URL;
+
   app.use(
     session({
       store: new PgSession({
-        conString: process.env.NODE_ENV === "production" 
-          ? (process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL)
-          : process.env.DATABASE_URL,
+        conString: sessionDbUrl,
         createTableIfMissing: true,
       }),
       secret: process.env.SESSION_SECRET || "qatar-living-deals-secret-key",
@@ -43,13 +46,13 @@ export async function registerRoutes(
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+        secure: isProduction,
+        sameSite: isProduction ? "strict" : "lax",
       },
     })
   );
 
-  await createDefaultAdminUser();
+  createDefaultAdminUser().catch(err => console.log("Admin user setup:", err.message));
 
   app.post("/api/deals", async (req, res) => {
     try {

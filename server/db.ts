@@ -17,6 +17,9 @@ if (!connectionString) {
 const pool = new Pool({
   connectionString,
   ssl: isProduction && process.env.EXTERNAL_DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10,
 });
 
 // Set search_path to rewards_external schema for external database in production
