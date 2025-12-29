@@ -1,5 +1,68 @@
--- Qatar Living Deals - Production Data Seed
--- Run this SQL in your Production Database to copy development data
+-- Qatar Living Deals - Production Data Seed for Azure PostgreSQL
+-- Run this SQL in your Production Database (Azure)
+-- Schema: rewards_external
+
+-- Set the schema
+SET search_path TO rewards_external;
+
+-- Create tables if they don't exist
+CREATE TABLE IF NOT EXISTS categories (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sub_categories (
+    id VARCHAR(36) PRIMARY KEY,
+    category_id VARCHAR(36) NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS terms (
+    id VARCHAR(36) PRIMARY KEY,
+    type VARCHAR(50) NOT NULL,
+    text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS admin_users (
+    id VARCHAR(36) PRIMARY KEY,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'user'
+);
+
+CREATE TABLE IF NOT EXISTS deals (
+    id VARCHAR(36) PRIMARY KEY,
+    category_id VARCHAR(36) REFERENCES categories(id),
+    sub_category_id VARCHAR(36) REFERENCES sub_categories(id),
+    brand_name VARCHAR(255) NOT NULL,
+    title VARCHAR(500) NOT NULL,
+    description TEXT,
+    discount_type VARCHAR(50),
+    discount_amount DECIMAL(10,2),
+    discount_percentage INTEGER,
+    start_date DATE,
+    end_date DATE,
+    claim_rules TEXT[],
+    general_rules TEXT[],
+    locations TEXT[],
+    images TEXT[],
+    status VARCHAR(50) DEFAULT 'pending',
+    merchant_email VARCHAR(255),
+    merchant_phone VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS session (
+    sid VARCHAR NOT NULL PRIMARY KEY,
+    sess JSON NOT NULL,
+    expire TIMESTAMP(6) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_expire ON session(expire);
 
 -- Categories
 INSERT INTO categories (id, name, created_at) VALUES
@@ -102,7 +165,7 @@ INSERT INTO terms (id, type, text, created_at) VALUES
 ('d2dda9ce-d4c3-47f2-8d8a-001f00326ebb', 'general', 'Cannot be combined with employee discounts.', '2025-12-16 11:58:51.169947')
 ON CONFLICT (id) DO NOTHING;
 
--- Admin Users (password is 'admin123' for admin user)
+-- Admin Users (password is 'admin123' for admin user, 'Francis123' for Francis)
 INSERT INTO admin_users (id, username, password, role) VALUES
 ('ca8a8192-68ec-430d-a537-e8170cb46cfc', 'admin', '$2b$10$qz/Pq2cDmyH7RRXX0v6uX.QFCPef32Ze6k4Ri6CSPPRycinmRUqki', 'admin'),
 ('c79a04e9-5baf-453a-825a-d03469f19eaf', 'Francis', '$2b$10$OaOTqiX8gpmhM8jlFo4VfOTHsfilaSXTdICIbhkx3M0ukhchnDevq', 'user')
