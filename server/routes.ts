@@ -44,6 +44,7 @@ export async function registerRoutes(
       store: new PgSession({
         conString: sessionDbUrl,
         createTableIfMissing: true,
+        schemaName: isProduction && process.env.EXTERNAL_DATABASE_URL ? "rewards_external" : "public",
       }),
       secret: process.env.SESSION_SECRET || "qatar-living-deals-secret-key",
       resave: false,
