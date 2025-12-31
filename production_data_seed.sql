@@ -33,27 +33,37 @@ CREATE TABLE IF NOT EXISTS admin_users (
     role VARCHAR(50) DEFAULT 'user'
 );
 
-CREATE TABLE IF NOT EXISTS deals (
-    id VARCHAR(36) PRIMARY KEY,
-    category_id VARCHAR(36) REFERENCES categories(id),
-    sub_category_id VARCHAR(36) REFERENCES sub_categories(id),
-    brand_name VARCHAR(255) NOT NULL,
-    title VARCHAR(500) NOT NULL,
-    description TEXT,
-    discount_type VARCHAR(50),
-    discount_amount DECIMAL(10,2),
-    discount_percentage INTEGER,
-    start_date DATE,
-    end_date DATE,
-    claim_rules TEXT[],
-    general_rules TEXT[],
-    locations TEXT[],
+DROP TABLE IF EXISTS deals;
+CREATE TABLE deals (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid(),
+    is_ala_carte BOOLEAN NOT NULL DEFAULT true,
+    category TEXT NOT NULL,
+    sub_category TEXT NOT NULL,
+    deal_type TEXT NOT NULL,
+    duration TEXT NOT NULL,
+    redemption TEXT NOT NULL,
+    limit_per_user TEXT,
+    original_price TEXT NOT NULL,
+    is_multiple_items BOOLEAN NOT NULL DEFAULT false,
+    discount_percentage TEXT,
+    is_two_tranches BOOLEAN NOT NULL DEFAULT false,
+    tranche_validity TEXT,
+    specific_days BOOLEAN NOT NULL DEFAULT false,
+    days TEXT[],
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    claim_rules TEXT[] NOT NULL,
+    general_rules TEXT[] NOT NULL,
+    other_rules TEXT,
+    branches TEXT[] NOT NULL,
+    merchant_name TEXT,
+    merchant_email TEXT,
+    merchant_phone TEXT,
     images TEXT[],
-    status VARCHAR(50) DEFAULT 'pending',
-    merchant_email VARCHAR(255),
-    merchant_phone VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    admin_comment TEXT,
+    assigned_to TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS session (
