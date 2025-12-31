@@ -172,6 +172,7 @@ export default function CreateOffer() {
   
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const MIN_PHOTOS = 4;
   const MAX_PHOTOS = 10;
@@ -471,6 +472,8 @@ export default function CreateOffer() {
   };
 
   const onSubmit = async (data: FormValues) => {
+    if (isSubmitting) return;
+    
     if (uploadedImages.length < MIN_PHOTOS) {
       toast({
         title: "Not enough photos",
@@ -480,6 +483,7 @@ export default function CreateOffer() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const imageBase64Array = await Promise.all(
         uploadedImages.map(img => convertFileToBase64(img.file))
@@ -536,6 +540,8 @@ export default function CreateOffer() {
         description: error instanceof Error ? error.message : "Failed to submit deal",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1370,8 +1376,19 @@ export default function CreateOffer() {
                 <Button type="button" variant="outline" className="min-w-[100px] border-slate-300 text-slate-600 hover:bg-slate-50">
                   Close
                 </Button>
-                <Button type="submit" className="min-w-[140px] bg-[#00426D] text-white hover:bg-[#003557]">
-                  Submit Deal
+                <Button 
+                  type="submit" 
+                  className="min-w-[140px] bg-[#00426D] text-white hover:bg-[#003557]"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Deal"
+                  )}
                 </Button>
               </div>
             </div>

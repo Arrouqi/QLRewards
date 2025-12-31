@@ -61,6 +61,7 @@ CREATE TABLE deals (
     merchant_phone TEXT,
     images TEXT[],
     admin_comment TEXT,
+    admin_comment_history TEXT[],
     assigned_to TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

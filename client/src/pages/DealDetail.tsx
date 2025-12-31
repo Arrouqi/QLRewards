@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { ArrowLeft, CheckCircle, Save, MessageSquare, FileDown, X, Gift, Percent, Tag, ShoppingBag, Upload, Pencil, Check, Crop as CropIcon, Camera, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Save, MessageSquare, FileDown, X, Gift, Percent, Tag, ShoppingBag, Upload, Pencil, Check, Crop as CropIcon, Camera, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -221,18 +221,18 @@ export default function DealDetail() {
 
       if (!params?.id) return;
 
-      const dealResponse = await fetch(`/api/deals/${params.id}`);
+      const dealResponse = await fetch(`/api/deals/${params.id}`, { credentials: "include" });
       if (!dealResponse.ok) {
         throw new Error("Deal not found");
       }
 
       const data = await dealResponse.json();
       setDeal(data);
-      setAdminComment(data.adminComment || "");
+      setAdminComment("");
       setAssignedTo(data.assignedTo || "");
       setUploadedImages(data.images || []);
 
-      const adminUsersResponse = await fetch("/api/admin-users");
+      const adminUsersResponse = await fetch("/api/admin-users", { credentials: "include" });
       if (adminUsersResponse.ok) {
         const users = await adminUsersResponse.json();
         setAdminUsers(users);
@@ -284,6 +284,7 @@ export default function DealDetail() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({ ...data, images: uploadedImages }),
       });
 
@@ -320,6 +321,7 @@ export default function DealDetail() {
     try {
       const response = await fetch(`/api/deals/${params.id}/approve`, {
         method: "PATCH",
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -358,6 +360,7 @@ export default function DealDetail() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({ adminComment, assignedTo }),
       });
 
@@ -368,10 +371,11 @@ export default function DealDetail() {
 
       const updatedDeal = await response.json();
       setDeal(updatedDeal);
+      setAdminComment("");
 
       toast({
         title: "Success",
-        description: "Admin notes saved successfully",
+        description: "Comment added successfully",
       });
     } catch (error) {
       toast({
@@ -1315,13 +1319,13 @@ export default function DealDetail() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
-                    Admin Comment
+                    Add Comment
                   </label>
                   <Textarea
                     value={adminComment}
                     onChange={(e) => setAdminComment(e.target.value)}
-                    placeholder="Add internal notes about this deal..."
-                    rows={4}
+                    placeholder="Add a comment about this deal..."
+                    rows={3}
                     className="bg-slate-50"
                     data-testid="textarea-admin-comment"
                   />
@@ -1330,13 +1334,70 @@ export default function DealDetail() {
                 <Button
                   type="button"
                   onClick={saveAdminFields}
-                  disabled={isSaving}
+                  disabled={isSaving || !adminComment.trim()}
                   className="w-full bg-[#00426D] hover:bg-[#003152]"
                   data-testid="button-save-admin-notes"
                 >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSaving ? "Saving..." : "Save Admin Notes"}
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Add Comment
+                    </>
+                  )}
                 </Button>
+
+                {deal.adminCommentHistory && deal.adminCommentHistory.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-3">
+                      Comment History
+                    </label>
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      {[...deal.adminCommentHistory].reverse().map((commentStr, index) => {
+                        try {
+                          const comment = JSON.parse(commentStr);
+                          return (
+                            <div 
+                              key={index} 
+                              className="bg-slate-50 p-3 rounded-lg border border-slate-200"
+                            >
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="text-sm font-medium text-[#00426D]">
+                                  {comment.author}
+                                </span>
+                                <span className="text-xs text-slate-400">
+                                  {new Date(comment.timestamp).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                              <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                                {comment.text}
+                              </p>
+                            </div>
+                          );
+                        } catch (e) {
+                          return (
+                            <div 
+                              key={index} 
+                              className="bg-slate-50 p-3 rounded-lg border border-slate-200"
+                            >
+                              <p className="text-sm text-slate-700">{commentStr}</p>
+                            </div>
+                          );
+                        }
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

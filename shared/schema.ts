@@ -30,6 +30,7 @@ export const deals = pgTable("deals", {
   merchantPhone: text("merchant_phone"),
   images: text("images").array(),
   adminComment: text("admin_comment"),
+  adminCommentHistory: text("admin_comment_history").array(),
   assignedTo: text("assigned_to"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

@@ -77,8 +77,8 @@ export default function AdminDashboard() {
       }
 
       const [dealsResponse, adminUsersResponse] = await Promise.all([
-        fetch("/api/deals"),
-        fetch("/api/admin-users"),
+        fetch("/api/deals", { credentials: "include" }),
+        fetch("/api/admin-users", { credentials: "include" }),
       ]);
 
       if (!dealsResponse.ok) {
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
   const handleRemoveConfirm = async () => {
     if (!dealToRemove) return;
     try {
-      const response = await fetch(`/api/deals/${dealToRemove}/archive`, { method: "PATCH" });
+      const response = await fetch(`/api/deals/${dealToRemove}/archive`, { method: "PATCH", credentials: "include" });
       if (!response.ok) throw new Error("Failed to remove deal");
       toast({ title: "Success", description: "Deal removed successfully" });
       await checkAuthAndFetchDeals();
@@ -231,6 +231,7 @@ export default function AdminDashboard() {
       const response = await fetch("/api/deals/bulk-approve", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ dealIds: Array.from(selectedDeals) }),
       });
       if (!response.ok) throw new Error("Failed to approve deals");
