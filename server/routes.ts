@@ -34,6 +34,11 @@ export async function registerRoutes(
     ? (process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL)
     : process.env.DATABASE_URL;
 
+  // Trust proxy for Azure App Service (behind load balancer)
+  if (isProduction) {
+    app.set('trust proxy', 1);
+  }
+
   app.use(
     session({
       store: new PgSession({
@@ -43,11 +48,12 @@ export async function registerRoutes(
       secret: process.env.SESSION_SECRET || "qatar-living-deals-secret-key",
       resave: false,
       saveUninitialized: false,
+      proxy: isProduction,
       cookie: {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         httpOnly: true,
         secure: isProduction,
-        sameSite: isProduction ? "strict" : "lax",
+        sameSite: "lax",
       },
     })
   );
