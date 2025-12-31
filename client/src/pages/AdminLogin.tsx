@@ -79,7 +79,7 @@ export default function AdminLogin() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-[#00426D]">Admin Login</CardTitle>
-          <CardDescription>Enter your credentials to access the admin panel</CardDescription>
+          <CardDescription>Enter your credentials to manage your deals</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
