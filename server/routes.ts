@@ -171,6 +171,7 @@ export async function registerRoutes(
           console.error("Session save error:", err);
           return res.status(500).json({ error: "Failed to create session" });
         }
+        console.log("Session saved - ID:", req.sessionID, "userId:", req.session.userId);
         res.json({ success: true, username: user.username, role: user.role });
       });
     } catch (error: any) {
@@ -188,6 +189,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/auth/session", (req, res) => {
+    console.log("Session check - ID:", req.sessionID, "userId:", req.session.userId);
     if (req.session.userId) {
       res.json({ 
         authenticated: true, 
@@ -195,7 +197,7 @@ export async function registerRoutes(
         role: req.session.role 
       });
     } else {
-      res.status(401).json({ authenticated: false });
+      res.json({ authenticated: false });
     }
   });
 

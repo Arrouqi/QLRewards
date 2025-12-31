@@ -19,7 +19,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { data: session } = useQuery({
     queryKey: ["/api/auth/session"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/session");
+      const res = await fetch("/api/auth/session", { credentials: "include" });
       if (!res.ok) return { role: "user" };
       return res.json();
     },
@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
       queryClient.clear();
       setLocation("/admin/login");
     } catch (error) {

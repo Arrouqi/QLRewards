@@ -70,7 +70,7 @@ export default function AdminDashboard() {
 
   const checkAuthAndFetchDeals = async () => {
     try {
-      const authResponse = await fetch("/api/auth/session");
+      const authResponse = await fetch("/api/auth/session", { credentials: "include" });
       if (!authResponse.ok) {
         setLocation("/admin/login");
         return;

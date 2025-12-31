@@ -38,7 +38,7 @@ export default function UserManagement() {
   const { data: session } = useQuery({
     queryKey: ["/api/auth/session"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/session");
+      const res = await fetch("/api/auth/session", { credentials: "include" });
       if (!res.ok) {
         setLocation("/admin/login");
         throw new Error("Not authenticated");
