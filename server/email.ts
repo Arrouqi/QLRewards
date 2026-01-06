@@ -17,7 +17,7 @@ async function getEmailTransporter() {
       port: 587,
       secure: false,
       auth: {
-        user: settings.fromEmail || "apikey",
+        user: "apikey",
         pass: settings.apiKey,
       },
     });
