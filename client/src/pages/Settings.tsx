@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Mail, Plus, Trash2, Loader2, AlertCircle, Settings as SettingsIcon, Send, CheckCircle2, XCircle, Users, Shield } from "lucide-react";
+import { Plus, Trash2, Loader2, AlertCircle, Settings as SettingsIcon, Send, CheckCircle2, XCircle, Users, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -369,126 +369,71 @@ export default function Settings() {
     }
   };
 
-  const RecipientList = ({ 
-    recipients, 
-    recipientType, 
-    newEmail, 
-    setNewEmail,
-    title,
-    description,
-    icon: Icon,
-    emptyMessage
-  }: {
-    recipients: EmailRecipient[];
-    recipientType: "sales" | "moderation";
-    newEmail: string;
-    setNewEmail: (value: string) => void;
-    title: string;
-    description: string;
-    icon: React.ElementType;
-    emptyMessage: string;
-  }) => (
-    <Card className="shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-[#00426D]">
-          <Icon className="h-5 w-5" />
-          {title}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <form 
-          onSubmit={(e) => { 
-            e.preventDefault(); 
-            handleAddRecipient(recipientType); 
-          }} 
-          className="flex gap-3"
-        >
-          <div className="flex-1">
-            <Input
-              type="email"
-              placeholder="Enter email address"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              className="h-11"
-              data-testid={`input-email-${recipientType}`}
-            />
-          </div>
-          <Button
-            type="submit"
-            disabled={isSaving || !newEmail.trim()}
-            className="bg-[#00426D] hover:bg-[#003152] h-11"
-            data-testid={`button-add-${recipientType}`}
-          >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Add
-              </>
-            )}
-          </Button>
-        </form>
+  const renderRecipientTable = (recipients: EmailRecipient[], recipientType: "sales" | "moderation") => {
+    if (recipients.length === 0) {
+      return (
+        <div className="text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+          <AlertCircle className="h-10 w-10 text-slate-400 mx-auto mb-3" />
+          <p className="text-slate-600 font-medium">No recipients configured</p>
+          <p className="text-slate-500 text-sm mt-1">
+            {recipientType === "sales" 
+              ? "Add email addresses to receive notifications when new deals are submitted."
+              : "Add email addresses to receive notifications when deals are forwarded to moderation."}
+          </p>
+        </div>
+      );
+    }
 
-        {recipients.length === 0 ? (
-          <div className="text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-            <AlertCircle className="h-10 w-10 text-slate-400 mx-auto mb-3" />
-            <p className="text-slate-600 font-medium">No recipients configured</p>
-            <p className="text-slate-500 text-sm mt-1">{emptyMessage}</p>
-          </div>
-        ) : (
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead>Email Address</TableHead>
-                  <TableHead className="w-[120px] text-center">Status</TableHead>
-                  <TableHead className="w-[150px] text-center">Added</TableHead>
-                  <TableHead className="w-[100px] text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recipients.map((recipient) => (
-                  <TableRow key={recipient.id} data-testid={`row-${recipientType}-${recipient.id}`}>
-                    <TableCell className="font-medium" data-testid={`text-email-${recipient.id}`}>
-                      {recipient.email}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Switch
-                          checked={recipient.isActive}
-                          onCheckedChange={() => handleToggleActive(recipient.id, recipient.isActive, recipientType)}
-                          data-testid={`switch-active-${recipient.id}`}
-                        />
-                        <Badge variant={recipient.isActive ? "default" : "secondary"}>
-                          {recipient.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center text-slate-500 text-sm">
-                      {format(new Date(recipient.createdAt), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(recipient.id, recipientType)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        data-testid={`button-delete-${recipient.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+    return (
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-slate-50">
+              <TableHead>Email Address</TableHead>
+              <TableHead className="w-[120px] text-center">Status</TableHead>
+              <TableHead className="w-[150px] text-center">Added</TableHead>
+              <TableHead className="w-[100px] text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {recipients.map((recipient) => (
+              <TableRow key={recipient.id} data-testid={`row-${recipientType}-${recipient.id}`}>
+                <TableCell className="font-medium" data-testid={`text-email-${recipient.id}`}>
+                  {recipient.email}
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <Switch
+                      checked={recipient.isActive}
+                      onCheckedChange={() => handleToggleActive(recipient.id, recipient.isActive, recipientType)}
+                      data-testid={`switch-active-${recipient.id}`}
+                    />
+                    <Badge variant={recipient.isActive ? "default" : "secondary"}>
+                      {recipient.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center text-slate-500 text-sm">
+                  {format(new Date(recipient.createdAt), "MMM d, yyyy")}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteClick(recipient.id, recipientType)}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    data-testid={`button-delete-${recipient.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -655,16 +600,55 @@ export default function Settings() {
           </TabsList>
           
           <TabsContent value="sales">
-            <RecipientList
-              recipients={salesRecipients}
-              recipientType="sales"
-              newEmail={newSalesEmail}
-              setNewEmail={setNewSalesEmail}
-              title="Sales Team Notifications"
-              description="These recipients will be notified when merchants submit new deal requests via the public form."
-              icon={Users}
-              emptyMessage="Add email addresses to receive notifications when new deals are submitted."
-            />
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-[#00426D]">
+                  <Users className="h-5 w-5" />
+                  Sales Team Notifications
+                </CardTitle>
+                <CardDescription>
+                  These recipients will be notified when merchants submit new deal requests via the public form.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <Input
+                      type="email"
+                      placeholder="Enter email address"
+                      value={newSalesEmail}
+                      onChange={(e) => setNewSalesEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddRecipient("sales");
+                        }
+                      }}
+                      className="h-11"
+                      data-testid="input-email-sales"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => handleAddRecipient("sales")}
+                    disabled={isSaving || !newSalesEmail.trim()}
+                    className="bg-[#00426D] hover:bg-[#003152] h-11"
+                    data-testid="button-add-sales"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {renderRecipientTable(salesRecipients, "sales")}
+              </CardContent>
+            </Card>
             
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
               <h4 className="font-medium text-blue-900 mb-2">When are sales emails sent?</h4>
@@ -676,16 +660,55 @@ export default function Settings() {
           </TabsContent>
           
           <TabsContent value="moderation">
-            <RecipientList
-              recipients={moderationRecipients}
-              recipientType="moderation"
-              newEmail={newModerationEmail}
-              setNewEmail={setNewModerationEmail}
-              title="Moderation Team Notifications"
-              description="These recipients will be notified when a deal is forwarded to moderation for review."
-              icon={Shield}
-              emptyMessage="Add email addresses to receive notifications when deals are forwarded to moderation."
-            />
+            <Card className="shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-[#00426D]">
+                  <Shield className="h-5 w-5" />
+                  Moderation Team Notifications
+                </CardTitle>
+                <CardDescription>
+                  These recipients will be notified when a deal is forwarded to moderation for review.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <Input
+                      type="email"
+                      placeholder="Enter email address"
+                      value={newModerationEmail}
+                      onChange={(e) => setNewModerationEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddRecipient("moderation");
+                        }
+                      }}
+                      className="h-11"
+                      data-testid="input-email-moderation"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => handleAddRecipient("moderation")}
+                    disabled={isSaving || !newModerationEmail.trim()}
+                    className="bg-[#00426D] hover:bg-[#003152] h-11"
+                    data-testid="button-add-moderation"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {renderRecipientTable(moderationRecipients, "moderation")}
+              </CardContent>
+            </Card>
             
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
               <h4 className="font-medium text-green-900 mb-2">When are moderation emails sent?</h4>
