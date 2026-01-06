@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Mail, Plus, Trash2, Loader2, AlertCircle, Power, PowerOff } from "lucide-react";
+import { Mail, Plus, Trash2, Loader2, AlertCircle, Settings as SettingsIcon, Send, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
 
@@ -35,21 +37,43 @@ interface EmailRecipient {
   createdAt: string;
 }
 
+interface EmailConfig {
+  id: string;
+  provider: string;
+  apiKey: string | null;
+  fromEmail: string | null;
+  fromName: string | null;
+  isEnabled: boolean;
+  updatedAt: string;
+}
+
 export default function Settings() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
   const [recipients, setRecipients] = useState<EmailRecipient[]>([]);
   const [newEmail, setNewEmail] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [recipientToDelete, setRecipientToDelete] = useState<string | null>(null);
 
+  const [emailConfig, setEmailConfig] = useState<EmailConfig | null>(null);
+  const [configForm, setConfigForm] = useState({
+    provider: "mandrill",
+    apiKey: "",
+    fromEmail: "",
+    fromName: "Qatar Living Deals",
+    isEnabled: false,
+  });
+  const [testEmail, setTestEmail] = useState("");
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
   useEffect(() => {
-    checkAuthAndFetchRecipients();
+    checkAuthAndFetchData();
   }, []);
 
-  const checkAuthAndFetchRecipients = async () => {
+  const checkAuthAndFetchData = async () => {
     try {
       const authResponse = await fetch("/api/auth/session", { credentials: "include" });
       if (!authResponse.ok) {
@@ -68,10 +92,28 @@ export default function Settings() {
         return;
       }
 
-      const recipientsResponse = await fetch("/api/settings/email-recipients", { credentials: "include" });
+      const [recipientsResponse, configResponse] = await Promise.all([
+        fetch("/api/settings/email-recipients", { credentials: "include" }),
+        fetch("/api/settings/email-config", { credentials: "include" }),
+      ]);
+
       if (recipientsResponse.ok) {
         const data = await recipientsResponse.json();
         setRecipients(data);
+      }
+
+      if (configResponse.ok) {
+        const config = await configResponse.json();
+        if (config) {
+          setEmailConfig(config);
+          setConfigForm({
+            provider: config.provider || "mandrill",
+            apiKey: config.apiKey || "",
+            fromEmail: config.fromEmail || "",
+            fromName: config.fromName || "Qatar Living Deals",
+            isEnabled: config.isEnabled || false,
+          });
+        }
       }
     } catch (error) {
       toast({
@@ -81,6 +123,102 @@ export default function Settings() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSaveConfig = async () => {
+    if (!configForm.fromEmail) {
+      toast({
+        title: "Error",
+        description: "Please enter a 'From' email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/settings/email-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(configForm),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save settings");
+      }
+
+      const savedConfig = await response.json();
+      setEmailConfig(savedConfig);
+      setConfigForm(prev => ({
+        ...prev,
+        apiKey: savedConfig.apiKey || "",
+      }));
+
+      toast({
+        title: "Success",
+        description: "Email settings saved successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!testEmail) {
+      toast({
+        title: "Error",
+        description: "Please enter an email address to send the test to",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTesting(true);
+    setTestResult(null);
+
+    try {
+      const response = await fetch("/api/settings/email-config/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ testEmail }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setTestResult({ success: true, message: "Test email sent successfully! Check your inbox." });
+        toast({
+          title: "Success",
+          description: "Test email sent successfully",
+        });
+      } else {
+        setTestResult({ success: false, message: result.error || "Failed to send test email" });
+        toast({
+          title: "Failed",
+          description: result.error || "Failed to send test email",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to send test email";
+      setTestResult({ success: false, message: errorMessage });
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -215,7 +353,7 @@ export default function Settings() {
 
   return (
     <AdminLayout>
-      <div className="p-4 md:p-6 max-w-4xl mx-auto">
+      <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-[#00426D]" data-testid="text-page-title">Settings</h1>
           <p className="text-slate-600 mt-1">Configure email notifications and system settings</p>
@@ -224,11 +362,145 @@ export default function Settings() {
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[#00426D]">
-              <Mail className="h-5 w-5" />
-              Email Notifications
+              <SettingsIcon className="h-5 w-5" />
+              Email Provider Configuration
             </CardTitle>
             <CardDescription>
-              Manage the list of email addresses that will receive notifications when a new deal request is submitted through the public form.
+              Configure Mailchimp Transactional (Mandrill) to send email notifications when new deals are submitted.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4">
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border">
+                <div>
+                  <Label className="text-base font-medium">Enable Email Notifications</Label>
+                  <p className="text-sm text-slate-500 mt-1">Turn on to send emails when new deals are submitted</p>
+                </div>
+                <Switch
+                  checked={configForm.isEnabled}
+                  onCheckedChange={(checked) => setConfigForm(prev => ({ ...prev, isEnabled: checked }))}
+                  data-testid="switch-email-enabled"
+                />
+              </div>
+
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">
+                  <strong>Mailchimp Transactional (Mandrill)</strong> - Enter your Mandrill API key below. 
+                  You can find this in your Mailchimp Transactional account under Settings → SMTP & API Info.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">Mandrill API Key</Label>
+                  <Input
+                    id="apiKey"
+                    type="password"
+                    placeholder="Enter your Mandrill API key"
+                    value={configForm.apiKey}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, apiKey: e.target.value }))}
+                    data-testid="input-api-key"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fromEmail">From Email Address *</Label>
+                  <Input
+                    id="fromEmail"
+                    type="email"
+                    placeholder="noreply@yourdomain.com"
+                    value={configForm.fromEmail}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, fromEmail: e.target.value }))}
+                    data-testid="input-from-email"
+                  />
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="fromName">From Name</Label>
+                  <Input
+                    id="fromName"
+                    placeholder="Qatar Living Deals"
+                    value={configForm.fromName}
+                    onChange={(e) => setConfigForm(prev => ({ ...prev, fromName: e.target.value }))}
+                    data-testid="input-from-name"
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSaveConfig}
+                disabled={isSaving}
+                className="bg-[#00426D] hover:bg-[#003152] w-full md:w-auto"
+                data-testid="button-save-config"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Email Settings"
+                )}
+              </Button>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="font-medium text-[#00426D]">Send Test Email</h3>
+              <p className="text-sm text-slate-500">
+                Verify your email configuration is working by sending a test email.
+              </p>
+              
+              <div className="flex gap-3">
+                <Input
+                  type="email"
+                  placeholder="Enter email to receive test"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="flex-1"
+                  data-testid="input-test-email"
+                />
+                <Button
+                  onClick={handleTestEmail}
+                  disabled={isTesting || !testEmail}
+                  variant="outline"
+                  className="border-[#00426D] text-[#00426D] hover:bg-[#00426D]/5"
+                  data-testid="button-send-test"
+                >
+                  {isTesting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Test
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {testResult && (
+                <div className={`flex items-center gap-2 p-3 rounded-lg ${testResult.success ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                  {testResult.success ? (
+                    <CheckCircle2 className="h-5 w-5" />
+                  ) : (
+                    <XCircle className="h-5 w-5" />
+                  )}
+                  <span className="text-sm">{testResult.message}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-[#00426D]">
+              <Mail className="h-5 w-5" />
+              Notification Recipients
+            </CardTitle>
+            <CardDescription>
+              Manage the list of email addresses that will receive notifications when a new deal request is submitted.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

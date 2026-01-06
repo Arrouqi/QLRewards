@@ -5,7 +5,8 @@ import {
   type SubCategory, type InsertSubCategory,
   type Term, type InsertTerm,
   type EmailRecipient, type InsertEmailRecipient,
-  deals, adminUsers, categories, subCategories, terms, emailRecipients 
+  type EmailSettings, type InsertEmailSettings,
+  deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings 
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, inArray, and } from "drizzle-orm";
@@ -46,6 +47,8 @@ export interface IStorage {
   getActiveEmailRecipients(): Promise<EmailRecipient[]>;
   updateEmailRecipient(id: string, data: { email?: string; isActive?: boolean }): Promise<EmailRecipient | undefined>;
   deleteEmailRecipient(id: string): Promise<void>;
+  getEmailSettings(): Promise<EmailSettings | undefined>;
+  upsertEmailSettings(settings: Partial<InsertEmailSettings>): Promise<EmailSettings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -273,6 +276,30 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEmailRecipient(id: string): Promise<void> {
     await db.delete(emailRecipients).where(eq(emailRecipients.id, id));
+  }
+
+  async getEmailSettings(): Promise<EmailSettings | undefined> {
+    const [settings] = await db.select().from(emailSettings);
+    return settings;
+  }
+
+  async upsertEmailSettings(settings: Partial<InsertEmailSettings>): Promise<EmailSettings> {
+    const existing = await this.getEmailSettings();
+    
+    if (existing) {
+      const [updated] = await db
+        .update(emailSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(emailSettings.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(emailSettings)
+        .values({ ...settings, updatedAt: new Date() })
+        .returning();
+      return created;
+    }
   }
 }
 

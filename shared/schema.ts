@@ -122,3 +122,21 @@ export const insertEmailRecipientSchema = createInsertSchema(emailRecipients).om
 
 export type InsertEmailRecipient = z.infer<typeof insertEmailRecipientSchema>;
 export type EmailRecipient = typeof emailRecipients.$inferSelect;
+
+export const emailSettings = pgTable("email_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull().default("mandrill"),
+  apiKey: text("api_key"),
+  fromEmail: text("from_email"),
+  fromName: text("from_name"),
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertEmailSettingsSchema = createInsertSchema(emailSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type InsertEmailSettings = z.infer<typeof insertEmailSettingsSchema>;
+export type EmailSettings = typeof emailSettings.$inferSelect;

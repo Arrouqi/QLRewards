@@ -520,6 +520,71 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/settings/email-config", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const settings = await storage.getEmailSettings();
+      if (settings) {
+        res.json({
+          ...settings,
+          apiKey: settings.apiKey ? "••••••••" + settings.apiKey.slice(-4) : null,
+        });
+      } else {
+        res.json(null);
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/settings/email-config", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { provider, apiKey, fromEmail, fromName, isEnabled } = req.body;
+      
+      const updateData: any = { provider, fromEmail, fromName, isEnabled };
+      if (apiKey && !apiKey.startsWith("••••")) {
+        updateData.apiKey = apiKey;
+      }
+      
+      const settings = await storage.upsertEmailSettings(updateData);
+      res.json({
+        ...settings,
+        apiKey: settings.apiKey ? "••••••••" + settings.apiKey.slice(-4) : null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/settings/email-config/test", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const { testEmail } = req.body;
+      if (!testEmail) {
+        return res.status(400).json({ error: "Test email address is required" });
+      }
+
+      const { sendTestEmail } = await import("./email");
+      const result = await sendTestEmail(testEmail);
+      
+      if (result.success) {
+        res.json({ success: true, message: "Test email sent successfully" });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   return httpServer;
 }
 
