@@ -4,10 +4,14 @@ import { storage } from "./storage";
 
 const DASHBOARD_URL = process.env.DASHBOARD_URL || "https://reqardsform-dzbbephca5gdgcgh.westeurope-01.azurewebsites.net";
 
-async function getEmailTransporter() {
+async function getEmailTransporter(ignoreEnabledCheck: boolean = false) {
   const settings = await storage.getEmailSettings();
   
-  if (!settings || !settings.isEnabled || !settings.apiKey) {
+  if (!settings || !settings.apiKey) {
+    return null;
+  }
+  
+  if (!ignoreEnabledCheck && !settings.isEnabled) {
     return null;
   }
 
@@ -287,9 +291,9 @@ export async function sendTestEmail(testEmail: string): Promise<{ success: boole
     return { success: false, error: "API key is not configured." };
   }
 
-  const transporter = await getEmailTransporter();
+  const transporter = await getEmailTransporter(true);
   if (!transporter) {
-    return { success: false, error: "Failed to create email transporter. Check your settings." };
+    return { success: false, error: "Failed to create email transporter. Please check your API key is valid." };
   }
 
   const fromEmail = settings.fromEmail || "noreply@qatarliving.com";
