@@ -17,7 +17,7 @@ export interface IStorage {
   getDealById(id: string): Promise<Deal | undefined>;
   updateDeal(id: string, deal: Partial<InsertDeal>): Promise<Deal | undefined>;
   approveDeal(id: string): Promise<Deal | undefined>;
-  bulkApproveDeals(ids: string[]): Promise<number>;
+  bulkApproveDeals(ids: string[]): Promise<Deal[]>;
   archiveDeal(id: string): Promise<Deal | undefined>;
   updateDealCategories(oldName: string, newName: string): Promise<void>;
   getAdminUser(username: string): Promise<AdminUser | undefined>;
@@ -85,14 +85,14 @@ export class DatabaseStorage implements IStorage {
     return approved;
   }
 
-  async bulkApproveDeals(ids: string[]): Promise<number> {
-    if (ids.length === 0) return 0;
+  async bulkApproveDeals(ids: string[]): Promise<Deal[]> {
+    if (ids.length === 0) return [];
     const result = await db
       .update(deals)
       .set({ status: "approved" })
       .where(and(inArray(deals.id, ids), eq(deals.status, "pending")))
       .returning();
-    return result.length;
+    return result;
   }
 
   async archiveDeal(id: string): Promise<Deal | undefined> {

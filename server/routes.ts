@@ -97,8 +97,22 @@ export async function registerRoutes(
       if (!Array.isArray(dealIds) || dealIds.length === 0) {
         return res.status(400).json({ error: "dealIds array is required" });
       }
-      const count = await storage.bulkApproveDeals(dealIds);
-      res.json({ success: true, count });
+      const approvedDeals = await storage.bulkApproveDeals(dealIds);
+      
+      if (approvedDeals.length > 0) {
+        const moderationRecipients = await storage.getActiveEmailRecipientsByType("moderation");
+        if (moderationRecipients.length > 0) {
+          const emails = moderationRecipients.map(r => r.email);
+          const forwardedBy = req.session.username || "Unknown";
+          for (const deal of approvedDeals) {
+            sendModerationNotification(deal, emails, forwardedBy).catch(err => {
+              console.error("[Email] Error sending moderation notification:", err);
+            });
+          }
+        }
+      }
+      
+      res.json({ success: true, count: approvedDeals.length });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
