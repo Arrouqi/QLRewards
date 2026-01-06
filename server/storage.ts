@@ -44,7 +44,8 @@ export interface IStorage {
   deleteTerm(id: string): Promise<void>;
   createEmailRecipient(recipient: InsertEmailRecipient): Promise<EmailRecipient>;
   getAllEmailRecipients(): Promise<EmailRecipient[]>;
-  getActiveEmailRecipients(): Promise<EmailRecipient[]>;
+  getEmailRecipientsByType(recipientType: string): Promise<EmailRecipient[]>;
+  getActiveEmailRecipientsByType(recipientType: string): Promise<EmailRecipient[]>;
   updateEmailRecipient(id: string, data: { email?: string; isActive?: boolean }): Promise<EmailRecipient | undefined>;
   deleteEmailRecipient(id: string): Promise<void>;
   getEmailSettings(): Promise<EmailSettings | undefined>;
@@ -261,8 +262,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(emailRecipients);
   }
 
-  async getActiveEmailRecipients(): Promise<EmailRecipient[]> {
-    return await db.select().from(emailRecipients).where(eq(emailRecipients.isActive, true));
+  async getEmailRecipientsByType(recipientType: string): Promise<EmailRecipient[]> {
+    return await db.select().from(emailRecipients).where(eq(emailRecipients.recipientType, recipientType));
+  }
+
+  async getActiveEmailRecipientsByType(recipientType: string): Promise<EmailRecipient[]> {
+    return await db.select().from(emailRecipients).where(
+      and(eq(emailRecipients.recipientType, recipientType), eq(emailRecipients.isActive, true))
+    );
   }
 
   async updateEmailRecipient(id: string, data: { email?: string; isActive?: boolean }): Promise<EmailRecipient | undefined> {

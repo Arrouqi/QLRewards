@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db } from "./db";
-import { sendNewDealNotification } from "./email";
+import { sendNewDealNotification, sendModerationNotification } from "./email";
 
 const PgSession = connectPgSimple(session);
 
@@ -67,7 +67,7 @@ export async function registerRoutes(
       const validatedData = insertDealSchema.parse(req.body);
       const deal = await storage.createDeal(validatedData);
       
-      const activeRecipients = await storage.getActiveEmailRecipients();
+      const activeRecipients = await storage.getActiveEmailRecipientsByType("sales");
       if (activeRecipients.length > 0) {
         const emails = activeRecipients.map(r => r.email);
         sendNewDealNotification(deal, emails).catch(err => {
@@ -136,6 +136,16 @@ export async function registerRoutes(
       if (!deal) {
         return res.status(404).json({ error: "Deal not found" });
       }
+      
+      const moderationRecipients = await storage.getActiveEmailRecipientsByType("moderation");
+      if (moderationRecipients.length > 0) {
+        const emails = moderationRecipients.map(r => r.email);
+        const forwardedBy = req.session.username || "Unknown";
+        sendModerationNotification(deal, emails, forwardedBy).catch(err => {
+          console.error("[Email] Error sending moderation notification:", err);
+        });
+      }
+      
       res.json(deal);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -466,7 +476,8 @@ export async function registerRoutes(
       if (req.session.role !== "admin") {
         return res.status(403).json({ error: "Admin access required" });
       }
-      const recipients = await storage.getAllEmailRecipients();
+      const recipientType = (req.query.type as string) || "sales";
+      const recipients = await storage.getEmailRecipientsByType(recipientType);
       res.json(recipients);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -483,7 +494,7 @@ export async function registerRoutes(
       res.status(201).json(recipient);
     } catch (error: any) {
       if (error.code === '23505') {
-        return res.status(400).json({ error: "This email address already exists" });
+        return res.status(400).json({ error: "This email address already exists for this recipient type" });
       }
       res.status(400).json({ error: error.message });
     }

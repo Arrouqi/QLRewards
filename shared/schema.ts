@@ -110,7 +110,8 @@ export type Term = typeof terms.$inferSelect;
 
 export const emailRecipients = pgTable("email_recipients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: text("email").notNull().unique(),
+  email: text("email").notNull(),
+  recipientType: text("recipient_type").notNull().default("sales"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

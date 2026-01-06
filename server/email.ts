@@ -149,6 +149,133 @@ This is an automated notification from Qatar Living Deals Admin Portal.
   }
 }
 
+export async function sendModerationNotification(deal: Deal, recipientEmails: string[], forwardedBy: string): Promise<void> {
+  const settings = await storage.getEmailSettings();
+  
+  if (!settings || !settings.isEnabled) {
+    console.log("[Email] Email notifications are disabled. Enable them in Settings.");
+    return;
+  }
+
+  if (!settings.apiKey) {
+    console.log("[Email] No API key configured. Please configure email settings in the dashboard.");
+    return;
+  }
+
+  if (recipientEmails.length === 0) {
+    console.log("[Email] No moderation recipients configured. Skipping email notification.");
+    return;
+  }
+
+  const transporter = await getEmailTransporter();
+  if (!transporter) {
+    console.log("[Email] Failed to create email transporter.");
+    return;
+  }
+
+  const fromEmail = settings.fromEmail || "noreply@qatarliving.com";
+  const fromName = settings.fromName || "Qatar Living Deals";
+  const subject = `Deal Ready for Moderation: ${deal.title}`;
+  
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Deal Ready for Moderation</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: #059669; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Qatar Living Deals</h1>
+        <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0; font-size: 14px;">Deal Forwarded to Moderation</p>
+      </div>
+      
+      <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none;">
+        <div style="background: #dcfce7; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 20px;">
+          <p style="margin: 0; color: #166534; font-weight: bold; text-align: center;">✓ Approved by Sales Team</p>
+        </div>
+        
+        <h2 style="color: #00426D; margin-top: 0; margin-bottom: 20px;">A deal is ready for moderation review!</h2>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 25px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-weight: bold; color: #6b7280; width: 140px;">Deal Title:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #111827;">${deal.title}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-weight: bold; color: #6b7280;">Category:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #111827;">${deal.category} - ${deal.subCategory}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-weight: bold; color: #6b7280;">Deal Type:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #111827;">${deal.dealType}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-weight: bold; color: #6b7280;">Merchant:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #111827;">${deal.merchantName || "Not specified"}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-weight: bold; color: #6b7280;">Forwarded By:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #111827;">${forwardedBy}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Forwarded At:</td>
+              <td style="padding: 8px 0; color: #111827;">${new Date().toLocaleString("en-US", { 
+                dateStyle: "medium", 
+                timeStyle: "short" 
+              })}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <div style="text-align: center;">
+          <a href="${DASHBOARD_URL}/admin/deals/${deal.id}" 
+             style="display: inline-block; background: #059669; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+            Review Deal
+          </a>
+        </div>
+        
+        <p style="color: #6b7280; font-size: 13px; margin-top: 25px; text-align: center;">
+          This deal has been approved by the sales team and is ready for moderation review.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `
+Deal Ready for Moderation - Qatar Living Deals
+
+A deal is ready for moderation review!
+
+Deal Title: ${deal.title}
+Category: ${deal.category} - ${deal.subCategory}
+Deal Type: ${deal.dealType}
+Merchant: ${deal.merchantName || "Not specified"}
+Forwarded By: ${forwardedBy}
+Forwarded At: ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+
+Review Deal: ${DASHBOARD_URL}/admin/deals/${deal.id}
+
+This deal has been approved by the sales team and is ready for moderation review.
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: recipientEmails.join(", "),
+      subject,
+      text: textContent,
+      html: htmlContent,
+    });
+    console.log(`[Email] Moderation notification sent to ${recipientEmails.length} recipient(s)`);
+  } catch (error) {
+    console.error("[Email] Failed to send moderation notification:", error);
+  }
+}
+
 export async function sendTestEmail(testEmail: string): Promise<{ success: boolean; error?: string }> {
   const settings = await storage.getEmailSettings();
   
