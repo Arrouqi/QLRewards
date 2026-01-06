@@ -370,7 +370,7 @@ export default function AdminDashboard() {
               {paginatedDeals.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-slate-500 py-8">
-                    {searchQuery || statusFilter !== "all" || assignedToFilter !== "all" ? "No deals match your filters" : "No deals found"}
+                    {searchQuery || statusFilter !== "all" ? "No deals match your filters" : "No deals found"}
                   </TableCell>
                 </TableRow>
               ) : (
