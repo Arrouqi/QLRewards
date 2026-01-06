@@ -45,3 +45,8 @@ waitForPort = 5000
 
 [agent]
 mockupState = "FULLSTACK"
+
+[userenv]
+
+[userenv.shared]
+DASHBOARD_URL = "https://reqardsform-dzbbephca5gdgcgh.westeurope-01.azurewebsites.net"
