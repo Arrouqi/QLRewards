@@ -44,7 +44,7 @@ export const insertDealSchema = createInsertSchema(deals).omit({
   status: true,
   createdAt: true,
   adminComment: true,
-  assignedTo: true,
+  adminCommentHistory: true,
 });
 
 export type InsertDeal = z.infer<typeof insertDealSchema>;
@@ -107,3 +107,18 @@ export const insertTermSchema = createInsertSchema(terms).omit({
 
 export type InsertTerm = z.infer<typeof insertTermSchema>;
 export type Term = typeof terms.$inferSelect;
+
+export const emailRecipients = pgTable("email_recipients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertEmailRecipientSchema = createInsertSchema(emailRecipients).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEmailRecipient = z.infer<typeof insertEmailRecipientSchema>;
+export type EmailRecipient = typeof emailRecipients.$inferSelect;

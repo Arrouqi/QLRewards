@@ -4,7 +4,8 @@ import {
   type Category, type InsertCategory,
   type SubCategory, type InsertSubCategory,
   type Term, type InsertTerm,
-  deals, adminUsers, categories, subCategories, terms 
+  type EmailRecipient, type InsertEmailRecipient,
+  deals, adminUsers, categories, subCategories, terms, emailRecipients 
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, inArray, and } from "drizzle-orm";
@@ -40,6 +41,11 @@ export interface IStorage {
   getTermsByType(type: string): Promise<Term[]>;
   updateTerm(id: string, text: string): Promise<Term | undefined>;
   deleteTerm(id: string): Promise<void>;
+  createEmailRecipient(recipient: InsertEmailRecipient): Promise<EmailRecipient>;
+  getAllEmailRecipients(): Promise<EmailRecipient[]>;
+  getActiveEmailRecipients(): Promise<EmailRecipient[]>;
+  updateEmailRecipient(id: string, data: { email?: string; isActive?: boolean }): Promise<EmailRecipient | undefined>;
+  deleteEmailRecipient(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -238,6 +244,35 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTerm(id: string): Promise<void> {
     await db.delete(terms).where(eq(terms.id, id));
+  }
+
+  async createEmailRecipient(recipient: InsertEmailRecipient): Promise<EmailRecipient> {
+    const [newRecipient] = await db.insert(emailRecipients).values({
+      ...recipient,
+      email: recipient.email.toLowerCase().trim()
+    }).returning();
+    return newRecipient;
+  }
+
+  async getAllEmailRecipients(): Promise<EmailRecipient[]> {
+    return await db.select().from(emailRecipients);
+  }
+
+  async getActiveEmailRecipients(): Promise<EmailRecipient[]> {
+    return await db.select().from(emailRecipients).where(eq(emailRecipients.isActive, true));
+  }
+
+  async updateEmailRecipient(id: string, data: { email?: string; isActive?: boolean }): Promise<EmailRecipient | undefined> {
+    const updateData: Partial<InsertEmailRecipient> = {};
+    if (data.email !== undefined) updateData.email = data.email.toLowerCase().trim();
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    
+    const [updated] = await db.update(emailRecipients).set(updateData).where(eq(emailRecipients.id, id)).returning();
+    return updated;
+  }
+
+  async deleteEmailRecipient(id: string): Promise<void> {
+    await db.delete(emailRecipients).where(eq(emailRecipients.id, id));
   }
 }
 
