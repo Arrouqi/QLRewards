@@ -132,18 +132,27 @@ export async function registerRoutes(
 
   app.patch("/api/deals/:id/approve", requireAuth, async (req, res) => {
     try {
+      const existingDeal = await storage.getDealById(req.params.id);
+      if (!existingDeal) {
+        return res.status(404).json({ error: "Deal not found" });
+      }
+      
+      const wasAlreadyApproved = existingDeal.status === "approved";
+      
       const deal = await storage.approveDeal(req.params.id);
       if (!deal) {
         return res.status(404).json({ error: "Deal not found" });
       }
       
-      const moderationRecipients = await storage.getActiveEmailRecipientsByType("moderation");
-      if (moderationRecipients.length > 0) {
-        const emails = moderationRecipients.map(r => r.email);
-        const forwardedBy = req.session.username || "Unknown";
-        sendModerationNotification(deal, emails, forwardedBy).catch(err => {
-          console.error("[Email] Error sending moderation notification:", err);
-        });
+      if (!wasAlreadyApproved) {
+        const moderationRecipients = await storage.getActiveEmailRecipientsByType("moderation");
+        if (moderationRecipients.length > 0) {
+          const emails = moderationRecipients.map(r => r.email);
+          const forwardedBy = req.session.username || "Unknown";
+          sendModerationNotification(deal, emails, forwardedBy).catch(err => {
+            console.error("[Email] Error sending moderation notification:", err);
+          });
+        }
       }
       
       res.json(deal);
