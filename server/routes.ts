@@ -1,11 +1,12 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema } from "@shared/schema";
+import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db } from "./db";
+import { sendNewDealNotification } from "./email";
 
 const PgSession = connectPgSimple(session);
 
@@ -65,6 +66,15 @@ export async function registerRoutes(
     try {
       const validatedData = insertDealSchema.parse(req.body);
       const deal = await storage.createDeal(validatedData);
+      
+      const activeRecipients = await storage.getActiveEmailRecipients();
+      if (activeRecipients.length > 0) {
+        const emails = activeRecipients.map(r => r.email);
+        sendNewDealNotification(deal, emails).catch(err => {
+          console.error("[Email] Error sending notification:", err);
+        });
+      }
+      
       res.status(201).json(deal);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -445,6 +455,62 @@ export async function registerRoutes(
   app.delete("/api/terms/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteTerm(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/settings/email-recipients", requireAuth, async (req, res) => {
+    try {
+      const recipients = await storage.getAllEmailRecipients();
+      res.json(recipients);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/settings/email-recipients", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const validatedData = insertEmailRecipientSchema.parse(req.body);
+      const recipient = await storage.createEmailRecipient(validatedData);
+      res.status(201).json(recipient);
+    } catch (error: any) {
+      if (error.code === '23505') {
+        return res.status(400).json({ error: "This email address already exists" });
+      }
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/settings/email-recipients/:id", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { email, isActive } = req.body;
+      const recipient = await storage.updateEmailRecipient(req.params.id, { email, isActive });
+      if (!recipient) {
+        return res.status(404).json({ error: "Recipient not found" });
+      }
+      res.json(recipient);
+    } catch (error: any) {
+      if (error.code === '23505') {
+        return res.status(400).json({ error: "This email address already exists" });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/settings/email-recipients/:id", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      await storage.deleteEmailRecipient(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

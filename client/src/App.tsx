@@ -14,6 +14,7 @@ import TermsManagement from "@/pages/TermsManagement";
 import UserManagement from "@/pages/UserManagement";
 import DealDetail from "@/pages/DealDetail";
 import PrintDeal from "@/pages/PrintDeal";
+import Settings from "@/pages/Settings";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/deals/:id" component={DealDetail} />
       <Route path="/admin/deals/:id/print" component={PrintDeal} />
+      <Route path="/admin/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
