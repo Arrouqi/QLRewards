@@ -463,6 +463,9 @@ export async function registerRoutes(
 
   app.get("/api/settings/email-recipients", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const recipients = await storage.getAllEmailRecipients();
       res.json(recipients);
     } catch (error: any) {
