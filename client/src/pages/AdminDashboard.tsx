@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Search, ChevronLeft, ChevronRight, Trash2, FileDown, Send, ArrowUpDown, ArrowUp, ArrowDown, Filter, Pencil } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Trash2, FileDown, Send, ArrowUpDown, ArrowUp, ArrowDown, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,13 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -41,12 +34,6 @@ type StatusFilter = "all" | "pending" | "approved" | "archived";
 type SortField = "title" | "merchantName" | "category" | "dealType" | "status" | "createdAt";
 type SortDirection = "asc" | "desc";
 
-interface AdminUserSafe {
-  id: string;
-  username: string;
-  role: string;
-}
-
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -59,8 +46,6 @@ export default function AdminDashboard() {
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [assignedToFilter, setAssignedToFilter] = useState<string>("all");
-  const [adminUsers, setAdminUsers] = useState<AdminUserSafe[]>([]);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [dealToRemove, setDealToRemove] = useState<string | null>(null);
 
@@ -76,10 +61,7 @@ export default function AdminDashboard() {
         return;
       }
 
-      const [dealsResponse, adminUsersResponse] = await Promise.all([
-        fetch("/api/deals", { credentials: "include" }),
-        fetch("/api/admin-users", { credentials: "include" }),
-      ]);
+      const dealsResponse = await fetch("/api/deals", { credentials: "include" });
 
       if (!dealsResponse.ok) {
         throw new Error("Failed to fetch deals");
@@ -87,11 +69,6 @@ export default function AdminDashboard() {
 
       const data = await dealsResponse.json();
       setDeals(data);
-
-      if (adminUsersResponse.ok) {
-        const users = await adminUsersResponse.json();
-        setAdminUsers(users);
-      }
     } catch (error) {
       toast({
         title: "Error",
@@ -131,11 +108,7 @@ export default function AdminDashboard() {
         deal.status.toLowerCase().includes(query) ||
         (deal.merchantName?.toLowerCase().includes(query) ?? false);
       const matchesStatus = statusFilter === "all" || deal.status === statusFilter;
-      const matchesAssignedTo = 
-        assignedToFilter === "all" || 
-        (assignedToFilter === "unassigned" && !deal.assignedTo) ||
-        deal.assignedTo === assignedToFilter;
-      return matchesSearch && matchesStatus && matchesAssignedTo;
+      return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
       // Always put archived deals at the end
@@ -248,7 +221,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, assignedToFilter]);
+  }, [searchQuery, statusFilter]);
 
   if (isLoading) {
     return (
@@ -303,23 +276,6 @@ export default function AdminDashboard() {
                 />
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-slate-400" />
-                  <Select value={assignedToFilter} onValueChange={setAssignedToFilter}>
-                    <SelectTrigger className="w-[180px]" data-testid="select-assigned-filter">
-                      <SelectValue placeholder="Filter by assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Assignees</SelectItem>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {adminUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.username}>
-                          {user.username}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 {selectedDeals.size > 0 && (
                   <Button
                     onClick={handleBulkApprove}

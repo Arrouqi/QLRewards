@@ -24,7 +24,8 @@ export interface IStorage {
   getAdminUserById(id: string): Promise<AdminUser | undefined>;
   updateAdminUser(id: string, data: { password?: string; role?: string }): Promise<AdminUser | undefined>;
   deleteAdminUser(id: string): Promise<void>;
-  updateDealAdminFields(id: string, adminComment: string | null, assignedTo: string | null, username: string): Promise<Deal | undefined>;
+  updateDealAdminFields(id: string, adminComment: string | null, username: string): Promise<Deal | undefined>;
+  updateDealMerchantIds(id: string, merchantUserId: string | null, merchantBranchId: string | null): Promise<Deal | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
   getAllCategories(): Promise<Category[]>;
   updateCategory(id: string, name: string): Promise<Category | undefined>;
@@ -124,7 +125,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(adminUsers).where(eq(adminUsers.id, id));
   }
 
-  async updateDealAdminFields(id: string, adminComment: string | null, assignedTo: string | null, username: string): Promise<Deal | undefined> {
+  async updateDealAdminFields(id: string, adminComment: string | null, username: string): Promise<Deal | undefined> {
     const existingDeal = await this.getDealById(id);
     if (!existingDeal) return undefined;
     
@@ -142,7 +143,16 @@ export class DatabaseStorage implements IStorage {
     
     const [updated] = await db
       .update(deals)
-      .set({ adminComment: "", assignedTo, adminCommentHistory })
+      .set({ adminComment: "", adminCommentHistory })
+      .where(eq(deals.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateDealMerchantIds(id: string, merchantUserId: string | null, merchantBranchId: string | null): Promise<Deal | undefined> {
+    const [updated] = await db
+      .update(deals)
+      .set({ merchantUserId, merchantBranchId })
       .where(eq(deals.id, id))
       .returning();
     return updated;

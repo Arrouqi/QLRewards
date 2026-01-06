@@ -782,6 +782,14 @@ export default function CreateOffer() {
                                       <SelectItem value="2">2 Weeks</SelectItem>
                                       <SelectItem value="3">3 Weeks</SelectItem>
                                       <SelectItem value="4">4 Weeks</SelectItem>
+                                      <SelectItem value="5">5 Weeks</SelectItem>
+                                      <SelectItem value="6">6 Weeks</SelectItem>
+                                      <SelectItem value="7">7 Weeks</SelectItem>
+                                      <SelectItem value="8">8 Weeks</SelectItem>
+                                      <SelectItem value="9">9 Weeks</SelectItem>
+                                      <SelectItem value="10">10 Weeks</SelectItem>
+                                      <SelectItem value="11">11 Weeks</SelectItem>
+                                      <SelectItem value="12">12 Weeks</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </FormItem>
@@ -792,86 +800,89 @@ export default function CreateOffer() {
                       </div>
                     )}
 
-                    <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="isMultipleItems"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={(checked) => {
-                                  field.onChange(checked);
-                                  setIsMultipleItems(!!checked);
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-medium text-slate-700">
-                              This Deal is for Multiple Items
-                            </FormLabel>
-                          </FormItem>
-                        )}
-                      />
-                      
-                      {isMultipleItems && (
-                        <div className="bg-[#FFF8E1] border border-[#FFE082] rounded-md p-3 flex items-start gap-3">
-                           <div className="bg-[#FFF8E1] rounded-full p-1 mt-0.5">
-                             <div className="bg-[#F57F17] rounded-full w-1 h-1"></div>
-                             <div className="bg-[#F57F17] w-0.5 h-2 mx-auto mt-0.5"></div>
-                           </div>
-                           <Info className="h-5 w-5 text-[#F57F17] flex-shrink-0" />
-                           <p className="text-[#5D4037] text-sm">
-                             If your deal is for multiple items, the price won't show on the deal card and details page.
-                           </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-                      <FormField
-                        control={form.control}
-                        name="originalPrice"
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">{offerType === "voucher" ? "Voucher Amount" : "Original Price"} <span className="text-red-500">*</span></FormLabel>
-                            <div className="relative">
-                              <FormControl>
-                                <Input 
-                                  placeholder="0.00" 
-                                  className="h-11 bg-slate-50 pr-12 disabled:opacity-50 disabled:cursor-not-allowed" 
-                                  {...field} 
-                                  disabled={isMultipleItems}
-                                />
-                              </FormControl>
-                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-
-                      {isDiscount && (
+                    {(isDiscount || isBogo) && (
+                      <div className="space-y-4">
                         <FormField
                           control={form.control}
-                          name="discountPercentage"
+                          name="isMultipleItems"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => {
+                                    field.onChange(checked);
+                                    setIsMultipleItems(!!checked);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-medium text-slate-700">
+                                This Deal is for Multiple Items
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        {isMultipleItems && (
+                          <div className="bg-[#FFF8E1] border border-[#FFE082] rounded-md p-3 flex items-start gap-3">
+                             <div className="bg-[#FFF8E1] rounded-full p-1 mt-0.5">
+                               <div className="bg-[#F57F17] rounded-full w-1 h-1"></div>
+                               <div className="bg-[#F57F17] w-0.5 h-2 mx-auto mt-0.5"></div>
+                             </div>
+                             <Info className="h-5 w-5 text-[#F57F17] flex-shrink-0" />
+                             <p className="text-[#5D4037] text-sm">
+                               If your deal is for multiple items, the price won't show on the deal card and details page.
+                             </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {!isMultipleItems && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                        <FormField
+                          control={form.control}
+                          name="originalPrice"
                           render={({ field }) => (
                             <FormItem className="flex-1">
-                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount Percentage <span className="text-red-500">*</span></FormLabel>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">{offerType === "voucher" ? "Voucher Amount" : "Original Price"} <span className="text-red-500">*</span></FormLabel>
                               <div className="relative">
                                 <FormControl>
                                   <Input 
-                                    placeholder="0" 
+                                    placeholder="0.00" 
                                     className="h-11 bg-slate-50 pr-12" 
                                     {...field} 
                                   />
                                 </FormControl>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">%</div>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
                               </div>
                             </FormItem>
                           )}
                         />
-                      )}
-                    </div>
+
+                        {isDiscount && (
+                          <FormField
+                            control={form.control}
+                            name="discountPercentage"
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount Percentage <span className="text-red-500">*</span></FormLabel>
+                                <div className="relative">
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="0" 
+                                      className="h-11 bg-slate-50 pr-12" 
+                                      {...field} 
+                                    />
+                                  </FormControl>
+                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">%</div>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+                    )}
 
                     <div className="bg-slate-50 p-4 rounded-md border border-slate-100">
                       <FormField

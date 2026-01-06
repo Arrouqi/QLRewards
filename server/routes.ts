@@ -285,9 +285,22 @@ export async function registerRoutes(
 
   app.patch("/api/deals/:id/admin-fields", requireAuth, async (req, res) => {
     try {
-      const { adminComment, assignedTo } = req.body;
+      const { adminComment } = req.body;
       const username = req.session.username || "Unknown";
-      const deal = await storage.updateDealAdminFields(req.params.id, adminComment || null, assignedTo || null, username);
+      const deal = await storage.updateDealAdminFields(req.params.id, adminComment || null, username);
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found" });
+      }
+      res.json(deal);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/deals/:id/merchant-ids", requireAuth, async (req, res) => {
+    try {
+      const { merchantUserId, merchantBranchId } = req.body;
+      const deal = await storage.updateDealMerchantIds(req.params.id, merchantUserId || null, merchantBranchId || null);
       if (!deal) {
         return res.status(404).json({ error: "Deal not found" });
       }

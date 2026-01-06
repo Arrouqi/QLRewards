@@ -29,9 +29,12 @@ export const deals = pgTable("deals", {
   merchantEmail: text("merchant_email"),
   merchantPhone: text("merchant_phone"),
   images: text("images").array(),
+  offerStartDate: text("offer_start_date"),
+  offerEndDate: text("offer_end_date"),
+  merchantUserId: text("merchant_user_id"),
+  merchantBranchId: text("merchant_branch_id"),
   adminComment: text("admin_comment"),
   adminCommentHistory: text("admin_comment_history").array(),
-  assignedTo: text("assigned_to"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

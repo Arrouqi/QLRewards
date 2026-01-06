@@ -60,11 +60,6 @@ function centerAspectCrop(
   );
 }
 
-interface AdminUserSafe {
-  id: string;
-  username: string;
-  role: string;
-}
 
 interface SubCategory {
   id: string;
@@ -121,9 +116,9 @@ export default function DealDetail() {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [adminUsers, setAdminUsers] = useState<AdminUserSafe[]>([]);
   const [adminComment, setAdminComment] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
+  const [merchantUserId, setMerchantUserId] = useState("");
+  const [merchantBranchId, setMerchantBranchId] = useState("");
   const [branchInput, setBranchInput] = useState("");
   
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -229,14 +224,9 @@ export default function DealDetail() {
       const data = await dealResponse.json();
       setDeal(data);
       setAdminComment("");
-      setAssignedTo(data.assignedTo || "");
+      setMerchantUserId(data.merchantUserId || "");
+      setMerchantBranchId(data.merchantBranchId || "");
       setUploadedImages(data.images || []);
-
-      const adminUsersResponse = await fetch("/api/admin-users", { credentials: "include" });
-      if (adminUsersResponse.ok) {
-        const users = await adminUsersResponse.json();
-        setAdminUsers(users);
-      }
 
       form.reset({
         category: data.category || "",
@@ -361,7 +351,7 @@ export default function DealDetail() {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ adminComment, assignedTo }),
+        body: JSON.stringify({ adminComment }),
       });
 
       if (!response.ok) {
@@ -381,6 +371,43 @@ export default function DealDetail() {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to save admin fields",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const saveMerchantIds = async () => {
+    if (!params?.id) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/deals/${params.id}/merchant-ids`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ merchantUserId, merchantBranchId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save merchant IDs");
+      }
+
+      const updatedDeal = await response.json();
+      setDeal(updatedDeal);
+
+      toast({
+        title: "Success",
+        description: "Merchant IDs saved successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save merchant IDs",
         variant: "destructive",
       });
     } finally {
@@ -1300,25 +1327,6 @@ export default function DealDetail() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
-                    Assign To
-                  </label>
-                  <Select value={assignedTo || "unassigned"} onValueChange={(val) => setAssignedTo(val === "unassigned" ? "" : val)}>
-                    <SelectTrigger className="h-11 bg-slate-50" data-testid="select-assigned-to">
-                      <SelectValue placeholder="Select admin user" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {adminUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.username}>
-                          {user.username}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
                     Add Comment
                   </label>
                   <Textarea
@@ -1400,6 +1408,100 @@ export default function DealDetail() {
                 )}
               </div>
             </div>
+
+            {deal.status === "approved" && (
+              <>
+                <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mt-4">
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Merchant IDs</h2>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Enter the merchant user ID and branch ID to link this deal with your system.
+                  </p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                        Merchant User ID
+                      </label>
+                      <Input
+                        value={merchantUserId}
+                        onChange={(e) => setMerchantUserId(e.target.value)}
+                        placeholder="Enter merchant user ID"
+                        className="bg-slate-50"
+                        data-testid="input-merchant-user-id"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                        Merchant Branch ID
+                      </label>
+                      <Input
+                        value={merchantBranchId}
+                        onChange={(e) => setMerchantBranchId(e.target.value)}
+                        placeholder="Enter merchant branch ID"
+                        className="bg-slate-50"
+                        data-testid="input-merchant-branch-id"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={saveMerchantIds}
+                      disabled={isSaving}
+                      className="w-full bg-[#00426D] hover:bg-[#003152]"
+                      data-testid="button-save-merchant-ids"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Merchant IDs
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mt-4">
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">API Payload Preview</h2>
+                  <p className="text-sm text-slate-500 mb-4">
+                    This is the sample payload that will be sent to create the offer in your system.
+                  </p>
+                  <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-xs overflow-x-auto max-h-[400px] overflow-y-auto">
+{JSON.stringify({
+  merchantUserId: deal.merchantUserId || "<MERCHANT_USER_ID>",
+  merchantBranchId: deal.merchantBranchId || "<MERCHANT_BRANCH_ID>",
+  title: deal.title,
+  description: deal.description,
+  category: deal.category,
+  subCategory: deal.subCategory,
+  dealType: deal.dealType,
+  duration: deal.duration,
+  redemption: deal.redemption,
+  limitPerUser: deal.limitPerUser,
+  originalPrice: deal.isMultipleItems ? null : deal.originalPrice,
+  isMultipleItems: deal.isMultipleItems,
+  discountPercentage: deal.discountPercentage,
+  isTwoTranches: deal.isTwoTranches,
+  trancheValidity: deal.trancheValidity,
+  specificDays: deal.specificDays,
+  days: deal.days,
+  offerStartDate: deal.offerStartDate || null,
+  offerEndDate: deal.offerEndDate || null,
+  claimRules: deal.claimRules,
+  generalRules: deal.generalRules,
+  otherRules: deal.otherRules,
+  merchantName: deal.merchantName,
+  merchantEmail: deal.merchantEmail,
+  merchantPhone: deal.merchantPhone,
+  branches: deal.branches,
+  images: deal.images?.map((_, i) => `<IMAGE_URL_${i + 1}>`) || [],
+}, null, 2)}
+                  </pre>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
