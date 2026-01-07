@@ -378,7 +378,13 @@ export default function AdminDashboard() {
                   <TableRow
                     key={deal.id}
                     className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => window.open(`/admin/deals/${deal.id}`, '_blank')}
+                    onClick={() => {
+                      if (deal.status === "pending" || deal.status === "approved") {
+                        window.open(`/admin/deals/${deal.id}/view`, '_blank');
+                      } else {
+                        window.open(`/admin/deals/${deal.id}`, '_blank');
+                      }
+                    }}
                     data-testid={`row-deal-${deal.id}`}
                   >
                     <TableCell onClick={(e) => e.stopPropagation()}>

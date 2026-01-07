@@ -13,6 +13,7 @@ import AdminConfig from "@/pages/AdminConfig";
 import TermsManagement from "@/pages/TermsManagement";
 import UserManagement from "@/pages/UserManagement";
 import DealDetail from "@/pages/DealDetail";
+import DealView from "@/pages/DealView";
 import PrintDeal from "@/pages/PrintDeal";
 import Settings from "@/pages/Settings";
 
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/admin/terms" component={TermsManagement} />
       <Route path="/admin/users" component={UserManagement} />
       <Route path="/admin/deals/:id" component={DealDetail} />
+      <Route path="/admin/deals/:id/view" component={DealView} />
       <Route path="/admin/deals/:id/print" component={PrintDeal} />
       <Route path="/admin/settings" component={Settings} />
       <Route component={NotFound} />
