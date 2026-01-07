@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Plus, Trash2, Loader2, AlertCircle, Settings as SettingsIcon, Send, CheckCircle2, XCircle, Users, Shield } from "lucide-react";
+import { Plus, Trash2, Loader2, AlertCircle, Settings as SettingsIcon, Send, CheckCircle2, XCircle, Users, Shield, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,6 +74,9 @@ export default function Settings() {
   });
   const [testEmail, setTestEmail] = useState("");
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     checkAuthAndFetchData();
@@ -366,6 +369,40 @@ export default function Settings() {
     } finally {
       setDeleteDialogOpen(false);
       setRecipientToDelete(null);
+    }
+  };
+
+  const handleMigrateImages = async () => {
+    setIsMigrating(true);
+    setMigrationResult(null);
+    
+    try {
+      const response = await fetch("/api/admin/migrate-images", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Migration failed");
+      }
+      
+      setMigrationResult({ success: true, message: result.message });
+      toast({
+        title: "Migration Complete",
+        description: result.message,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Migration failed";
+      setMigrationResult({ success: false, message });
+      toast({
+        title: "Migration Failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -719,6 +756,64 @@ export default function Settings() {
             </div>
           </TabsContent>
         </Tabs>
+        
+        {/* Storage Migration Section */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cloud className="h-5 w-5" />
+              Storage Migration
+            </CardTitle>
+            <CardDescription>
+              Migrate existing deal images from database to Azure Cloud Storage
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  This will move any images stored in the database to Azure Blob Storage. 
+                  New deals already save images to Azure automatically. 
+                  Running this migration is safe and can be done multiple times.
+                </p>
+              </div>
+              
+              <Button
+                onClick={handleMigrateImages}
+                disabled={isMigrating}
+                className="bg-[#00426D] hover:bg-[#003152]"
+                data-testid="button-migrate-images"
+              >
+                {isMigrating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Migrating...
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="h-4 w-4 mr-2" />
+                    Migrate Images to Azure
+                  </>
+                )}
+              </Button>
+              
+              {migrationResult && (
+                <div className={`flex items-center gap-2 p-3 rounded-lg ${
+                  migrationResult.success 
+                    ? "bg-green-50 text-green-800 border border-green-200" 
+                    : "bg-red-50 text-red-800 border border-red-200"
+                }`}>
+                  {migrationResult.success ? (
+                    <CheckCircle2 className="h-5 w-5" />
+                  ) : (
+                    <XCircle className="h-5 w-5" />
+                  )}
+                  <span>{migrationResult.message}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
