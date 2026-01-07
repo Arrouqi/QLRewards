@@ -357,15 +357,9 @@ export async function sendMerchantConfirmation(deal: Deal): Promise<void> {
           </table>
         </div>
         
-        <h3 style="color: #00426D; margin-bottom: 15px;">What Happens Next?</h3>
-        <ul style="color: #374151; padding-left: 20px;">
-          <li style="margin-bottom: 8px;">Our sales team will review your deal submission</li>
-          <li style="margin-bottom: 8px;">We may contact you if we need additional information</li>
-          <li style="margin-bottom: 8px;">Once approved, your deal will be forwarded to our moderation team</li>
-          <li style="margin-bottom: 8px;">You will be notified when your deal goes live</li>
-        </ul>
+        <p style="color: #374151; margin-top: 20px;">Your deal is now under review by the Qatar Living Deals team. We will be in touch if we need any additional information.</p>
         
-        <p style="color: #374151; margin-top: 25px;">If you have any questions, please don't hesitate to contact us.</p>
+        <p style="color: #374151; margin-top: 15px;">If you have any questions, please don't hesitate to contact us.</p>
         
         <p style="color: #374151; margin-top: 20px;">
           Best regards,<br>
@@ -393,11 +387,7 @@ Submission Details:
 - Deal Type: ${deal.dealType}
 - Submitted On: ${new Date(deal.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
 
-What Happens Next?
-1. Our sales team will review your deal submission
-2. We may contact you if we need additional information
-3. Once approved, your deal will be forwarded to our moderation team
-4. You will be notified when your deal goes live
+Your deal is now under review by the Qatar Living Deals team. We will be in touch if we need any additional information.
 
 If you have any questions, please don't hesitate to contact us.
 
