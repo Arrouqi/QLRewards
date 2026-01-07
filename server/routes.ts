@@ -236,13 +236,25 @@ export async function registerRoutes(
   // Migrate existing base64 images to Azure Storage
   app.post("/api/admin/migrate-images", requireAuth, async (req, res) => {
     try {
+      console.log("[Migration] Starting image migration...");
       const deals = await storage.getAllDeals();
+      console.log(`[Migration] Found ${deals.length} total deals`);
+      
+      const dealsWithImages = deals.filter(deal => deal.images && deal.images.length > 0);
+      console.log(`[Migration] Found ${dealsWithImages.length} deals with images`);
+      
       const dealsWithBase64 = deals.filter(deal => 
         deal.images && deal.images.some(img => img && img.startsWith("data:"))
       );
+      console.log(`[Migration] Found ${dealsWithBase64.length} deals with base64 images to migrate`);
       
       if (dealsWithBase64.length === 0) {
-        return res.json({ message: "No deals with base64 images to migrate", migrated: 0 });
+        return res.json({ 
+          message: "No deals with base64 images to migrate", 
+          migrated: 0,
+          totalDeals: deals.length,
+          dealsWithImages: dealsWithImages.length
+        });
       }
       
       const migratedUrls = await migrateExistingImages(dealsWithBase64);
@@ -256,6 +268,7 @@ export async function registerRoutes(
         if (hasUrls) {
           await storage.updateDeal(dealId, { images: urls });
           migratedCount++;
+          console.log(`[Migration] Updated deal ${dealId} with ${urls.length} Azure URLs`);
         }
       }
       
