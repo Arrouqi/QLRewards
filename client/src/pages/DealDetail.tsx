@@ -80,7 +80,7 @@ const dealSchema = z.object({
   duration: z.string().min(1, "Duration is required"),
   redemption: z.string().min(1, "Redemption is required"),
   limitPerUser: z.string().optional(),
-  originalPrice: z.string().min(1, "Original price is required"),
+  originalPrice: z.string().optional(),
   isMultipleItems: z.boolean().default(false),
   discountPercentage: z.string().optional(),
   isTwoTranches: z.boolean().default(false),
@@ -96,6 +96,14 @@ const dealSchema = z.object({
   merchantEmail: z.string().optional(),
   merchantPhone: z.string().optional(),
   branches: z.array(z.string()).min(1, "At least one branch is required"),
+}).refine((data) => {
+  if (!data.isMultipleItems && (!data.originalPrice || data.originalPrice.trim() === "")) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Original price is required when not a multiple items deal",
+  path: ["originalPrice"],
 });
 
 type DealValues = z.infer<typeof dealSchema>;
@@ -198,6 +206,7 @@ export default function DealDetail() {
   const watchedRedemption = form.watch("redemption");
   const watchedSpecificDays = form.watch("specificDays");
   const watchedIsTwoTranches = form.watch("isTwoTranches");
+  const watchedIsMultipleItems = form.watch("isMultipleItems");
 
   const selectedCategory = categories.find(c => c.name === watchedCategory);
   const availableSubCategories = selectedCategory?.subCategories || [];
@@ -847,51 +856,66 @@ export default function DealDetail() {
                       />
                     )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="originalPrice"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">Original Price (QAR) <span className="text-red-500">*</span></FormLabel>
-                            <FormControl>
-                              <Input className="h-11 bg-slate-50" placeholder="0.00" {...field} data-testid="input-price" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {watchedDealType === "discount" && (
+                    {(watchedDealType === "discount" || watchedDealType === "bogo") && (
+                      <div className="space-y-4">
                         <FormField
                           control={form.control}
-                          name="discountPercentage"
+                          name="isMultipleItems"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                              </FormControl>
+                              <FormLabel className="font-normal text-slate-700">Multiple items in this deal</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        {watchedIsMultipleItems && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-800">
+                            If your deal is for multiple items, the price won't show on the deal card and details page.
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {!watchedIsMultipleItems && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="originalPrice"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount %</FormLabel>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">
+                                {watchedDealType === "voucher" ? "Voucher Amount" : "Original Price"} (QAR) <span className="text-red-500">*</span>
+                              </FormLabel>
                               <FormControl>
-                                <Input className="h-11 bg-slate-50" placeholder="e.g., 25" {...field} data-testid="input-discount" />
+                                <Input className="h-11 bg-slate-50" placeholder="0.00" {...field} data-testid="input-price" />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      )}
-                    </div>
+
+                        {watchedDealType === "discount" && (
+                          <FormField
+                            control={form.control}
+                            name="discountPercentage"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount %</FormLabel>
+                                <FormControl>
+                                  <Input className="h-11 bg-slate-50" placeholder="e.g., 25" {...field} data-testid="input-discount" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                      </div>
+                    )}
 
                     <div className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="isMultipleItems"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                            </FormControl>
-                            <FormLabel className="font-normal text-slate-700">Multiple items in this deal</FormLabel>
-                          </FormItem>
-                        )}
-                      />
 
                       {watchedDealType === "bogo" && (
                         <>
