@@ -69,30 +69,17 @@ export default function DealView() {
     }
   };
 
-  const downloadImage = async (imageUrl: string, index: number) => {
-    try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      const extension = imageUrl.includes(".png") ? "png" : imageUrl.includes(".webp") ? "webp" : "jpg";
-      link.download = `deal-${deal?.id}-image-${index + 1}.${extension}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast({
-        title: "Downloaded",
-        description: `Image ${index + 1} downloaded successfully`,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to download image",
-        variant: "destructive",
-      });
-    }
+  const downloadImage = (index: number) => {
+    const link = document.createElement("a");
+    link.href = `/api/deals/${deal?.id}/download-image/${index}`;
+    link.download = "";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({
+      title: "Downloading",
+      description: `Image ${index + 1} download started`,
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -351,29 +338,30 @@ export default function DealView() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {deal.images.map((image, index) => (
-                  <div key={index} className="relative group">
-                    <div className="aspect-[16/10] rounded-lg overflow-hidden border border-slate-200">
-                      <img
-                        src={image}
-                        alt={`Deal image ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        data-testid={`image-${index}`}
-                      />
+                  <div key={index} className="space-y-2">
+                    <div className="relative">
+                      <div className="aspect-[16/10] rounded-lg overflow-hidden border border-slate-200">
+                        <img
+                          src={image}
+                          alt={`Deal image ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          data-testid={`image-${index}`}
+                        />
+                      </div>
+                      <div className="absolute top-2 left-2 bg-[#00426D] text-white text-xs px-2 py-1 rounded">
+                        {index + 1}
+                      </div>
                     </div>
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => downloadImage(image, index)}
-                        data-testid={`button-download-${index}`}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                    </div>
-                    <div className="absolute top-2 left-2 bg-[#00426D] text-white text-xs px-2 py-1 rounded">
-                      {index + 1}
-                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => downloadImage(index)}
+                      data-testid={`button-download-${index}`}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Image {index + 1}
+                    </Button>
                   </div>
                 ))}
               </div>

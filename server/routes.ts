@@ -162,6 +162,39 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/deals/:id/download-image/:index", requireAuth, async (req, res) => {
+    try {
+      const deal = await storage.getDealById(req.params.id);
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found" });
+      }
+      
+      const index = parseInt(req.params.index);
+      if (isNaN(index) || !deal.images || index < 0 || index >= deal.images.length) {
+        return res.status(404).json({ error: "Image not found" });
+      }
+      
+      const imageUrl = deal.images[index];
+      const response = await fetch(imageUrl);
+      
+      if (!response.ok) {
+        return res.status(500).json({ error: "Failed to fetch image" });
+      }
+      
+      const contentType = response.headers.get("content-type") || "image/jpeg";
+      const extension = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+      
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Disposition", `attachment; filename="deal-${deal.id}-image-${index + 1}.${extension}"`);
+      
+      const buffer = await response.arrayBuffer();
+      res.send(Buffer.from(buffer));
+    } catch (error: any) {
+      console.error("[Download] Image download failed:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/deals/:id", requireAuth, async (req, res) => {
     try {
       const partialSchema = insertDealSchema.partial();
