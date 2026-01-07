@@ -280,6 +280,147 @@ This deal has been approved by the sales team and is ready for moderation review
   }
 }
 
+export async function sendMerchantConfirmation(deal: Deal): Promise<void> {
+  if (!deal.merchantEmail) {
+    console.log("[Email] No merchant email provided. Skipping confirmation email.");
+    return;
+  }
+
+  const settings = await storage.getEmailSettings();
+  
+  if (!settings || !settings.isEnabled) {
+    console.log("[Email] Email notifications are disabled. Skipping merchant confirmation.");
+    return;
+  }
+
+  if (!settings.apiKey) {
+    console.log("[Email] No API key configured. Skipping merchant confirmation.");
+    return;
+  }
+
+  const transporter = await getEmailTransporter();
+  if (!transporter) {
+    console.log("[Email] Failed to create email transporter.");
+    return;
+  }
+
+  const fromEmail = settings.fromEmail || "noreply@qatarliving.com";
+  const fromName = settings.fromName || "Qatar Living Deals";
+  const subject = `Deal Submission Received: ${deal.title}`;
+  
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Deal Submission Confirmation</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: #00426D; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Qatar Living Deals</h1>
+        <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0; font-size: 14px;">Deal Submission Confirmation</p>
+      </div>
+      
+      <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none;">
+        <div style="background: #dcfce7; padding: 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 20px;">
+          <p style="margin: 0; color: #166534; font-weight: bold; text-align: center;">✓ Your Deal Has Been Submitted Successfully!</p>
+        </div>
+        
+        <p style="color: #374151; margin-bottom: 20px;">Dear ${deal.merchantName || "Valued Merchant"},</p>
+        
+        <p style="color: #374151; margin-bottom: 20px;">Thank you for submitting your deal to Qatar Living Deals! We have received your submission and our team will review it shortly.</p>
+        
+        <h3 style="color: #00426D; margin-bottom: 15px;">Submission Details:</h3>
+        
+        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 25px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-weight: bold; color: #6b7280; width: 140px;">Deal Title:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #111827;">${deal.title}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-weight: bold; color: #6b7280;">Category:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #111827;">${deal.category} - ${deal.subCategory}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-weight: bold; color: #6b7280;">Deal Type:</td>
+              <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #111827;">${deal.dealType}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; font-weight: bold; color: #6b7280;">Submitted On:</td>
+              <td style="padding: 8px 0; color: #111827;">${new Date(deal.createdAt).toLocaleString("en-US", { 
+                dateStyle: "medium", 
+                timeStyle: "short" 
+              })}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <h3 style="color: #00426D; margin-bottom: 15px;">What Happens Next?</h3>
+        <ul style="color: #374151; padding-left: 20px;">
+          <li style="margin-bottom: 8px;">Our sales team will review your deal submission</li>
+          <li style="margin-bottom: 8px;">We may contact you if we need additional information</li>
+          <li style="margin-bottom: 8px;">Once approved, your deal will be forwarded to our moderation team</li>
+          <li style="margin-bottom: 8px;">You will be notified when your deal goes live</li>
+        </ul>
+        
+        <p style="color: #374151; margin-top: 25px;">If you have any questions, please don't hesitate to contact us.</p>
+        
+        <p style="color: #374151; margin-top: 20px;">
+          Best regards,<br>
+          <strong>The Qatar Living Deals Team</strong>
+        </p>
+        
+        <p style="color: #6b7280; font-size: 13px; margin-top: 25px; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+          This is an automated confirmation email from Qatar Living Deals.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `
+Deal Submission Confirmation - Qatar Living Deals
+
+Dear ${deal.merchantName || "Valued Merchant"},
+
+Thank you for submitting your deal to Qatar Living Deals! We have received your submission and our team will review it shortly.
+
+Submission Details:
+- Deal Title: ${deal.title}
+- Category: ${deal.category} - ${deal.subCategory}
+- Deal Type: ${deal.dealType}
+- Submitted On: ${new Date(deal.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+
+What Happens Next?
+1. Our sales team will review your deal submission
+2. We may contact you if we need additional information
+3. Once approved, your deal will be forwarded to our moderation team
+4. You will be notified when your deal goes live
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+The Qatar Living Deals Team
+
+This is an automated confirmation email from Qatar Living Deals.
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: deal.merchantEmail,
+      subject,
+      text: textContent,
+      html: htmlContent,
+    });
+    console.log(`[Email] Merchant confirmation sent to ${deal.merchantEmail}`);
+  } catch (error) {
+    console.error("[Email] Failed to send merchant confirmation:", error);
+  }
+}
+
 export async function sendTestEmail(testEmail: string): Promise<{ success: boolean; error?: string }> {
   const settings = await storage.getEmailSettings();
   

@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db } from "./db";
-import { sendNewDealNotification, sendModerationNotification } from "./email";
+import { sendNewDealNotification, sendModerationNotification, sendMerchantConfirmation } from "./email";
 
 const PgSession = connectPgSimple(session);
 
@@ -67,6 +67,12 @@ export async function registerRoutes(
       const validatedData = insertDealSchema.parse(req.body);
       const deal = await storage.createDeal(validatedData);
       
+      // Send confirmation email to merchant
+      sendMerchantConfirmation(deal).catch(err => {
+        console.error("[Email] Error sending merchant confirmation:", err);
+      });
+      
+      // Send notification to sales team
       const activeRecipients = await storage.getActiveEmailRecipientsByType("sales");
       if (activeRecipients.length > 0) {
         const emails = activeRecipients.map(r => r.email);
