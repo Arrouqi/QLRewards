@@ -7,6 +7,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db } from "./db";
 import { sendNewDealNotification, sendModerationNotification, sendMerchantConfirmation } from "./email";
+import { uploadMultipleImages, migrateExistingImages } from "./azureStorage";
 
 const PgSession = connectPgSimple(session);
 
@@ -65,10 +66,25 @@ export async function registerRoutes(
   app.post("/api/deals", async (req, res) => {
     try {
       const validatedData = insertDealSchema.parse(req.body);
-      const deal = await storage.createDeal(validatedData);
+      
+      // First create the deal to get an ID
+      const tempDeal = await storage.createDeal({ ...validatedData, images: [] });
+      
+      // Upload images to Azure Storage if present
+      if (validatedData.images && validatedData.images.length > 0) {
+        try {
+          const imageUrls = await uploadMultipleImages(validatedData.images, tempDeal.id);
+          await storage.updateDeal(tempDeal.id, { images: imageUrls });
+          tempDeal.images = imageUrls;
+        } catch (uploadError) {
+          console.error("[Azure] Image upload failed:", uploadError);
+        }
+      }
+      
+      const deal = await storage.getDealById(tempDeal.id);
       
       // Send confirmation email to merchant
-      sendMerchantConfirmation(deal).catch(err => {
+      sendMerchantConfirmation(deal!).catch(err => {
         console.error("[Email] Error sending merchant confirmation:", err);
       });
       
@@ -76,7 +92,7 @@ export async function registerRoutes(
       const activeRecipients = await storage.getActiveEmailRecipientsByType("sales");
       if (activeRecipients.length > 0) {
         const emails = activeRecipients.map(r => r.email);
-        sendNewDealNotification(deal, emails).catch(err => {
+        sendNewDealNotification(deal!, emails).catch(err => {
           console.error("[Email] Error sending notification:", err);
         });
       }
@@ -150,6 +166,20 @@ export async function registerRoutes(
     try {
       const partialSchema = insertDealSchema.partial();
       const validatedData = partialSchema.parse(req.body);
+      
+      // Handle image uploads to Azure if images are provided
+      if (validatedData.images && validatedData.images.length > 0) {
+        const hasBase64 = validatedData.images.some(img => img && img.startsWith("data:"));
+        if (hasBase64) {
+          try {
+            const imageUrls = await uploadMultipleImages(validatedData.images, req.params.id);
+            validatedData.images = imageUrls;
+          } catch (uploadError) {
+            console.error("[Azure] Image upload failed:", uploadError);
+          }
+        }
+      }
+      
       const deal = await storage.updateDeal(req.params.id, validatedData);
       if (!deal) {
         return res.status(404).json({ error: "Deal not found" });
@@ -199,6 +229,43 @@ export async function registerRoutes(
       }
       res.json(deal);
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Migrate existing base64 images to Azure Storage
+  app.post("/api/admin/migrate-images", requireAuth, async (req, res) => {
+    try {
+      const deals = await storage.getAllDeals();
+      const dealsWithBase64 = deals.filter(deal => 
+        deal.images && deal.images.some(img => img && img.startsWith("data:"))
+      );
+      
+      if (dealsWithBase64.length === 0) {
+        return res.json({ message: "No deals with base64 images to migrate", migrated: 0 });
+      }
+      
+      const migratedUrls = await migrateExistingImages(dealsWithBase64);
+      
+      let migratedCount = 0;
+      const entries = Array.from(migratedUrls.entries());
+      for (const entry of entries) {
+        const dealId = entry[0];
+        const urls = entry[1];
+        const hasUrls = urls.some((url: string) => url.startsWith("http"));
+        if (hasUrls) {
+          await storage.updateDeal(dealId, { images: urls });
+          migratedCount++;
+        }
+      }
+      
+      res.json({ 
+        message: `Successfully migrated ${migratedCount} deals`, 
+        migrated: migratedCount,
+        total: dealsWithBase64.length 
+      });
+    } catch (error: any) {
+      console.error("[Migration] Error:", error);
       res.status(500).json({ error: error.message });
     }
   });
