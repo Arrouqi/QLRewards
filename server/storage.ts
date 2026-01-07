@@ -1,5 +1,5 @@
 import { 
-  type Deal, type InsertDeal, 
+  type Deal, type InsertDeal, type DealSummary,
   type AdminUser, type InsertAdminUser, 
   type Category, type InsertCategory,
   type SubCategory, type InsertSubCategory,
@@ -14,6 +14,7 @@ import { eq, inArray, and } from "drizzle-orm";
 export interface IStorage {
   createDeal(deal: InsertDeal): Promise<Deal>;
   getAllDeals(): Promise<Deal[]>;
+  getAllDealSummaries(): Promise<DealSummary[]>;
   getDealById(id: string): Promise<Deal | undefined>;
   updateDeal(id: string, deal: Partial<InsertDeal>): Promise<Deal | undefined>;
   approveDeal(id: string): Promise<Deal | undefined>;
@@ -60,6 +61,24 @@ export class DatabaseStorage implements IStorage {
 
   async getAllDeals(): Promise<Deal[]> {
     return await db.select().from(deals);
+  }
+
+  async getAllDealSummaries(): Promise<DealSummary[]> {
+    return await db.select({
+      id: deals.id,
+      title: deals.title,
+      category: deals.category,
+      subCategory: deals.subCategory,
+      dealType: deals.dealType,
+      status: deals.status,
+      merchantName: deals.merchantName,
+      merchantEmail: deals.merchantEmail,
+      createdAt: deals.createdAt,
+      isAlaCarte: deals.isAlaCarte,
+      duration: deals.duration,
+      originalPrice: deals.originalPrice,
+      discountPercentage: deals.discountPercentage,
+    }).from(deals);
   }
 
   async getDealById(id: string): Promise<Deal | undefined> {

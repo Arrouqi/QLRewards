@@ -50,6 +50,12 @@ export const insertDealSchema = createInsertSchema(deals).omit({
 export type InsertDeal = z.infer<typeof insertDealSchema>;
 export type Deal = typeof deals.$inferSelect;
 
+export type DealSummary = Pick<Deal, 
+  'id' | 'title' | 'category' | 'subCategory' | 'dealType' | 'status' | 
+  'merchantName' | 'merchantEmail' | 'createdAt' | 'isAlaCarte' | 'duration' | 
+  'originalPrice' | 'discountPercentage'
+>;
+
 export const adminUsers = pgTable("admin_users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),

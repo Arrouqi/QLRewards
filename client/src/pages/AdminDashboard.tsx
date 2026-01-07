@@ -27,7 +27,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
 import { cn } from "@/lib/utils";
-import type { Deal } from "@shared/schema";
+import type { DealSummary } from "@shared/schema";
 
 const ITEMS_PER_PAGE = 10;
 type StatusFilter = "all" | "pending" | "approved" | "archived";
@@ -37,7 +37,7 @@ type SortDirection = "asc" | "desc";
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [deals, setDeals] = useState<Deal[]>([]);
+  const [deals, setDeals] = useState<DealSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
         return;
       }
 
-      const dealsResponse = await fetch("/api/deals", { credentials: "include" });
+      const dealsResponse = await fetch("/api/deals/summary", { credentials: "include" });
 
       if (!dealsResponse.ok) {
         throw new Error("Failed to fetch deals");

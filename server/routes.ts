@@ -96,6 +96,16 @@ export async function registerRoutes(
     }
   });
 
+  // Lightweight summary endpoint - excludes images and heavy data
+  app.get("/api/deals/summary", requireAuth, async (req, res) => {
+    try {
+      const deals = await storage.getAllDealSummaries();
+      res.json(deals);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Bulk approve route must be defined BEFORE parameterized routes like /api/deals/:id
   app.patch("/api/deals/bulk-approve", requireAuth, async (req, res) => {
     try {
