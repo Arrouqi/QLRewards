@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { format } from "date-fns";
-import { ArrowLeft, Download, Copy, Check, Calendar, Tag, MapPin, User, Mail, Phone, FileText, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Download, Copy, Check, Calendar, Tag, MapPin, User, Mail, Phone, FileText, Image as ImageIcon, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,6 +150,14 @@ export default function DealView() {
             <Badge className={getStatusColor(deal.status)}>
               {deal.status === "approved" ? "Sent to Moderation" : deal.status.charAt(0).toUpperCase() + deal.status.slice(1)}
             </Badge>
+            <Button
+              variant="outline"
+              onClick={() => window.open(`/admin/deals/${deal.id}/print`, '_blank')}
+              data-testid="button-pdf"
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
             <Button
               onClick={() => setLocation(`/admin/deals/${deal.id}`)}
               className="bg-[#00426D] hover:bg-[#003152]"
