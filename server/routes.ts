@@ -233,6 +233,24 @@ export async function registerRoutes(
     }
   });
 
+  // Check Azure Storage configuration
+  app.get("/api/admin/azure-status", requireAuth, async (req, res) => {
+    try {
+      const hasConnectionString = !!process.env.AZURE_STORAGE_CONNECTION_STRING;
+      const connectionStringLength = process.env.AZURE_STORAGE_CONNECTION_STRING?.length || 0;
+      
+      res.json({
+        configured: hasConnectionString,
+        connectionStringLength,
+        message: hasConnectionString 
+          ? "Azure Storage connection string is configured" 
+          : "AZURE_STORAGE_CONNECTION_STRING environment variable is not set"
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Migrate existing base64 images to Azure Storage
   app.post("/api/admin/migrate-images", requireAuth, async (req, res) => {
     try {
