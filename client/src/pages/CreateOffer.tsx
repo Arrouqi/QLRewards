@@ -702,7 +702,7 @@ export default function CreateOffer() {
                       )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="redemption"
@@ -912,7 +912,7 @@ export default function CreateOffer() {
                       />
 
                       {isSpecificDays && (
-                        <div className="mt-4 ml-7 grid grid-cols-2 gap-3">
+                        <div className="mt-4 ml-0 sm:ml-7 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                           {days.map((day) => (
                             <div key={day} className="flex items-center space-x-2">
                               <Checkbox id={day} />
@@ -1309,7 +1309,7 @@ export default function CreateOffer() {
                         data-testid="input-image-upload"
                       />
 
-                      <div className="grid grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {/* Render uploaded images */}
                         {uploadedImages.map((img, index) => (
                           <div 
@@ -1383,13 +1383,13 @@ export default function CreateOffer() {
 
             {/* Footer Actions */}
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-50">
-              <div className="container mx-auto max-w-6xl flex justify-end items-center gap-4">
-                <Button type="button" variant="outline" className="min-w-[100px] border-slate-300 text-slate-600 hover:bg-slate-50">
+              <div className="container mx-auto max-w-6xl flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-2 sm:gap-4">
+                <Button type="button" variant="outline" className="min-w-[100px] border-slate-300 text-slate-600 hover:bg-slate-50 order-2 sm:order-1">
                   Close
                 </Button>
                 <Button 
                   type="submit" 
-                  className="min-w-[140px] bg-[#00426D] text-white hover:bg-[#003557]"
+                  className="min-w-[140px] bg-[#00426D] text-white hover:bg-[#003557] order-1 sm:order-2"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
