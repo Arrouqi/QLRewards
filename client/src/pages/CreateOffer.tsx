@@ -1334,14 +1334,15 @@ export default function CreateOffer() {
                         data-testid="input-image-upload"
                       />
 
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {/* Render uploaded images */}
                         {uploadedImages.map((img, index) => (
                           <div 
                             key={index}
-                            className={`aspect-[16/10] relative group cursor-grab active:cursor-grabbing transition-all ${
+                            className={`relative rounded-lg overflow-hidden border-2 border-slate-200 cursor-grab active:cursor-grabbing transition-all ${
                               draggedIndex === index ? 'opacity-50 scale-95' : ''
-                            } ${dragOverIndex === index ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+                            } ${dragOverIndex === index ? 'ring-2 ring-[#FF7F39] ring-offset-2' : ''}`}
+                            style={{ aspectRatio: '16/10' }}
                             draggable
                             onDragStart={(e) => handleDragStart(e, index)}
                             onDragOver={(e) => handleDragOver(e, index)}
@@ -1350,42 +1351,50 @@ export default function CreateOffer() {
                             onDragEnd={handleDragEnd}
                             data-testid={`image-preview-${index}`}
                           >
-                            {index === 0 && (
-                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
-                                Cover Photo
-                              </div>
-                            )}
                             <img 
                               src={img.preview} 
                               alt={`Upload ${index + 1}`}
-                              className="w-full h-full object-cover rounded-lg border-2 border-slate-200 pointer-events-none"
+                              className="w-full h-full object-cover pointer-events-none"
                             />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                            {index === 0 && (
+                              <div className="absolute top-2 left-2 bg-[#FF7F39] text-white text-[10px] px-2 py-1 rounded font-medium">
+                                Cover
+                              </div>
+                            )}
+                            {index > 0 && (
+                              <div className="absolute top-2 left-2 bg-[#00426D] text-white text-[10px] px-2 py-1 rounded font-medium">
+                                {index + 1}
+                              </div>
+                            )}
+                            <div className="absolute bottom-2 right-2 flex gap-1">
                               <button
                                 type="button"
                                 onClick={() => handleEditImage(index)}
-                                className="bg-white text-slate-700 rounded-full p-1.5 hover:bg-[#00426D]/10 transition-colors"
+                                className="bg-white/90 text-slate-700 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
                                 data-testid={`button-edit-image-${index}`}
+                                title="Edit/Crop"
                               >
-                                <Pencil className="h-3 w-3" />
+                                <Pencil className="h-4 w-4" />
                               </button>
                               <button
                                 type="button"
                                 onClick={() => removeImage(index)}
-                                className="bg-white text-red-500 rounded-full p-1.5 hover:bg-red-50 transition-colors"
+                                className="bg-white/90 text-red-500 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
                                 data-testid={`button-remove-image-${index}`}
+                                title="Remove"
                               >
-                                <X className="h-3 w-3" />
+                                <X className="h-4 w-4" />
                               </button>
                             </div>
                           </div>
                         ))}
 
-                        {/* Show up to 5 empty upload tiles */}
-                        {uploadedImages.length < MAX_PHOTOS && Array.from({ length: Math.min(5, MAX_PHOTOS - uploadedImages.length) }).map((_, idx) => (
+                        {/* Show empty upload tiles */}
+                        {uploadedImages.length < MAX_PHOTOS && Array.from({ length: Math.min(3, MAX_PHOTOS - uploadedImages.length) }).map((_, idx) => (
                           <div 
                             key={`empty-${idx}`}
-                            className="aspect-[16/10] relative group cursor-pointer"
+                            className="relative rounded-lg cursor-pointer"
+                            style={{ aspectRatio: '16/10' }}
                             onClick={handleImageClick}
                             data-testid={`upload-tile-${idx}`}
                           >
@@ -1394,8 +1403,8 @@ export default function CreateOffer() {
                                 Cover Photo
                               </div>
                             )}
-                            <div className="w-full h-full border-2 border-dashed border-slate-300 rounded-lg hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors flex flex-col items-center justify-center p-4 text-center min-h-[100px]">
-                              <Plus className="h-8 w-8 text-slate-400 mb-2" />
+                            <div className="w-full h-full border-2 border-dashed border-slate-300 rounded-lg hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors flex flex-col items-center justify-center">
+                              <Plus className="h-8 w-8 text-slate-400 mb-1" />
                               <span className="text-xs text-slate-500 font-medium">Upload</span>
                             </div>
                           </div>

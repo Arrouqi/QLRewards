@@ -1237,9 +1237,10 @@ export default function DealDetail() {
                       {uploadedImages.map((img, index) => (
                         <div 
                           key={index}
-                          className={`relative aspect-[16/10] rounded-lg overflow-hidden border-2 border-slate-200 group cursor-grab active:cursor-grabbing transition-all ${
+                          className={`relative rounded-lg overflow-hidden border-2 border-slate-200 cursor-grab active:cursor-grabbing transition-all ${
                             draggedIndex === index ? 'opacity-50 scale-95' : ''
-                          } ${dragOverIndex === index ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+                          } ${dragOverIndex === index ? 'ring-2 ring-[#FF7F39] ring-offset-2' : ''}`}
+                          style={{ aspectRatio: '16/10' }}
                           draggable
                           onDragStart={(e) => handleDragStart(e, index)}
                           onDragOver={(e) => handleDragOver(e, index)}
@@ -1253,32 +1254,35 @@ export default function DealDetail() {
                             alt={`Deal photo ${index + 1}`}
                             className="w-full h-full object-cover pointer-events-none"
                           />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <Button
+                          {index === 0 && (
+                            <div className="absolute top-2 left-2 bg-[#FF7F39] text-white text-[10px] px-2 py-1 rounded font-medium">
+                              Cover
+                            </div>
+                          )}
+                          {index > 0 && (
+                            <div className="absolute top-2 left-2 bg-[#00426D] text-white text-[10px] px-2 py-1 rounded font-medium">
+                              {index + 1}
+                            </div>
+                          )}
+                          <div className="absolute bottom-2 right-2 flex gap-1">
+                            <button
                               type="button"
-                              size="sm"
-                              variant="secondary"
                               onClick={() => handleEditImage(index)}
-                              className="h-8"
+                              className="bg-white/90 text-slate-700 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
                               data-testid={`button-edit-image-${index}`}
+                              title="Edit/Crop"
                             >
-                              <Pencil className="h-3 w-3 mr-1" />
-                              Edit
-                            </Button>
-                            <Button
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
                               type="button"
-                              size="sm"
-                              variant="destructive"
                               onClick={() => removeImage(index)}
-                              className="h-8"
+                              className="bg-white/90 text-red-500 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
                               data-testid={`button-remove-image-${index}`}
+                              title="Remove"
                             >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              Remove
-                            </Button>
-                          </div>
-                          <div className="absolute top-2 left-2 bg-[#00426D] text-white text-xs px-2 py-1 rounded">
-                            {index + 1}
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1286,11 +1290,12 @@ export default function DealDetail() {
                       {uploadedImages.length < MAX_PHOTOS && (
                         <div
                           onClick={handleImageClick}
-                          className="aspect-[16/10] rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#00426D] hover:bg-slate-50 transition-colors"
+                          className="rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors"
+                          style={{ aspectRatio: '16/10' }}
                           data-testid="button-add-image"
                         >
-                          <Upload className="h-8 w-8 text-slate-400 mb-2" />
-                          <span className="text-sm text-slate-500">Add Photo</span>
+                          <Upload className="h-8 w-8 text-slate-400 mb-1" />
+                          <span className="text-xs text-slate-500 font-medium">Add Photo</span>
                           <span className="text-xs text-slate-400">{uploadedImages.length}/{MAX_PHOTOS}</span>
                         </div>
                       )}
