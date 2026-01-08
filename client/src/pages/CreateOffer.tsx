@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -427,7 +428,7 @@ export default function CreateOffer() {
       specificDays: false,
       isMultipleItems: false,
       isTwoTranches: false,
-      days: [],
+      days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
       claimRules: [],
       generalRules: [],
       agreement: false,
@@ -660,10 +661,10 @@ export default function CreateOffer() {
                                   <div
                                     key={type.id}
                                     className={cn(
-                                      "cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center gap-3 transition-all",
+                                      "cursor-pointer rounded-xl border-2 p-4 flex flex-col items-center justify-center gap-3 transition-all",
                                       isSelected 
-                                        ? "border-[#00426D] bg-[#00426D]/5 text-[#00426D] shadow-sm ring-1 ring-[#00426D]" 
-                                        : "border-slate-200 bg-white text-slate-600 hover:border-[#00426D]/30 hover:bg-slate-50"
+                                        ? "border-[#FF7F39] bg-[#FF7F39]/5 shadow-sm ring-1 ring-[#FF7F39]" 
+                                        : "border-slate-200 bg-white text-slate-600 hover:border-[#FF7F39]/50 hover:bg-[#FF7F39]/5"
                                     )}
                                     onClick={() => field.onChange(type.id)}
                                   >
@@ -912,19 +913,43 @@ export default function CreateOffer() {
                       />
 
                       {isSpecificDays && (
-                        <div className="mt-4 ml-0 sm:ml-7 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                          {days.map((day) => (
-                            <div key={day} className="flex items-center space-x-2">
-                              <Checkbox id={day} />
-                              <label
-                                htmlFor={day}
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-600"
-                              >
-                                {day}
-                              </label>
+                        <FormField
+                          control={form.control}
+                          name="days"
+                          render={({ field }) => (
+                            <div className="mt-4 ml-0 sm:ml-7 space-y-3">
+                              {days.map((day) => {
+                                const isEnabled = field.value?.includes(day);
+                                return (
+                                  <div 
+                                    key={day} 
+                                    className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-slate-200"
+                                  >
+                                    <label
+                                      htmlFor={`day-${day}`}
+                                      className="text-sm font-medium text-slate-700 cursor-pointer"
+                                    >
+                                      {day}
+                                    </label>
+                                    <Switch
+                                      id={`day-${day}`}
+                                      checked={isEnabled}
+                                      onCheckedChange={(checked) => {
+                                        const currentDays = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...currentDays, day]);
+                                        } else {
+                                          field.onChange(currentDays.filter((d: string) => d !== day));
+                                        }
+                                      }}
+                                      className="data-[state=checked]:bg-[#FF7F39]"
+                                    />
+                                  </div>
+                                );
+                              })}
                             </div>
-                          ))}
-                        </div>
+                          )}
+                        />
                       )}
                     </div>
 
@@ -1309,7 +1334,7 @@ export default function CreateOffer() {
                         data-testid="input-image-upload"
                       />
 
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         {/* Render uploaded images */}
                         {uploadedImages.map((img, index) => (
                           <div 
@@ -1365,13 +1390,13 @@ export default function CreateOffer() {
                             data-testid={`upload-tile-${idx}`}
                           >
                             {uploadedImages.length === 0 && idx === 0 && (
-                              <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#F47920] text-white text-[10px] px-2 py-0.5 rounded-sm font-medium z-10">
+                              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FF7F39] text-white text-[10px] px-3 py-1 rounded font-medium z-10 whitespace-nowrap">
                                 Cover Photo
                               </div>
                             )}
-                            <div className="w-full h-full border-2 border-dashed border-slate-200 rounded-lg hover:border-[#00426D] hover:bg-[#00426D]/5 transition-colors flex flex-col items-center justify-center p-2 text-center">
-                              <Plus className="h-5 w-5 text-slate-400 mb-1" />
-                              <span className="text-[10px] text-slate-500">Upload</span>
+                            <div className="w-full h-full border-2 border-dashed border-slate-300 rounded-lg hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors flex flex-col items-center justify-center p-4 text-center min-h-[100px]">
+                              <Plus className="h-8 w-8 text-slate-400 mb-2" />
+                              <span className="text-xs text-slate-500 font-medium">Upload</span>
                             </div>
                           </div>
                         ))}
