@@ -662,13 +662,13 @@ export default function CreateOffer() {
                                     className={cn(
                                       "cursor-pointer rounded-xl border p-4 flex flex-col items-center justify-center gap-3 transition-all",
                                       isSelected 
-                                        ? "border-blue-500 bg-blue-50 text-blue-600 shadow-sm ring-1 ring-blue-500" 
-                                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                                        ? "border-[#00426D] bg-[#00426D]/5 text-[#00426D] shadow-sm ring-1 ring-[#00426D]" 
+                                        : "border-slate-200 bg-white text-slate-600 hover:border-[#00426D]/30 hover:bg-slate-50"
                                     )}
                                     onClick={() => field.onChange(type.id)}
                                   >
-                                    <Icon className={cn("h-6 w-6", isSelected ? "text-blue-600" : "text-slate-900")} />
-                                    <span className={cn("text-xs font-medium", isSelected ? "text-blue-700" : "text-slate-900")}>
+                                    <Icon className={cn("h-6 w-6", isSelected ? "text-[#FF7F39]" : "text-slate-900")} />
+                                    <span className={cn("text-xs font-medium", isSelected ? "text-[#00426D]" : "text-slate-900")}>
                                       {type.label}
                                     </span>
                                   </div>
@@ -1251,7 +1251,7 @@ export default function CreateOffer() {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel className="text-sm text-slate-600 font-normal">
-                            I agree to the <a href="https://www.qatarliving.com/rules-advertising" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Rules for Advertising</a> on Qatar Living and the <a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Terms of use</a>.
+                            I agree to the <a href="https://www.qatarliving.com/rules-advertising" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">Rules for Advertising</a> on Qatar Living and the <a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">Terms of use</a>.
                           </FormLabel>
                           <FormMessage />
                         </div>
@@ -1280,7 +1280,7 @@ export default function CreateOffer() {
                         <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <button type="button" className="flex items-center gap-1 cursor-help text-blue-500 hover:text-blue-600">
+                              <button type="button" className="flex items-center gap-1 cursor-help text-[#00426D] hover:text-[#003557]">
                                 <Info className="h-3 w-3" />
                                 <span>1280 x 800 - recommended size</span>
                               </button>
@@ -1339,7 +1339,7 @@ export default function CreateOffer() {
                               <button
                                 type="button"
                                 onClick={() => handleEditImage(index)}
-                                className="bg-white text-slate-700 rounded-full p-1.5 hover:bg-blue-50 transition-colors"
+                                className="bg-white text-slate-700 rounded-full p-1.5 hover:bg-[#00426D]/10 transition-colors"
                                 data-testid={`button-edit-image-${index}`}
                               >
                                 <Pencil className="h-3 w-3" />
@@ -1369,7 +1369,7 @@ export default function CreateOffer() {
                                 Cover Photo
                               </div>
                             )}
-                            <div className="w-full h-full border-2 border-dashed border-slate-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center p-2 text-center">
+                            <div className="w-full h-full border-2 border-dashed border-slate-200 rounded-lg hover:border-[#00426D] hover:bg-[#00426D]/5 transition-colors flex flex-col items-center justify-center p-2 text-center">
                               <Plus className="h-5 w-5 text-slate-400 mb-1" />
                               <span className="text-[10px] text-slate-500">Upload</span>
                             </div>

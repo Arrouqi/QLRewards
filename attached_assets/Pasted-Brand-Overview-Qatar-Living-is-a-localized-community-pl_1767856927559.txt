@@ -1,0 +1,170 @@
+Brand Overview
+Qatar Living is a localized community platform with the tagline "One Place, Endless Choices." The brand identity emphasizes trust, community, and local connection across Middle Eastern markets (Qatar, Arabian, Oman).
+Logo System
+Main Logo Structure
+Primary Logo: Country name (Qatar/Arabian/Oman) positioned above "LIVING"
+Wordmark: "LIVING" with distinctive styling where "IN" is highlighted in orange, rest in dark blue
+Unique Element: The "IN" letters feature a curved connecting line that extends beyond typical structure
+Tagline: "One Place, Endless Choices" (use strategically, see usage guidelines below)
+Logo Usage Rules
+Use FULL logo with tagline for:
+Corporate stationery (letterheads, business cards)
+Website headers & footers
+Brand advertisements and billboards
+Presentation templates (cover/closing slides)
+Email signatures
+Large merchandise (t-shirts, mugs)
+Signage and brand introductions
+Use logo WITHOUT tagline for:
+Internal documents & reports
+Space-constrained digital ads
+Video opening/closing frames
+Small promotional items (pens, USBs)
+When brand recognition is already strong
+Logo Specifications
+Minimum Size: Print = 2cm width | Digital = 130px width
+Safe Space: Measure using the height of letter "N" as unit "x", maintain minimum "x" spacing on all sides
+Spacing Grid: Logo built on proportional grid system visible in guidelines
+Logo Variations
+Country versions: Qatar, Arabian, Oman (each with/without tagline)
+Color variations: Full color, white on dark, dark on light, monochrome (black/white)
+Subsection lockups: Properties, Classifieds, Vehicles, Jobs, Services, Rewards (with department names in orange below "LIVING")
+Brandmark/Icon
+Standalone "IN" symbol can be used for: app icons, social media profiles, favicons, watermarks, small-scale branding
+Available in: filled versions (blue background, orange background), outline versions (blue stroke, orange stroke)
+Icon-only usage: when space is extremely limited or brand has strong recognition
+Color Palette
+Primary Colors
+Dark Blue (Primary brand color - 50% usage)
+Hex: #00426D
+RGB: R0 G66 B109
+CMYK: C100 M43 Y0 K55
+Pantone: 2188C
+Meaning: Trust, stability, peace, reliability
+Orange (Secondary brand color - 30% usage)
+Hex: #FF7F39
+RGB: R255 G127 B57
+CMYK: C0 M59 Y90 K0
+Pantone: 1575 C
+Meaning: Warmth, energy, enthusiasm, community
+White
+Hex: #FFFFFF
+RGB: R255 G255 B255
+CMYK: C0 M0 Y0 K0
+Usage: Backgrounds, breathing space, clean aesthetic
+Dark Gray (Text/neutral color)
+Hex: #4D4D4F
+RGB: R77 G77 B79
+CMYK: C0 M0 Y0 K85
+Usage: Body text, when color is limited
+Secondary Colors (Accent colors - 20% usage)
+Light Orange: #FFAE42
+Gold: #FFD700
+Medium Blue: #0071AF
+Light Blue: #14B8F2
+Color Usage Ratio
+50% Dark Blue
+30% Orange
+20% Secondary colors/White/Neutrals
+Typography
+Primary Typeface: Prelude
+Prelude Bold: Headings, display text
+Display Headline: Size 75pt
+H1: Size 60pt
+Always use +100 tracking (letter spacing)
+Leading: Type size + 12pt (e.g., 24pt leading on 12pt type)
+Prelude Regular: Body text
+Subheader: Size 30pt
+Body: Size 24-30pt
+Secondary Typeface: Public Sans
+Public Sans Bold: Alternative headings
+Display Headline: Size 75pt, Black weight
+H1: Size 60pt, Bold weight
+Public Sans Regular: Alternative body text
+Subheader: Size 35pt
+Body: Size 30pt
+Tracking: 0 to +50
+Leading: Type size + 2pt (e.g., 14pt leading on 12pt type)
+Arabic Typeface: GE SS TWO
+GE SS TWO Bold: Arabic headings
+GE SS TWO Medium: Arabic subheadings
+GE SS TWO Light: Arabic body text
+Size hierarchy: 75pt (main), 60pt (H1), 30pt (subhead), 24pt (body)
+Typography Guidelines
+Uppercase for emphasis in Prelude
+Sentence case for body text in both typefaces
+Prelude requires more generous letter spacing (+100 tracking)
+Public Sans for clarity when legibility is paramount
+Avoid excessive formatting (minimal bold, headers, bullets unless requested or essential)
+Graphic Elements
+Pattern System
+Created from "IN" brandmark through rotation and repetition
+Can be used as backgrounds in blue, orange, or outline versions
+Pattern maintains brand identity while adding visual texture
+Brandmark Cropping
+Brandmark can be cropped for design flexibility
+Divide height by 6 sections
+Can crop after 4th or 5th vertical section
+Creates dynamic layout options: upper left, upper right, lower corners, full width applications
+Design Applications
+Digital (Web/App)
+Clean, modern aesthetic with ample white space
+Use dark blue (#00426D) for primary navigation/headers
+Orange (#FF7F39) for CTAs, highlights, and "IN" in logo
+Cards/sections with subtle borders or shadows
+Responsive design with consistent spacing grid
+Mobile icons: Circular or rounded square format with "IN" symbol
+Social Media
+Post dimensions: Maintain consistent branding
+Profile pictures: Circular "IN" icon versions (with country name in small text)
+Cover images: Full logo with tagline, incorporate pattern elements
+Story templates: Orange or blue backgrounds with white logo
+Print Materials
+Stationery uses subtle pattern elements
+Business cards: Front = logo, Back = contact details with pattern
+Letterhead: Logo top-left, pattern accent bottom-right
+Envelopes: Orange interior accent, logo on front
+Merchandise
+T-shirts/apparel: Large logo placement, pattern elements
+Mugs/small items: Icon or simplified logo
+Bags: Full logo with pattern backgrounds
+Caps: Embroidered "IN" icon or small logo
+Brand Personality & Tone
+Visual Personality
+Professional yet approachable: Balance of corporate dark blue with friendly orange
+Local and connected: Country-specific branding shows localization
+Modern and clean: Sans-serif typefaces, ample white space
+Energetic but trustworthy: Orange brings energy, blue brings stability
+Key Messages
+"One Place, Endless Choices" - emphasizes variety and convenience
+Community-focused platform for local living
+Connecting people with properties, vehicles, jobs, services, classifieds
+Don'ts (Critical Rules)
+Logo Don'ts
+❌ Don't stretch or distort the logo
+❌ Don't rotate or tilt the logo
+❌ Don't change the country name position
+❌ Don't make logo transparent or reduce opacity
+❌ Don't add strokes/outlines to logo
+❌ Don't place logo on busy background images without proper contrast
+❌ Don't separate the "IN" color from the rest of the wordmark
+Color Don'ts
+❌ Don't use colors outside the defined palette
+❌ Don't use dark blue and orange in equal proportions (follow 50/30/20 rule)
+❌ Don't use low-contrast color combinations that reduce legibility
+Typography Don'ts
+❌ Don't substitute typefaces with similar alternatives
+❌ Don't use Prelude without proper tracking (+100)
+❌ Don't mix too many type weights in single design
+❌ Don't use excessive decorative typography
+
+When designing for Qatar Living, prioritize:
+✅ Clean, professional layouts with hierarchy
+✅ Consistent use of dark blue and orange (50/30 ratio)
+✅ Generous white space and breathing room
+✅ Appropriate logo version for context (with/without tagline)
+✅ Prelude for distinctive brand voice, Public Sans for clarity
+✅ Pattern elements for visual interest without overwhelming
+✅ Mobile-first, responsive approach for digital
+✅ Localization (correct country name for market)
+
