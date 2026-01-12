@@ -222,12 +222,7 @@ export default function MerchantOnboarding() {
     name: "deals",
   });
 
-  const watchedBranchesRaw = form.watch("branches");
-  const branchNames = useMemo(() => {
-    const branches = watchedBranchesRaw || [];
-    return branches.map((b: any, i: number) => b?.name || `Branch ${i + 1}`);
-  }, [JSON.stringify(watchedBranchesRaw)]);
-
+  
   const addBranch = () => {
     appendBranch({ name: "", location: "", phone: "", detail: "" });
   };
@@ -668,7 +663,6 @@ export default function MerchantOnboarding() {
                     claimTerms={claimTerms}
                     generalTerms={generalTerms}
                     branches={branchFields}
-                    branchNames={branchNames}
                     isExpanded={expandedDeals.includes(index)}
                     onToggle={() => toggleDealExpansion(index)}
                     onRemove={() => removeDeal(index)}
@@ -977,7 +971,6 @@ function DealFormSection({
   claimTerms, 
   generalTerms,
   branches,
-  branchNames,
   isExpanded, 
   onToggle, 
   onRemove 
@@ -988,7 +981,6 @@ function DealFormSection({
   claimTerms: { id: number; type: string; text: string }[];
   generalTerms: { id: number; type: string; text: string }[];
   branches: any[];
-  branchNames: string[];
   isExpanded: boolean;
   onToggle: () => void;
   onRemove: () => void;
@@ -997,6 +989,7 @@ function DealFormSection({
   const dealCategory = form.watch(`deals.${index}.category`);
   const selectedCategory = categories.find(c => c.name === dealCategory);
   const availableSubCategories = selectedCategory?.subCategories || [];
+  const branchNames = branches.map((b: any, i: number) => b?.name || `Branch ${i + 1}`);
 
   const offerTypes = [
     { id: "bogo", label: "Buy 1 Get 1", icon: Gift },
