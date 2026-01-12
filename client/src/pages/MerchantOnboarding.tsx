@@ -221,6 +221,9 @@ export default function MerchantOnboarding() {
     name: "deals",
   });
 
+  const watchedBranches = form.watch("branches") || [];
+  const branchNames = watchedBranches.map((b: any, i: number) => b?.name || `Branch ${i + 1}`);
+
   const addBranch = () => {
     appendBranch({ name: "", location: "", phone: "", detail: "" });
   };
@@ -635,6 +638,7 @@ export default function MerchantOnboarding() {
                     claimTerms={claimTerms}
                     generalTerms={generalTerms}
                     branches={branchFields}
+                    branchNames={branchNames}
                     isExpanded={expandedDeals.includes(index)}
                     onToggle={() => toggleDealExpansion(index)}
                     onRemove={() => removeDeal(index)}
@@ -943,6 +947,7 @@ function DealFormSection({
   claimTerms, 
   generalTerms,
   branches,
+  branchNames,
   isExpanded, 
   onToggle, 
   onRemove 
@@ -953,6 +958,7 @@ function DealFormSection({
   claimTerms: { id: number; type: string; text: string }[];
   generalTerms: { id: number; type: string; text: string }[];
   branches: any[];
+  branchNames: string[];
   isExpanded: boolean;
   onToggle: () => void;
   onRemove: () => void;
@@ -1214,26 +1220,26 @@ function DealFormSection({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Applicable Branches *</FormLabel>
-                {branches.length === 0 ? (
+                {branchNames.length === 0 ? (
                   <p className="text-sm text-slate-500">Add branches above first</p>
                 ) : (
                   <div className="space-y-2">
-                    {branches.map((branch, branchIndex) => {
-                      const branchName = form.watch(`branches.${branchIndex}.name`) || `Branch ${branchIndex + 1}`;
-                      const isSelected = field.value?.includes(branchName);
+                    {branchNames.map((branchName, branchIndex) => {
+                      const displayName = branchName || `Branch ${branchIndex + 1}`;
+                      const isSelected = field.value?.includes(displayName);
                       return (
                         <div
-                          key={branch.id}
+                          key={branchIndex}
                           onClick={() => {
                             const newValue = isSelected
-                              ? field.value.filter((v: string) => v !== branchName)
-                              : [...(field.value || []), branchName];
+                              ? field.value.filter((v: string) => v !== displayName)
+                              : [...(field.value || []), displayName];
                             field.onChange(newValue);
                           }}
                           className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
                         >
                           <Checkbox checked={isSelected} className="pointer-events-none" />
-                          <span className="text-sm">{branchName}</span>
+                          <span className="text-sm">{displayName}</span>
                         </div>
                       );
                     })}
