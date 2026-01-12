@@ -985,11 +985,6 @@ function DealFormSection({
   onToggle: () => void;
   onRemove: () => void;
 }) {
-  const dealTitle = form.watch(`deals.${index}.title`) || `Deal ${index + 1}`;
-  const dealCategory = form.watch(`deals.${index}.category`);
-  const selectedCategory = categories.find(c => c.name === dealCategory);
-  const availableSubCategories = selectedCategory?.subCategories || [];
-  
   const offerTypes = [
     { id: "bogo", label: "Buy 1 Get 1", icon: Gift },
     { id: "discount", label: "Discount", icon: Percent },
@@ -1005,7 +1000,7 @@ function DealFormSection({
       >
         <div className="flex items-center gap-2">
           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          <span className="font-medium">{dealTitle}</span>
+          <span className="font-medium">Deal {index + 1}</span>
         </div>
         <Button
           type="button"
@@ -1061,24 +1056,29 @@ function DealFormSection({
             <FormField
               control={form.control}
               name={`deals.${index}.subCategory`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sub-Category *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!dealCategory}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select sub-category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {availableSubCategories.map((sub) => (
-                        <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const categoryValue = form.getValues(`deals.${index}.category`);
+                const selectedCategory = categories.find(c => c.name === categoryValue);
+                const subCategories = selectedCategory?.subCategories || [];
+                return (
+                  <FormItem>
+                    <FormLabel>Sub-Category *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!categoryValue}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sub-category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {subCategories.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
           </div>
 
