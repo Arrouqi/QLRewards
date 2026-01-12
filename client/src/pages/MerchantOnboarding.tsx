@@ -989,12 +989,7 @@ function DealFormSection({
   const dealCategory = form.watch(`deals.${index}.category`);
   const selectedCategory = categories.find(c => c.name === dealCategory);
   const availableSubCategories = selectedCategory?.subCategories || [];
-  const branchNamesKey = branches.map(b => b?.name || "").join(",");
-  const branchNames = useMemo(() => 
-    branches.map((b: any, i: number) => b?.name || `Branch ${i + 1}`),
-    [branchNamesKey]
-  );
-
+  
   const offerTypes = [
     { id: "bogo", label: "Buy 1 Get 1", icon: Gift },
     { id: "discount", label: "Discount", icon: Percent },
@@ -1247,12 +1242,12 @@ function DealFormSection({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Applicable Branches *</FormLabel>
-                {branchNames.length === 0 ? (
+                {branches.length === 0 ? (
                   <p className="text-sm text-slate-500">Add branches above first</p>
                 ) : (
                   <div className="space-y-2">
-                    {branchNames.map((branchName, branchIndex) => {
-                      const displayName = branchName || `Branch ${branchIndex + 1}`;
+                    {branches.map((branch: any, branchIndex: number) => {
+                      const displayName = branch?.name || `Branch ${branchIndex + 1}`;
                       const isSelected = field.value?.includes(displayName);
                       return (
                         <div
