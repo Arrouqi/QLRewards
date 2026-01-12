@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema } from "@shared/schema";
+import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -761,6 +761,142 @@ export async function registerRoutes(
       } else {
         res.status(400).json({ success: false, error: result.error });
       }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Merchant Onboarding Routes
+  app.post("/api/merchants", async (req, res) => {
+    try {
+      const { deals, ...merchantData } = req.body;
+      
+      // Upload document files if provided
+      const documentFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'companyStamp', 'signedContractUpload'];
+      for (const field of documentFields) {
+        if (merchantData[field] && merchantData[field].startsWith('data:')) {
+          try {
+            const urls = await uploadMultipleImages([merchantData[field]], `merchant-${field}`);
+            merchantData[field] = urls[0];
+          } catch (uploadError) {
+            console.error(`[Azure] ${field} upload failed:`, uploadError);
+          }
+        }
+      }
+      
+      const validatedMerchant = insertMerchantSchema.parse(merchantData);
+      const merchant = await storage.createMerchant(validatedMerchant);
+      
+      // Create associated deals
+      if (deals && Array.isArray(deals)) {
+        for (const deal of deals) {
+          try {
+            // Upload deal images
+            let imageUrls: string[] = [];
+            if (deal.images && deal.images.length > 0) {
+              try {
+                imageUrls = await uploadMultipleImages(deal.images, `merchant-${merchant.id}-deal`);
+              } catch (uploadError) {
+                console.error("[Azure] Deal image upload failed:", uploadError);
+              }
+            }
+            
+            const dealData = {
+              ...deal,
+              merchantId: merchant.id,
+              images: imageUrls,
+            };
+            const validatedDeal = insertMerchantDealSchema.parse(dealData);
+            await storage.createMerchantDeal(validatedDeal);
+          } catch (dealError) {
+            console.error("Error creating merchant deal:", dealError);
+          }
+        }
+      }
+      
+      res.status(201).json(merchant);
+    } catch (error: any) {
+      console.error("Merchant creation error:", error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/merchants", requireAuth, async (req, res) => {
+    try {
+      const merchants = await storage.getAllMerchants();
+      res.json(merchants);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/merchants/:id", requireAuth, async (req, res) => {
+    try {
+      const merchant = await storage.getMerchantById(req.params.id);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      
+      const deals = await storage.getMerchantDealsByMerchantId(merchant.id);
+      res.json({ ...merchant, deals });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/merchants/:id", requireAuth, async (req, res) => {
+    try {
+      const merchant = await storage.updateMerchant(req.params.id, req.body);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/merchants/:id/status", requireAuth, async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!["pending", "approved", "rejected", "archived"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      
+      const merchant = await storage.updateMerchantStatus(req.params.id, status);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/merchants/:id/upload-signed", async (req, res) => {
+    try {
+      const { signedContractUpload } = req.body;
+      
+      if (!signedContractUpload) {
+        return res.status(400).json({ error: "Signed contract file is required" });
+      }
+      
+      let uploadUrl = signedContractUpload;
+      if (signedContractUpload.startsWith('data:')) {
+        try {
+          const urls = await uploadMultipleImages([signedContractUpload], `merchant-${req.params.id}-signed`);
+          uploadUrl = urls[0];
+        } catch (uploadError) {
+          console.error("[Azure] Signed contract upload failed:", uploadError);
+          return res.status(500).json({ error: "Failed to upload signed contract" });
+        }
+      }
+      
+      const merchant = await storage.updateMerchant(req.params.id, { signedContractUpload: uploadUrl });
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      res.json(merchant);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
