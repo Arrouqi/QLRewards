@@ -989,7 +989,11 @@ function DealFormSection({
   const dealCategory = form.watch(`deals.${index}.category`);
   const selectedCategory = categories.find(c => c.name === dealCategory);
   const availableSubCategories = selectedCategory?.subCategories || [];
-  const branchNames = branches.map((b: any, i: number) => b?.name || `Branch ${i + 1}`);
+  const branchNamesKey = branches.map(b => b?.name || "").join(",");
+  const branchNames = useMemo(() => 
+    branches.map((b: any, i: number) => b?.name || `Branch ${i + 1}`),
+    [branchNamesKey]
+  );
 
   const offerTypes = [
     { id: "bogo", label: "Buy 1 Get 1", icon: Gift },
