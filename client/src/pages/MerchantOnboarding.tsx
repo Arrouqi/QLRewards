@@ -166,6 +166,7 @@ export default function MerchantOnboarding() {
   const [expandedDeals, setExpandedDeals] = useState<number[]>([0]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [submittedMerchantId, setSubmittedMerchantId] = useState<string | null>(null);
+  const [countryCode, setCountryCode] = useState("+974");
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
@@ -381,20 +382,6 @@ export default function MerchantOnboarding() {
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="+974 XXXX XXXX" data-testid="input-phone" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 <FormField
@@ -413,7 +400,7 @@ export default function MerchantOnboarding() {
 
                 <Separator />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <FormField
                     control={form.control}
                     name="contactPerson"
@@ -422,6 +409,46 @@ export default function MerchantOnboarding() {
                         <FormLabel>Contact Person *</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Full name" data-testid="input-contact-person" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number *</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Select 
+                              value={countryCode} 
+                              onValueChange={setCountryCode}
+                            >
+                              <SelectTrigger className="w-[120px]" data-testid="select-country-code">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="+974">🇶🇦 +974</SelectItem>
+                                <SelectItem value="+971">🇦🇪 +971</SelectItem>
+                                <SelectItem value="+966">🇸🇦 +966</SelectItem>
+                                <SelectItem value="+973">🇧🇭 +973</SelectItem>
+                                <SelectItem value="+968">🇴🇲 +968</SelectItem>
+                                <SelectItem value="+965">🇰🇼 +965</SelectItem>
+                                <SelectItem value="+91">🇮🇳 +91</SelectItem>
+                                <SelectItem value="+44">🇬🇧 +44</SelectItem>
+                                <SelectItem value="+1">🇺🇸 +1</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input 
+                              {...field} 
+                              placeholder="XXXX XXXX" 
+                              className="flex-1"
+                              data-testid="input-phone" 
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
