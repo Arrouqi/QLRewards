@@ -147,3 +147,79 @@ export const insertEmailSettingsSchema = createInsertSchema(emailSettings).omit(
 
 export type InsertEmailSettings = z.infer<typeof insertEmailSettingsSchema>;
 export type EmailSettings = typeof emailSettings.$inferSelect;
+
+export const merchants = pgTable("merchants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyName: text("company_name").notNull(),
+  crNumber: text("cr_number").notNull(),
+  brandName: text("brand_name").notNull(),
+  address: text("address").notNull(),
+  contactPerson: text("contact_person").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  products: text("products").array().notNull(),
+  businessCategories: text("business_categories").array().notNull(),
+  branches: text("branches").array(),
+  subscriptionFee: text("subscription_fee"),
+  redemptionFee: text("redemption_fee"),
+  crDocument: text("cr_document"),
+  establishmentCard: text("establishment_card"),
+  tradeLicense: text("trade_license"),
+  menuPriceList: text("menu_price_list"),
+  merchantSignature: text("merchant_signature"),
+  merchantSignatoryName: text("merchant_signatory_name"),
+  companyStamp: text("company_stamp"),
+  merchantSignDate: text("merchant_sign_date"),
+  qlSignature: text("ql_signature"),
+  qlName: text("ql_name"),
+  qlTitle: text("ql_title"),
+  qlSignDate: text("ql_sign_date"),
+  signedContractUpload: text("signed_contract_upload"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertMerchantSchema = createInsertSchema(merchants).omit({
+  id: true,
+  status: true,
+  createdAt: true,
+});
+
+export type InsertMerchant = z.infer<typeof insertMerchantSchema>;
+export type Merchant = typeof merchants.$inferSelect;
+
+export const merchantDeals = pgTable("merchant_deals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  merchantId: varchar("merchant_id").notNull().references(() => merchants.id),
+  category: text("category").notNull(),
+  subCategory: text("sub_category").notNull(),
+  dealType: text("deal_type").notNull(),
+  duration: text("duration").notNull(),
+  redemption: text("redemption").notNull(),
+  limitPerUser: text("limit_per_user"),
+  originalPrice: text("original_price"),
+  isMultipleItems: boolean("is_multiple_items").notNull().default(false),
+  discountPercentage: text("discount_percentage"),
+  isTwoTranches: boolean("is_two_tranches").notNull().default(false),
+  trancheValidity: text("tranche_validity"),
+  specificDays: boolean("specific_days").notNull().default(false),
+  days: text("days").array(),
+  title: text("title").notNull(),
+  description: text("description"),
+  claimRules: text("claim_rules").array().notNull(),
+  generalRules: text("general_rules").array().notNull(),
+  otherRules: text("other_rules"),
+  branches: text("branches").array().notNull(),
+  images: text("images").array(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertMerchantDealSchema = createInsertSchema(merchantDeals).omit({
+  id: true,
+  status: true,
+  createdAt: true,
+});
+
+export type InsertMerchantDeal = z.infer<typeof insertMerchantDealSchema>;
+export type MerchantDeal = typeof merchantDeals.$inferSelect;
