@@ -1,4 +1,4 @@
-import { useState, useRef, ChangeEvent, useCallback } from "react";
+import { useState, useRef, ChangeEvent, useCallback, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -221,8 +221,11 @@ export default function MerchantOnboarding() {
     name: "deals",
   });
 
-  const watchedBranches = form.watch("branches") || [];
-  const branchNames = watchedBranches.map((b: any, i: number) => b?.name || `Branch ${i + 1}`);
+  const watchedBranchesRaw = form.watch("branches");
+  const branchNames = useMemo(() => {
+    const branches = watchedBranchesRaw || [];
+    return branches.map((b: any, i: number) => b?.name || `Branch ${i + 1}`);
+  }, [JSON.stringify(watchedBranchesRaw)]);
 
   const addBranch = () => {
     appendBranch({ name: "", location: "", phone: "", detail: "" });
