@@ -6,7 +6,9 @@ import {
   type Term, type InsertTerm,
   type EmailRecipient, type InsertEmailRecipient,
   type EmailSettings, type InsertEmailSettings,
-  deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings 
+  type Merchant, type InsertMerchant,
+  type MerchantDeal, type InsertMerchantDeal,
+  deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantDeals 
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, inArray, and } from "drizzle-orm";
@@ -51,6 +53,15 @@ export interface IStorage {
   deleteEmailRecipient(id: string): Promise<void>;
   getEmailSettings(): Promise<EmailSettings | undefined>;
   upsertEmailSettings(settings: Partial<InsertEmailSettings>): Promise<EmailSettings>;
+  createMerchant(merchant: InsertMerchant): Promise<Merchant>;
+  getAllMerchants(): Promise<Merchant[]>;
+  getMerchantById(id: string): Promise<Merchant | undefined>;
+  updateMerchant(id: string, data: Partial<InsertMerchant>): Promise<Merchant | undefined>;
+  updateMerchantStatus(id: string, status: string): Promise<Merchant | undefined>;
+  createMerchantDeal(deal: InsertMerchantDeal): Promise<MerchantDeal>;
+  getMerchantDealsByMerchantId(merchantId: string): Promise<MerchantDeal[]>;
+  getMerchantDealById(id: string): Promise<MerchantDeal | undefined>;
+  updateMerchantDeal(id: string, data: Partial<InsertMerchantDeal>): Promise<MerchantDeal | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -327,6 +338,49 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return created;
     }
+  }
+
+  async createMerchant(merchant: InsertMerchant): Promise<Merchant> {
+    const [newMerchant] = await db.insert(merchants).values(merchant).returning();
+    return newMerchant;
+  }
+
+  async getAllMerchants(): Promise<Merchant[]> {
+    return await db.select().from(merchants);
+  }
+
+  async getMerchantById(id: string): Promise<Merchant | undefined> {
+    const [merchant] = await db.select().from(merchants).where(eq(merchants.id, id));
+    return merchant;
+  }
+
+  async updateMerchant(id: string, data: Partial<InsertMerchant>): Promise<Merchant | undefined> {
+    const [updated] = await db.update(merchants).set(data).where(eq(merchants.id, id)).returning();
+    return updated;
+  }
+
+  async updateMerchantStatus(id: string, status: string): Promise<Merchant | undefined> {
+    const [updated] = await db.update(merchants).set({ status }).where(eq(merchants.id, id)).returning();
+    return updated;
+  }
+
+  async createMerchantDeal(deal: InsertMerchantDeal): Promise<MerchantDeal> {
+    const [newDeal] = await db.insert(merchantDeals).values(deal).returning();
+    return newDeal;
+  }
+
+  async getMerchantDealsByMerchantId(merchantId: string): Promise<MerchantDeal[]> {
+    return await db.select().from(merchantDeals).where(eq(merchantDeals.merchantId, merchantId));
+  }
+
+  async getMerchantDealById(id: string): Promise<MerchantDeal | undefined> {
+    const [deal] = await db.select().from(merchantDeals).where(eq(merchantDeals.id, id));
+    return deal;
+  }
+
+  async updateMerchantDeal(id: string, data: Partial<InsertMerchantDeal>): Promise<MerchantDeal | undefined> {
+    const [updated] = await db.update(merchantDeals).set(data).where(eq(merchantDeals.id, id)).returning();
+    return updated;
   }
 }
 
