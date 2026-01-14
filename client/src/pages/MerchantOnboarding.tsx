@@ -1,5 +1,5 @@
 import { useState, useRef, ChangeEvent, useCallback, useMemo } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
@@ -235,6 +235,9 @@ export default function MerchantOnboarding() {
     control: form.control,
     name: "deals",
   });
+
+  const productsValue = useWatch({ control: form.control, name: "products" }) || [];
+  const businessCategoriesValue = useWatch({ control: form.control, name: "businessCategories" }) || [];
 
   
   const addBranch = () => {
@@ -489,8 +492,7 @@ export default function MerchantOnboarding() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {productTypes.map((product) => {
-                    const currentProducts = form.getValues("products") || [];
-                    const isSelected = currentProducts.includes(product.id);
+                    const isSelected = productsValue.includes(product.id);
                     return (
                       <label
                         key={product.id}
@@ -506,11 +508,10 @@ export default function MerchantOnboarding() {
                           type="checkbox"
                           checked={isSelected}
                           onChange={(e) => {
-                            const current = form.getValues("products") || [];
                             if (e.target.checked) {
-                              form.setValue("products", [...current, product.id], { shouldValidate: true });
+                              form.setValue("products", [...productsValue, product.id], { shouldValidate: true });
                             } else {
-                              form.setValue("products", current.filter((v: string) => v !== product.id), { shouldValidate: true });
+                              form.setValue("products", productsValue.filter((v: string) => v !== product.id), { shouldValidate: true });
                             }
                           }}
                           className="h-4 w-4 accent-[#FF7F39]"
@@ -531,8 +532,7 @@ export default function MerchantOnboarding() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {businessCategoryList.map((categoryName, idx) => {
-                    const currentCategories = form.getValues("businessCategories") || [];
-                    const isSelected = currentCategories.includes(categoryName);
+                    const isSelected = businessCategoriesValue.includes(categoryName);
                     return (
                       <label
                         key={idx}
@@ -548,11 +548,10 @@ export default function MerchantOnboarding() {
                           type="checkbox"
                           checked={isSelected}
                           onChange={(e) => {
-                            const current = form.getValues("businessCategories") || [];
                             if (e.target.checked) {
-                              form.setValue("businessCategories", [...current, categoryName], { shouldValidate: true });
+                              form.setValue("businessCategories", [...businessCategoriesValue, categoryName], { shouldValidate: true });
                             } else {
-                              form.setValue("businessCategories", current.filter((v: string) => v !== categoryName), { shouldValidate: true });
+                              form.setValue("businessCategories", businessCategoriesValue.filter((v: string) => v !== categoryName), { shouldValidate: true });
                             }
                           }}
                           className="h-4 w-4 accent-[#FF7F39]"
@@ -1011,6 +1010,14 @@ function DealFormSection({
     { id: "bundle", label: "Bundle", icon: ShoppingBag },
   ];
 
+  const categoryValue = useWatch({ control: form.control, name: `deals.${index}.category` });
+  const claimRulesValue = useWatch({ control: form.control, name: `deals.${index}.claimRules` }) || [];
+  const generalRulesValue = useWatch({ control: form.control, name: `deals.${index}.generalRules` }) || [];
+  const branchesValue = useWatch({ control: form.control, name: `deals.${index}.branches` }) || [];
+  
+  const selectedCategory = categories.find(c => c.name === categoryValue);
+  const subCategories = selectedCategory?.subCategories || [];
+
   return (
     <div className="border rounded-lg overflow-hidden">
       <div
@@ -1075,29 +1082,24 @@ function DealFormSection({
             <FormField
               control={form.control}
               name={`deals.${index}.subCategory`}
-              render={({ field }) => {
-                const categoryValue = form.getValues(`deals.${index}.category`);
-                const selectedCategory = categories.find(c => c.name === categoryValue);
-                const subCategories = selectedCategory?.subCategories || [];
-                return (
-                  <FormItem>
-                    <FormLabel>Sub-Category *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!categoryValue}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select sub-category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subCategories.map((sub) => (
-                          <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sub-Category *</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!categoryValue}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select sub-category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {subCategories.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
 
@@ -1197,8 +1199,7 @@ function DealFormSection({
             <Label>Claim Rules *</Label>
             <div className="space-y-2 mt-2">
               {claimTerms.map((term) => {
-                const currentRules = form.getValues(`deals.${index}.claimRules`) || [];
-                const isSelected = currentRules.includes(term.text);
+                const isSelected = claimRulesValue.includes(term.text);
                 return (
                   <label
                     key={term.id}
@@ -1208,11 +1209,10 @@ function DealFormSection({
                       type="checkbox"
                       checked={isSelected}
                       onChange={(e) => {
-                        const current = form.getValues(`deals.${index}.claimRules`) || [];
                         if (e.target.checked) {
-                          form.setValue(`deals.${index}.claimRules`, [...current, term.text]);
+                          form.setValue(`deals.${index}.claimRules`, [...claimRulesValue, term.text]);
                         } else {
-                          form.setValue(`deals.${index}.claimRules`, current.filter((v: string) => v !== term.text));
+                          form.setValue(`deals.${index}.claimRules`, claimRulesValue.filter((v: string) => v !== term.text));
                         }
                       }}
                       className="h-4 w-4 accent-[#FF7F39]"
@@ -1228,8 +1228,7 @@ function DealFormSection({
             <Label>General Rules *</Label>
             <div className="space-y-2 mt-2">
               {generalTerms.map((term) => {
-                const currentRules = form.getValues(`deals.${index}.generalRules`) || [];
-                const isSelected = currentRules.includes(term.text);
+                const isSelected = generalRulesValue.includes(term.text);
                 return (
                   <label
                     key={term.id}
@@ -1239,11 +1238,10 @@ function DealFormSection({
                       type="checkbox"
                       checked={isSelected}
                       onChange={(e) => {
-                        const current = form.getValues(`deals.${index}.generalRules`) || [];
                         if (e.target.checked) {
-                          form.setValue(`deals.${index}.generalRules`, [...current, term.text]);
+                          form.setValue(`deals.${index}.generalRules`, [...generalRulesValue, term.text]);
                         } else {
-                          form.setValue(`deals.${index}.generalRules`, current.filter((v: string) => v !== term.text));
+                          form.setValue(`deals.${index}.generalRules`, generalRulesValue.filter((v: string) => v !== term.text));
                         }
                       }}
                       className="h-4 w-4 accent-[#FF7F39]"
@@ -1263,8 +1261,7 @@ function DealFormSection({
               <div className="space-y-2 mt-2">
                 {branches.map((branch: any, branchIndex: number) => {
                   const displayName = branch?.name || `Branch ${branchIndex + 1}`;
-                  const currentBranches = form.getValues(`deals.${index}.branches`) || [];
-                  const isSelected = currentBranches.includes(displayName);
+                  const isSelected = branchesValue.includes(displayName);
                   return (
                     <label
                       key={branchIndex}
@@ -1274,11 +1271,10 @@ function DealFormSection({
                         type="checkbox"
                         checked={isSelected}
                         onChange={(e) => {
-                          const current = form.getValues(`deals.${index}.branches`) || [];
                           if (e.target.checked) {
-                            form.setValue(`deals.${index}.branches`, [...current, displayName]);
+                            form.setValue(`deals.${index}.branches`, [...branchesValue, displayName]);
                           } else {
-                            form.setValue(`deals.${index}.branches`, current.filter((v: string) => v !== displayName));
+                            form.setValue(`deals.${index}.branches`, branchesValue.filter((v: string) => v !== displayName));
                           }
                         }}
                         className="h-4 w-4 accent-[#FF7F39]"
