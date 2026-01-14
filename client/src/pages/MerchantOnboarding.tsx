@@ -151,10 +151,24 @@ type MerchantFormValues = z.infer<typeof merchantSchema>;
 type DealFormValues = z.infer<typeof dealSchema>;
 
 const productTypes = [
-  { id: "bogo", label: "Buy 1 Get 1", icon: Gift },
-  { id: "discount", label: "Discount", icon: Percent },
-  { id: "voucher", label: "Voucher", icon: Tag },
-  { id: "bundle", label: "Bundle", icon: ShoppingBag },
+  { id: "bogo", label: "Buy 1 Get 1" },
+  { id: "discount", label: "Discount" },
+  { id: "voucher", label: "Voucher" },
+  { id: "bundle", label: "Bundle" },
+];
+
+const businessCategoryList = [
+  "Food & Dining",
+  "Hotel & Resorts", 
+  "Travel & Leisure",
+  "Health & Wellness",
+  "Shopping & Retail",
+  "Entertainment & Activities",
+  "Education & Learning",
+  "Automotive",
+  "Home Services",
+  "Financial & Professional Services",
+  "Collectibles",
 ];
 
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -473,43 +487,39 @@ export default function MerchantOnboarding() {
                 <CardTitle className="text-[#00426D]">Living Deals Products</CardTitle>
               </CardHeader>
               <CardContent>
-                <FormField
-                  control={form.control}
-                  name="products"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {productTypes.map((product) => {
-                          const Icon = product.icon;
-                          const isSelected = field.value?.includes(product.id);
-                          return (
-                            <div
-                              key={product.id}
-                              onClick={() => {
-                                const newValue = isSelected
-                                  ? field.value.filter((v: string) => v !== product.id)
-                                  : [...(field.value || []), product.id];
-                                field.onChange(newValue);
-                              }}
-                              className={cn(
-                                "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
-                                isSelected
-                                  ? "border-[#FF7F39] bg-[#FF7F39]/10"
-                                  : "border-slate-200 hover:border-[#FF7F39]/50"
-                              )}
-                              data-testid={`checkbox-product-${product.id}`}
-                            >
-                              <Checkbox checked={isSelected} className="pointer-events-none" />
-                              <Icon className={cn("h-5 w-5", isSelected ? "text-[#FF7F39]" : "text-slate-500")} />
-                              <span className="font-medium text-sm">{product.label}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {productTypes.map((product) => {
+                    const currentProducts = form.getValues("products") || [];
+                    const isSelected = currentProducts.includes(product.id);
+                    return (
+                      <label
+                        key={product.id}
+                        className={cn(
+                          "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
+                          isSelected
+                            ? "border-[#FF7F39] bg-[#FF7F39]/10"
+                            : "border-slate-200 hover:border-[#FF7F39]/50"
+                        )}
+                        data-testid={`checkbox-product-${product.id}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const current = form.getValues("products") || [];
+                            if (e.target.checked) {
+                              form.setValue("products", [...current, product.id], { shouldValidate: true });
+                            } else {
+                              form.setValue("products", current.filter((v: string) => v !== product.id), { shouldValidate: true });
+                            }
+                          }}
+                          className="h-4 w-4 accent-[#FF7F39]"
+                        />
+                        <span className="font-medium text-sm">{product.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
 
@@ -519,41 +529,39 @@ export default function MerchantOnboarding() {
                 <CardTitle className="text-[#00426D]">Business Categories</CardTitle>
               </CardHeader>
               <CardContent>
-                <FormField
-                  control={form.control}
-                  name="businessCategories"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {categories.map((category) => {
-                          const isSelected = field.value?.includes(category.name);
-                          return (
-                            <div
-                              key={category.id}
-                              onClick={() => {
-                                const newValue = isSelected
-                                  ? field.value.filter((v: string) => v !== category.name)
-                                  : [...(field.value || []), category.name];
-                                field.onChange(newValue);
-                              }}
-                              className={cn(
-                                "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                                isSelected
-                                  ? "border-[#FF7F39] bg-[#FF7F39]/10"
-                                  : "border-slate-200 hover:border-[#FF7F39]/50"
-                              )}
-                              data-testid={`checkbox-category-${category.id}`}
-                            >
-                              <Checkbox checked={isSelected} className="pointer-events-none" />
-                              <span className="text-sm">{category.name}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {businessCategoryList.map((categoryName, idx) => {
+                    const currentCategories = form.getValues("businessCategories") || [];
+                    const isSelected = currentCategories.includes(categoryName);
+                    return (
+                      <label
+                        key={idx}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                          isSelected
+                            ? "border-[#FF7F39] bg-[#FF7F39]/10"
+                            : "border-slate-200 hover:border-[#FF7F39]/50"
+                        )}
+                        data-testid={`checkbox-category-${idx}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const current = form.getValues("businessCategories") || [];
+                            if (e.target.checked) {
+                              form.setValue("businessCategories", [...current, categoryName], { shouldValidate: true });
+                            } else {
+                              form.setValue("businessCategories", current.filter((v: string) => v !== categoryName), { shouldValidate: true });
+                            }
+                          }}
+                          className="h-4 w-4 accent-[#FF7F39]"
+                        />
+                        <span className="text-sm">{categoryName}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
 
@@ -870,48 +878,53 @@ function DocumentUpload({ label, field, form, onChange }: {
   onChange: (field: keyof MerchantFormValues, e: ChangeEvent<HTMLInputElement>) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const value = form.getValues(field);
+  const [hasValue, setHasValue] = useState(false);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    onChange(field, e);
+    setHasValue(!!e.target.files?.[0]);
+  };
+
+  const handleClear = () => {
+    form.setValue(field, "");
+    setHasValue(false);
+    if (inputRef.current) inputRef.current.value = "";
+  };
 
   return (
-    <FormField
-      control={form.control}
-      name={field}
-      render={({ field: formField }) => (
-        <div className="space-y-2">
-          {label && <Label>{label}</Label>}
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*,.pdf"
-            className="hidden"
-            onChange={(e) => onChange(field, e)}
-          />
-          {formField.value ? (
-            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <Check className="h-4 w-4 text-green-600" />
-              <span className="text-sm text-green-700">File uploaded</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => form.setValue(field, "")}
-                className="ml-auto text-red-500"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div
-              onClick={() => inputRef.current?.click()}
-              className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors"
-            >
-              <Upload className="h-5 w-5 text-slate-400" />
-              <span className="text-sm text-slate-500">Click to upload</span>
-            </div>
-          )}
+    <div className="space-y-2">
+      {label && <Label>{label}</Label>}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*,.pdf"
+        className="hidden"
+        onChange={handleChange}
+      />
+      {hasValue ? (
+        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <Check className="h-4 w-4 text-green-600" />
+          <span className="text-sm text-green-700">File uploaded</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+            className="ml-auto text-red-500"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <div
+          onClick={() => inputRef.current?.click()}
+          className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors"
+        >
+          <Upload className="h-5 w-5 text-slate-400" />
+          <span className="text-sm text-slate-500">Click to upload</span>
         </div>
       )}
-    />
+    </div>
   );
 }
 
