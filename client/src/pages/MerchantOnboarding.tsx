@@ -869,43 +869,49 @@ function DocumentUpload({ label, field, form, onChange }: {
   form: any;
   onChange: (field: keyof MerchantFormValues, e: ChangeEvent<HTMLInputElement>) => void;
 }) {
-  const value = form.watch(field);
   const inputRef = useRef<HTMLInputElement>(null);
+  const value = form.getValues(field);
 
   return (
-    <div className="space-y-2">
-      {label && <Label>{label}</Label>}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*,.pdf"
-        className="hidden"
-        onChange={(e) => onChange(field, e)}
-      />
-      {value ? (
-        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <Check className="h-4 w-4 text-green-600" />
-          <span className="text-sm text-green-700">File uploaded</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => form.setValue(field, "")}
-            className="ml-auto text-red-500"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ) : (
-        <div
-          onClick={() => inputRef.current?.click()}
-          className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors"
-        >
-          <Upload className="h-5 w-5 text-slate-400" />
-          <span className="text-sm text-slate-500">Click to upload</span>
+    <FormField
+      control={form.control}
+      name={field}
+      render={({ field: formField }) => (
+        <div className="space-y-2">
+          {label && <Label>{label}</Label>}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*,.pdf"
+            className="hidden"
+            onChange={(e) => onChange(field, e)}
+          />
+          {formField.value ? (
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <Check className="h-4 w-4 text-green-600" />
+              <span className="text-sm text-green-700">File uploaded</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => form.setValue(field, "")}
+                className="ml-auto text-red-500"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div
+              onClick={() => inputRef.current?.click()}
+              className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors"
+            >
+              <Upload className="h-5 w-5 text-slate-400" />
+              <span className="text-sm text-slate-500">Click to upload</span>
+            </div>
+          )}
         </div>
       )}
-    </div>
+    />
   );
 }
 
