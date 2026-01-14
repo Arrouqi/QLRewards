@@ -1193,103 +1193,103 @@ function DealFormSection({
             )}
           />
 
-          <FormField
-            control={form.control}
-            name={`deals.${index}.claimRules`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Claim Rules *</FormLabel>
-                <div className="space-y-2">
-                  {claimTerms.map((term) => {
-                    const isSelected = field.value?.includes(term.text);
-                    return (
-                      <div
-                        key={term.id}
-                        onClick={() => {
-                          const newValue = isSelected
-                            ? field.value.filter((v: string) => v !== term.text)
-                            : [...(field.value || []), term.text];
-                          field.onChange(newValue);
-                        }}
-                        className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
-                      >
-                        <Checkbox checked={isSelected} className="pointer-events-none" />
-                        <span className="text-sm" dangerouslySetInnerHTML={{ __html: term.text }} />
-                      </div>
-                    );
-                  })}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label>Claim Rules *</Label>
+            <div className="space-y-2 mt-2">
+              {claimTerms.map((term) => {
+                const currentRules = form.getValues(`deals.${index}.claimRules`) || [];
+                const isSelected = currentRules.includes(term.text);
+                return (
+                  <label
+                    key={term.id}
+                    className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const current = form.getValues(`deals.${index}.claimRules`) || [];
+                        if (e.target.checked) {
+                          form.setValue(`deals.${index}.claimRules`, [...current, term.text]);
+                        } else {
+                          form.setValue(`deals.${index}.claimRules`, current.filter((v: string) => v !== term.text));
+                        }
+                      }}
+                      className="h-4 w-4 accent-[#FF7F39]"
+                    />
+                    <span className="text-sm" dangerouslySetInnerHTML={{ __html: term.text }} />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
 
-          <FormField
-            control={form.control}
-            name={`deals.${index}.generalRules`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>General Rules *</FormLabel>
-                <div className="space-y-2">
-                  {generalTerms.map((term) => {
-                    const isSelected = field.value?.includes(term.text);
-                    return (
-                      <div
-                        key={term.id}
-                        onClick={() => {
-                          const newValue = isSelected
-                            ? field.value.filter((v: string) => v !== term.text)
-                            : [...(field.value || []), term.text];
-                          field.onChange(newValue);
-                        }}
-                        className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
-                      >
-                        <Checkbox checked={isSelected} className="pointer-events-none" />
-                        <span className="text-sm" dangerouslySetInnerHTML={{ __html: term.text }} />
-                      </div>
-                    );
-                  })}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div>
+            <Label>General Rules *</Label>
+            <div className="space-y-2 mt-2">
+              {generalTerms.map((term) => {
+                const currentRules = form.getValues(`deals.${index}.generalRules`) || [];
+                const isSelected = currentRules.includes(term.text);
+                return (
+                  <label
+                    key={term.id}
+                    className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const current = form.getValues(`deals.${index}.generalRules`) || [];
+                        if (e.target.checked) {
+                          form.setValue(`deals.${index}.generalRules`, [...current, term.text]);
+                        } else {
+                          form.setValue(`deals.${index}.generalRules`, current.filter((v: string) => v !== term.text));
+                        }
+                      }}
+                      className="h-4 w-4 accent-[#FF7F39]"
+                    />
+                    <span className="text-sm" dangerouslySetInnerHTML={{ __html: term.text }} />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
 
-          <FormField
-            control={form.control}
-            name={`deals.${index}.branches`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Applicable Branches *</FormLabel>
-                {branches.length === 0 ? (
-                  <p className="text-sm text-slate-500">Add branches above first</p>
-                ) : (
-                  <div className="space-y-2">
-                    {branches.map((branch: any, branchIndex: number) => {
-                      const displayName = branch?.name || `Branch ${branchIndex + 1}`;
-                      const isSelected = field.value?.includes(displayName);
-                      return (
-                        <div
-                          key={branchIndex}
-                          onClick={() => {
-                            const newValue = isSelected
-                              ? field.value.filter((v: string) => v !== displayName)
-                              : [...(field.value || []), displayName];
-                            field.onChange(newValue);
-                          }}
-                          className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
-                        >
-                          <Checkbox checked={isSelected} className="pointer-events-none" />
-                          <span className="text-sm">{displayName}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <FormMessage />
-              </FormItem>
+          <div>
+            <Label>Applicable Branches *</Label>
+            {branches.length === 0 ? (
+              <p className="text-sm text-slate-500 mt-2">Add branches above first</p>
+            ) : (
+              <div className="space-y-2 mt-2">
+                {branches.map((branch: any, branchIndex: number) => {
+                  const displayName = branch?.name || `Branch ${branchIndex + 1}`;
+                  const currentBranches = form.getValues(`deals.${index}.branches`) || [];
+                  const isSelected = currentBranches.includes(displayName);
+                  return (
+                    <label
+                      key={branchIndex}
+                      className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          const current = form.getValues(`deals.${index}.branches`) || [];
+                          if (e.target.checked) {
+                            form.setValue(`deals.${index}.branches`, [...current, displayName]);
+                          } else {
+                            form.setValue(`deals.${index}.branches`, current.filter((v: string) => v !== displayName));
+                          }
+                        }}
+                        className="h-4 w-4 accent-[#FF7F39]"
+                      />
+                      <span className="text-sm">{displayName}</span>
+                    </label>
+                  );
+                })}
+              </div>
             )}
-          />
+          </div>
         </div>
       )}
     </div>
