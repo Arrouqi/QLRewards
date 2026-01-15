@@ -22,7 +22,8 @@ import {
   Tag,
   ShoppingBag,
   Check,
-  Info
+  Info,
+  ImageIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useLocation } from "wouter";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 interface SubCategory {
   id: string;
@@ -106,14 +108,18 @@ const dealSchema = z.object({
   category: z.string().min(1, "Category is required"),
   subCategory: z.string().min(1, "Sub-category is required"),
   dealType: z.string().min(1, "Deal type is required"),
-  duration: z.string().min(1, "Duration is required"),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
   redemption: z.string().min(1, "Redemption is required"),
   limitPerUser: z.string().optional(),
   originalPrice: z.string().optional(),
   isMultipleItems: z.boolean().default(false),
   discountPercentage: z.string().optional(),
   isTwoTranches: z.boolean().default(false),
-  trancheValidity: z.string().optional(),
+  tranche1StartDate: z.string().optional(),
+  tranche1EndDate: z.string().optional(),
+  tranche2StartDate: z.string().optional(),
+  tranche2EndDate: z.string().optional(),
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -156,19 +162,6 @@ const productTypes = [
   { id: "bundle", label: "Bundle" },
 ];
 
-const businessCategoryList = [
-  "Food & Dining",
-  "Hotel & Resorts", 
-  "Travel & Leisure",
-  "Health & Wellness",
-  "Shopping & Retail",
-  "Entertainment & Activities",
-  "Education & Learning",
-  "Automotive",
-  "Home Services",
-  "Financial & Professional Services",
-  "Collectibles",
-];
 
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -179,8 +172,7 @@ export default function MerchantOnboarding() {
   const [expandedDeals, setExpandedDeals] = useState<number[]>([0]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [submittedMerchantId, setSubmittedMerchantId] = useState<string | null>(null);
-  const [countryCode, setCountryCode] = useState("+974");
-
+  
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -248,14 +240,18 @@ export default function MerchantOnboarding() {
       category: "",
       subCategory: "",
       dealType: "",
-      duration: "",
+      startDate: "",
+      endDate: "",
       redemption: "",
       limitPerUser: "",
       originalPrice: "",
       isMultipleItems: false,
       discountPercentage: "",
       isTwoTranches: false,
-      trancheValidity: "",
+      tranche1StartDate: "",
+      tranche1EndDate: "",
+      tranche2StartDate: "",
+      tranche2EndDate: "",
       specificDays: false,
       days: daysOfWeek,
       title: "",
@@ -433,33 +429,12 @@ export default function MerchantOnboarding() {
                       <FormItem>
                         <FormLabel>Phone Number *</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Select 
-                              value={countryCode} 
-                              onValueChange={setCountryCode}
-                            >
-                              <SelectTrigger className="w-[120px]" data-testid="select-country-code">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="+974">🇶🇦 +974</SelectItem>
-                                <SelectItem value="+971">🇦🇪 +971</SelectItem>
-                                <SelectItem value="+966">🇸🇦 +966</SelectItem>
-                                <SelectItem value="+973">🇧🇭 +973</SelectItem>
-                                <SelectItem value="+968">🇴🇲 +968</SelectItem>
-                                <SelectItem value="+965">🇰🇼 +965</SelectItem>
-                                <SelectItem value="+91">🇮🇳 +91</SelectItem>
-                                <SelectItem value="+44">🇬🇧 +44</SelectItem>
-                                <SelectItem value="+1">🇺🇸 +1</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input 
-                              {...field} 
-                              placeholder="XXXX XXXX" 
-                              className="flex-1"
-                              data-testid="input-phone" 
-                            />
-                          </div>
+                          <PhoneInput
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Phone number"
+                            data-testid="input-phone"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -530,11 +505,11 @@ export default function MerchantOnboarding() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {businessCategoryList.map((categoryName, idx) => {
-                    const isSelected = businessCategoriesValue.includes(categoryName);
+                  {categories.map((category: Category, idx: number) => {
+                    const isSelected = businessCategoriesValue.includes(category.name);
                     return (
                       <label
-                        key={idx}
+                        key={category.id}
                         className={cn(
                           "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
                           isSelected
@@ -548,14 +523,14 @@ export default function MerchantOnboarding() {
                           checked={isSelected}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              form.setValue("businessCategories", [...businessCategoriesValue, categoryName], { shouldValidate: true });
+                              form.setValue("businessCategories", [...businessCategoriesValue, category.name], { shouldValidate: true });
                             } else {
-                              form.setValue("businessCategories", businessCategoriesValue.filter((v: string) => v !== categoryName), { shouldValidate: true });
+                              form.setValue("businessCategories", businessCategoriesValue.filter((v: string) => v !== category.name), { shouldValidate: true });
                             }
                           }}
                           className="h-4 w-4 accent-[#FF7F39]"
                         />
-                        <span className="text-sm">{categoryName}</span>
+                        <span className="text-sm">{category.name}</span>
                       </label>
                     );
                   })}
@@ -607,9 +582,9 @@ export default function MerchantOnboarding() {
                         name={`branches.${index}.location`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Location *</FormLabel>
+                            <FormLabel>Location (Google Maps URL) *</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="Branch location" data-testid={`input-branch-location-${index}`} />
+                              <Input {...field} placeholder="https://maps.google.com/..." data-testid={`input-branch-location-${index}`} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -622,7 +597,12 @@ export default function MerchantOnboarding() {
                           <FormItem>
                             <FormLabel>Phone</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="Branch phone" data-testid={`input-branch-phone-${index}`} />
+                              <PhoneInput
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Phone number"
+                                data-testid={`input-branch-phone-${index}`}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -971,6 +951,166 @@ function UploadSignedContract({ merchantId }: { merchantId: string | null }) {
   );
 }
 
+function TwoTranchesSection({ form, index }: { form: any; index: number }) {
+  const isTwoTranches = useWatch({ control: form.control, name: `deals.${index}.isTwoTranches` });
+  
+  return (
+    <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
+      <FormField
+        control={form.control}
+        name={`deals.${index}.isTwoTranches`}
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center gap-3">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+            <FormLabel className="!mt-0 font-medium">Split into Two Tranches</FormLabel>
+          </FormItem>
+        )}
+      />
+      
+      {isTwoTranches && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <FormField
+            control={form.control}
+            name={`deals.${index}.tranche1StartDate`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tranche 1 Start Date</FormLabel>
+                <FormControl>
+                  <Input {...field} type="date" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`deals.${index}.tranche1EndDate`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tranche 1 End Date</FormLabel>
+                <FormControl>
+                  <Input {...field} type="date" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`deals.${index}.tranche2StartDate`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tranche 2 Start Date</FormLabel>
+                <FormControl>
+                  <Input {...field} type="date" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name={`deals.${index}.tranche2EndDate`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tranche 2 End Date</FormLabel>
+                <FormControl>
+                  <Input {...field} type="date" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DealImageUpload({ form, index }: { form: any; index: number }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const images = useWatch({ control: form.control, name: `deals.${index}.images` }) || [];
+
+  const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const newImages: string[] = [];
+
+    for (const file of Array.from(files)) {
+      const reader = new FileReader();
+      await new Promise<void>((resolve) => {
+        reader.onload = () => {
+          if (reader.result) {
+            newImages.push(reader.result as string);
+          }
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    form.setValue(`deals.${index}.images`, [...images, ...newImages]);
+    setUploading(false);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const removeImage = (imageIndex: number) => {
+    const updated = images.filter((_: string, i: number) => i !== imageIndex);
+    form.setValue(`deals.${index}.images`, updated);
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label>Deal Images</Label>
+      <div className="flex flex-wrap gap-3">
+        {images.map((img: string, imgIndex: number) => (
+          <div key={imgIndex} className="relative group">
+            <img src={img} alt={`Deal image ${imgIndex + 1}`} className="w-24 h-24 object-cover rounded-lg border" />
+            <button
+              type="button"
+              onClick={() => removeImage(imgIndex)}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-[#FF7F39] hover:text-[#FF7F39] transition-colors"
+        >
+          {uploading ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : (
+            <>
+              <ImageIcon className="h-6 w-6 mb-1" />
+              <span className="text-xs">Add Image</span>
+            </>
+          )}
+        </button>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleUpload}
+      />
+    </div>
+  );
+}
+
 function DealFormSection({ 
   index, 
   form, 
@@ -1125,23 +1265,27 @@ function DealFormSection({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name={`deals.${index}.duration`}
+              name={`deals.${index}.startDate`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Duration *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select duration" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="1 month">1 Month</SelectItem>
-                      <SelectItem value="3 months">3 Months</SelectItem>
-                      <SelectItem value="6 months">6 Months</SelectItem>
-                      <SelectItem value="1 year">1 Year</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Start Date *</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name={`deals.${index}.endDate`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>End Date *</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -1168,7 +1312,23 @@ function DealFormSection({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name={`deals.${index}.limitPerUser`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Limit Per User</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="number" placeholder="e.g., 1" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
+
+          <TwoTranchesSection form={form} index={index} />
 
           <FormField
             control={form.control}
@@ -1242,6 +1402,20 @@ function DealFormSection({
             </div>
           </div>
 
+          <FormField
+            control={form.control}
+            name={`deals.${index}.otherRules`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Other Rules / Additional Terms</FormLabel>
+                <FormControl>
+                  <Textarea {...field} placeholder="Enter any additional rules or terms..." rows={3} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <div>
             <Label>Applicable Branches *</Label>
             {branches.length === 0 ? (
@@ -1275,6 +1449,8 @@ function DealFormSection({
               </div>
             )}
           </div>
+
+          <DealImageUpload form={form} index={index} />
         </div>
       )}
     </div>
