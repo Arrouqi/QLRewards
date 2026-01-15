@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Settings, LogOut, FileText, Users, Menu, X, FolderCog, Mail } from "lucide-react";
+import { LayoutDashboard, Settings, LogOut, FileText, Users, Menu, X, FolderCog, Mail, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       label: "Deal Requests",
       icon: LayoutDashboard,
       href: "/admin/dashboard",
+    },
+    {
+      label: "Merchant Onboarding",
+      icon: Building2,
+      href: "/admin/merchants",
     },
     ...(session?.role === "admin" ? [
       {
