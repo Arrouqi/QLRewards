@@ -4,19 +4,26 @@ import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { 
   Building2, 
-  Eye, 
   Send, 
   Archive, 
   Search,
   ArrowLeft,
   FileDown,
   Download,
-  Pencil
+  Pencil,
+  MoreHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -213,7 +220,12 @@ export default function MerchantManagement() {
                 </TableRow>
               ) : (
                 filteredMerchants.map((merchant) => (
-                  <TableRow key={merchant.id}>
+                  <TableRow 
+                    key={merchant.id} 
+                    className="cursor-pointer hover:bg-slate-50"
+                    onClick={() => setLocation(`/admin/merchants/${merchant.id}`)}
+                    data-testid={`row-merchant-${merchant.id}`}
+                  >
                     <TableCell>
                       <div>
                         <p className="font-medium">{merchant.companyName}</p>
@@ -241,75 +253,69 @@ export default function MerchantManagement() {
                     <TableCell className="text-sm text-slate-500">
                       {format(new Date(merchant.createdAt), "dd MMM yyyy")}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setLocation(`/admin/merchants/${merchant.id}`)}
-                          data-testid={`button-view-${merchant.id}`}
-                          title="View"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setLocation(`/admin/merchants/${merchant.id}/edit`)}
-                          data-testid={`button-edit-${merchant.id}`}
-                          title="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => window.open(`/merchant-success/${merchant.id}`, '_blank')}
-                          data-testid={`button-pdf-${merchant.id}`}
-                          title="Download Agreement PDF"
-                        >
-                          <FileDown className="h-4 w-4" />
-                        </Button>
-                        {merchant.signedContractUpload && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              const link = document.createElement("a");
-                              link.href = merchant.signedContractUpload!;
-                              link.download = `Signed_Contract_${merchant.companyName.replace(/\s+/g, '_')}.pdf`;
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
-                            }}
-                            data-testid={`button-signed-${merchant.id}`}
-                            title="Download Signed Contract"
+                            data-testid={`button-actions-${merchant.id}`}
                           >
-                            <Download className="h-4 w-4 text-green-600" />
+                            <MoreHorizontal className="h-4 w-4" />
                           </Button>
-                        )}
-                        {merchant.status === "pending" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-blue-600 hover:text-blue-700"
-                            onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "moderation" })}
-                            data-testid={`button-forward-${merchant.id}`}
-                            title="Forward to Moderation"
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => setLocation(`/admin/merchants/${merchant.id}/edit`)}
+                            data-testid={`menu-edit-${merchant.id}`}
                           >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-slate-600 hover:text-slate-700"
-                          onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "archived" })}
-                          data-testid={`button-archive-${merchant.id}`}
-                        >
-                          <Archive className="h-4 w-4" />
-                        </Button>
-                      </div>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => window.open(`/merchant-success/${merchant.id}`, '_blank')}
+                            data-testid={`menu-pdf-${merchant.id}`}
+                          >
+                            <FileDown className="h-4 w-4 mr-2" />
+                            Download Agreement
+                          </DropdownMenuItem>
+                          {merchant.signedContractUpload && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const link = document.createElement("a");
+                                link.href = merchant.signedContractUpload!;
+                                link.download = `Signed_Contract_${merchant.companyName.replace(/\s+/g, '_')}.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                              data-testid={`menu-signed-${merchant.id}`}
+                            >
+                              <Download className="h-4 w-4 mr-2 text-green-600" />
+                              Download Signed Contract
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          {merchant.status === "pending" && (
+                            <DropdownMenuItem
+                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "moderation" })}
+                              className="text-blue-600"
+                              data-testid={`menu-forward-${merchant.id}`}
+                            >
+                              <Send className="h-4 w-4 mr-2" />
+                              Forward to Moderation
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "archived" })}
+                            className="text-slate-600"
+                            data-testid={`menu-archive-${merchant.id}`}
+                          >
+                            <Archive className="h-4 w-4 mr-2" />
+                            Archive
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))

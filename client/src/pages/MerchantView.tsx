@@ -683,33 +683,125 @@ export default function MerchantView() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {merchant.deals?.map((dealData, index) => {
                   const deal = typeof dealData === 'string' ? JSON.parse(dealData) : dealData;
                   return (
-                    <div key={index} className="p-4 border rounded-lg">
-                      <div className="flex items-start justify-between mb-3">
+                    <div key={index} className="p-5 border rounded-lg bg-slate-50">
+                      <div className="flex items-start justify-between mb-4">
                         <div>
-                          <h4 className="font-medium text-lg">{deal.title}</h4>
-                          <p className="text-sm text-slate-500">{deal.category} - {deal.subCategory}</p>
+                          <h4 className="font-semibold text-lg text-[#00426D]">{deal.title}</h4>
+                          <p className="text-sm text-slate-500">{deal.category} {deal.subCategory ? `- ${deal.subCategory}` : ''}</p>
                         </div>
-                        <Badge variant="outline">{deal.dealType}</Badge>
+                        <Badge variant="outline" className="bg-white">{deal.dealType}</Badge>
                       </div>
-                      <p className="text-sm text-slate-600 mb-3">{deal.description}</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                      
+                      {deal.description && (
+                        <p className="text-sm text-slate-600 mb-4 bg-white p-3 rounded border">{deal.description}</p>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                         {deal.originalPrice && (
-                          <div>
-                            <span className="text-slate-500">Price:</span> QAR {deal.originalPrice}
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">Original Price</span>
+                            <span className="font-medium">QAR {deal.originalPrice}</span>
                           </div>
                         )}
                         {deal.discountPercentage && (
-                          <div>
-                            <span className="text-slate-500">Discount:</span> {deal.discountPercentage}%
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">Discount</span>
+                            <span className="font-medium text-green-600">{deal.discountPercentage}%</span>
                           </div>
                         )}
-                        {deal.startDate && deal.endDate && (
-                          <div className="col-span-2">
-                            <span className="text-slate-500">Period:</span> {deal.startDate} to {deal.endDate}
+                        {deal.startDate && (
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">Start Date</span>
+                            <span className="font-medium">{deal.startDate}</span>
+                          </div>
+                        )}
+                        {deal.endDate && (
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">End Date</span>
+                            <span className="font-medium">{deal.endDate}</span>
+                          </div>
+                        )}
+                        {deal.redemption && (
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">Redemption</span>
+                            <span className="font-medium capitalize">{deal.redemption}</span>
+                            {deal.redemption === 'limited' && deal.limitPerUser && (
+                              <span className="text-slate-500 ml-1">({deal.limitPerUser} per user)</span>
+                            )}
+                          </div>
+                        )}
+                        {deal.isTwoTranches && (
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">Two Tranches</span>
+                            <span className="font-medium">Yes - {deal.trancheValidity || 'N/A'} weeks per tranche</span>
+                          </div>
+                        )}
+                        {deal.isMultipleItems && (
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">Multiple Items</span>
+                            <span className="font-medium">Yes</span>
+                          </div>
+                        )}
+                        {deal.specificDays && deal.days && deal.days.length > 0 && (
+                          <div className="bg-white p-3 rounded border col-span-full">
+                            <span className="text-slate-500 block text-xs mb-1">Valid Days</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {deal.days.map((day: string) => (
+                                <Badge key={day} variant="secondary" className="text-xs">{day}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {deal.claimRules && deal.claimRules.length > 0 && (
+                          <div className="bg-white p-3 rounded border col-span-full">
+                            <span className="text-slate-500 block text-xs mb-1">Claim Rules</span>
+                            <ul className="list-disc list-inside mt-1">
+                              {deal.claimRules.map((rule: string, i: number) => (
+                                <li key={i} className="text-sm">{rule}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {deal.generalRules && deal.generalRules.length > 0 && (
+                          <div className="bg-white p-3 rounded border col-span-full">
+                            <span className="text-slate-500 block text-xs mb-1">General Rules</span>
+                            <ul className="list-disc list-inside mt-1">
+                              {deal.generalRules.map((rule: string, i: number) => (
+                                <li key={i} className="text-sm">{rule}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {deal.otherRules && (
+                          <div className="bg-white p-3 rounded border col-span-full">
+                            <span className="text-slate-500 block text-xs mb-1">Other Rules</span>
+                            <p className="text-sm">{deal.otherRules}</p>
+                          </div>
+                        )}
+                        {deal.branches && deal.branches.length > 0 && (
+                          <div className="bg-white p-3 rounded border col-span-full">
+                            <span className="text-slate-500 block text-xs mb-1">Applicable Branches</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {deal.branches.map((branch: string) => (
+                                <Badge key={branch} variant="outline" className="text-xs">{branch}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {deal.images && deal.images.length > 0 && (
+                          <div className="bg-white p-3 rounded border col-span-full">
+                            <span className="text-slate-500 block text-xs mb-2">Deal Images</span>
+                            <div className="flex flex-wrap gap-2">
+                              {deal.images.map((img: string, i: number) => (
+                                <a key={i} href={img} target="_blank" rel="noopener noreferrer" className="block">
+                                  <img src={img} alt={`Deal ${index + 1} image ${i + 1}`} className="h-20 w-20 object-cover rounded border hover:opacity-80" />
+                                </a>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
