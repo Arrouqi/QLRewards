@@ -67,51 +67,100 @@ export default function MerchantSuccess() {
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 20;
-    let y = 20;
+    const margin = 15;
+    const contentWidth = pageWidth - margin * 2;
+    let y = 15;
 
-    const addLine = (text: string, fontSize = 10, bold = false) => {
-      doc.setFontSize(fontSize);
-      doc.setFont("helvetica", bold ? "bold" : "normal");
-      const lines = doc.splitTextToSize(text, pageWidth - margin * 2);
-      lines.forEach((line: string) => {
-        if (y > 270) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.text(line, margin, y);
-        y += fontSize * 0.4 + 2;
-      });
+    const checkPageBreak = (needed: number) => {
+      if (y + needed > 280) {
+        doc.addPage();
+        y = 20;
+        return true;
+      }
+      return false;
     };
 
-    const addSection = (title: string) => {
+    const drawHeader = () => {
+      doc.setFillColor(0, 66, 109);
+      doc.rect(0, 0, pageWidth, 35, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("QATAR LIVING DEALS", pageWidth / 2, 15, { align: "center" });
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text("Merchant Partnership Agreement", pageWidth / 2, 24, { align: "center" });
+      doc.setFontSize(9);
+      doc.text(`Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, 31, { align: "center" });
+      y = 45;
+    };
+
+    const drawSectionHeader = (title: string) => {
+      checkPageBreak(15);
+      doc.setFillColor(0, 66, 109);
+      doc.rect(margin, y, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(title, margin + 3, y + 5.5);
+      doc.setTextColor(0, 0, 0);
+      y += 12;
+    };
+
+    const drawField = (label: string, value: string, indent = 0) => {
+      checkPageBreak(8);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(80, 80, 80);
+      doc.text(label + ":", margin + indent, y);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+      const labelWidth = doc.getTextWidth(label + ": ");
+      const valueLines = doc.splitTextToSize(value || "N/A", contentWidth - labelWidth - indent - 5);
+      doc.text(valueLines[0], margin + indent + labelWidth, y);
       y += 5;
-      addLine(title, 12, true);
-      y += 2;
+      for (let i = 1; i < valueLines.length; i++) {
+        checkPageBreak(5);
+        doc.text(valueLines[i], margin + indent + labelWidth, y);
+        y += 5;
+      }
     };
 
-    doc.setTextColor(0, 66, 109);
-    addLine("QATAR LIVING DEALS", 18, true);
-    addLine("MERCHANT PARTNERSHIP AGREEMENT", 14, true);
-    doc.setTextColor(0, 0, 0);
-    y += 10;
+    const drawSubsectionTitle = (title: string) => {
+      checkPageBreak(10);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 66, 109);
+      doc.text(title, margin, y);
+      doc.setTextColor(0, 0, 0);
+      y += 6;
+    };
 
-    addSection("Company Information");
-    addLine(`Company Name: ${merchant.companyName}`);
-    addLine(`CR Number: ${merchant.crNumber}`);
-    addLine(`Brand Name: ${merchant.brandName}`);
-    addLine(`Address: ${merchant.address}`);
-    addLine(`Contact Person: ${merchant.contactPerson}`);
-    addLine(`Email: ${merchant.email}`);
-    addLine(`Phone: ${merchant.phone}`);
+    const drawDivider = () => {
+      checkPageBreak(5);
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 4;
+    };
 
+    drawHeader();
+
+    drawSectionHeader("COMPANY INFORMATION");
+    drawField("Company Name", merchant.companyName);
+    drawField("CR Number", merchant.crNumber);
+    drawField("Brand Name", merchant.brandName);
+    drawField("Address", merchant.address);
+    drawField("Contact Person", merchant.contactPerson);
+    drawField("Email", merchant.email);
+    drawField("Phone", merchant.phone);
     if (merchant.products?.length > 0) {
-      addLine(`Products/Services: ${merchant.products.join(", ")}`);
+      drawField("Product Types", merchant.products.join(", "));
     }
-
     if (merchant.businessCategories?.length > 0) {
-      addLine(`Business Categories: ${merchant.businessCategories.join(", ")}`);
+      drawField("Business Categories", merchant.businessCategories.join(", "));
     }
+    y += 3;
 
     const documents = [];
     if (merchant.crDocument) documents.push("CR Document");
@@ -119,120 +168,204 @@ export default function MerchantSuccess() {
     if (merchant.tradeLicense) documents.push("Trade License");
     if (merchant.menuPriceList) documents.push("Menu/Price List");
     if (documents.length > 0) {
-      addLine(`Uploaded Documents: ${documents.join(", ")}`);
+      drawField("Documents Uploaded", documents.join(", "));
     }
+    y += 5;
 
     if (merchant.branches?.length > 0) {
-      addSection("Branch Locations");
+      drawSectionHeader("BRANCH LOCATIONS");
       merchant.branches.forEach((branchStr, index) => {
         try {
-          const branch = JSON.parse(branchStr);
-          addLine(`Branch ${index + 1}: ${branch.name}`);
-          if (branch.location) addLine(`  Location: ${branch.location}`);
-          if (branch.phone) addLine(`  Phone: ${branch.phone}`);
-          if (branch.detail) addLine(`  Details: ${branch.detail}`);
+          const branch = typeof branchStr === 'string' ? JSON.parse(branchStr) : branchStr;
+          drawSubsectionTitle(`Branch ${index + 1}: ${branch.name}`);
+          if (branch.location) drawField("Google Maps URL", branch.location, 5);
+          if (branch.phone) drawField("Phone", branch.phone, 5);
+          if (branch.detail) drawField("Details", branch.detail, 5);
+          y += 2;
         } catch {
-          addLine(`Branch ${index + 1}: ${branchStr}`);
+          drawField(`Branch ${index + 1}`, String(branchStr));
         }
       });
+      y += 3;
     }
 
     if (merchant.deals?.length > 0) {
-      addSection("Deal Offers");
+      drawSectionHeader("DEAL OFFERS");
       merchant.deals.forEach((dealData, index) => {
         const deal = typeof dealData === 'string' ? JSON.parse(dealData) : dealData;
-        addLine(`Deal ${index + 1}: ${deal.title || "Untitled"}`, 11, true);
-        if (deal.category) addLine(`  Category: ${deal.category}`);
-        if (deal.subCategory) addLine(`  Sub-Category: ${deal.subCategory}`);
-        if (deal.dealType) addLine(`  Deal Type: ${deal.dealType}`);
+        
+        checkPageBreak(20);
+        drawSubsectionTitle(`Deal ${index + 1}: ${deal.title || "Untitled"}`);
+        
+        if (deal.category) drawField("Category", deal.category, 5);
+        if (deal.subCategory) drawField("Sub-Category", deal.subCategory, 5);
+        if (deal.dealType) drawField("Deal Type", deal.dealType, 5);
         if (deal.startDate && deal.endDate) {
-          addLine(`  Validity: ${deal.startDate} to ${deal.endDate}`);
+          drawField("Validity Period", `${deal.startDate} to ${deal.endDate}`, 5);
         }
-        if (deal.description) addLine(`  Description: ${deal.description}`);
-        if (deal.originalPrice) addLine(`  Original Price: QAR ${deal.originalPrice}`);
-        if (deal.discountPercentage) addLine(`  Discount: ${deal.discountPercentage}%`);
+        if (deal.description) drawField("Description", deal.description, 5);
+        if (deal.originalPrice) drawField("Original Price", `QAR ${deal.originalPrice}`, 5);
+        if (deal.discountPercentage) drawField("Discount", `${deal.discountPercentage}%`, 5);
         if (deal.redemption) {
-          addLine(`  Redemption Type: ${deal.redemption}`);
-          if (deal.redemption === 'limited' && deal.limitPerUser) {
-            addLine(`  Limit Per User: ${deal.limitPerUser}`);
-          }
+          drawField("Redemption", deal.redemption === 'limited' 
+            ? `Limited (${deal.limitPerUser || 'N/A'} per user)` 
+            : 'Unlimited', 5);
         }
-        if (deal.isTwoTranches && deal.trancheValidity) {
-          addLine(`  Two Tranches: Yes (${deal.trancheValidity} weeks per tranche)`);
+        if (deal.isTwoTranches) {
+          drawField("Two Tranches", `Yes - ${deal.trancheValidity || 'N/A'} weeks per tranche`, 5);
         }
         if (deal.isMultipleItems) {
-          addLine(`  Multiple Items: Yes`);
+          drawField("Multiple Items", "Yes", 5);
         }
         if (deal.specificDays && deal.days?.length > 0) {
-          addLine(`  Specific Days: ${deal.days.join(", ")}`);
+          drawField("Valid Days", deal.days.join(", "), 5);
         }
         if (deal.claimRules?.length > 0) {
-          addLine(`  Claim Rules: ${deal.claimRules.join("; ")}`);
+          drawField("Claim Rules", deal.claimRules.join("; "), 5);
         }
         if (deal.generalRules?.length > 0) {
-          addLine(`  General Rules: ${deal.generalRules.join("; ")}`);
+          drawField("General Rules", deal.generalRules.join("; "), 5);
         }
-        if (deal.otherRules) addLine(`  Other Rules: ${deal.otherRules}`);
+        if (deal.otherRules) {
+          drawField("Other Rules", deal.otherRules, 5);
+        }
         if (deal.branches?.length > 0) {
-          addLine(`  Applicable Branches: ${deal.branches.join(", ")}`);
+          drawField("Applicable Branches", deal.branches.join(", "), 5);
         }
         if (deal.images?.length > 0) {
-          addLine(`  Images: ${deal.images.length} image(s) uploaded`);
+          drawField("Images", `${deal.images.length} image(s) uploaded`, 5);
         }
-        y += 3;
+        
+        drawDivider();
       });
     }
 
-    y += 20;
-    addSection("Authorization & Signature");
+    drawSectionHeader("TERMS AND CONDITIONS");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    const terms = [
+      "1. The Merchant agrees to honor all deals and offers as specified in this agreement.",
+      "2. Qatar Living reserves the right to feature, promote, or modify the display of deals on its platform.",
+      "3. The Merchant shall ensure all information provided is accurate and up-to-date.",
+      "4. Any changes to deal terms must be communicated to Qatar Living at least 7 days in advance.",
+      "5. The Merchant is responsible for training staff on deal redemption procedures.",
+      "6. Qatar Living is not liable for any disputes between the Merchant and customers.",
+      "7. This agreement may be terminated by either party with 30 days written notice.",
+      "8. The Merchant agrees to display Qatar Living promotional materials at their premises.",
+      "9. All deals must comply with Qatar's consumer protection laws and regulations.",
+      "10. This agreement is governed by the laws of the State of Qatar."
+    ];
+    terms.forEach(term => {
+      checkPageBreak(6);
+      const lines = doc.splitTextToSize(term, contentWidth);
+      lines.forEach((line: string) => {
+        doc.text(line, margin, y);
+        y += 4;
+      });
+    });
+    y += 8;
+
+    doc.addPage();
+    y = 20;
+
+    drawSectionHeader("AUTHORIZATION & SIGNATURES");
     
-    addLine("I, the undersigned, hereby confirm that all information provided in this application is true and accurate.");
-    addLine("I agree to the terms and conditions of the Qatar Living Deals Merchant Partnership Program.");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    const declaration = "We, the undersigned, hereby confirm that all information provided in this application is true and accurate. Both parties agree to the terms and conditions of the Qatar Living Deals Merchant Partnership Program as outlined above.";
+    const declLines = doc.splitTextToSize(declaration, contentWidth);
+    declLines.forEach((line: string) => {
+      doc.text(line, margin, y);
+      y += 5;
+    });
     y += 10;
 
-    if (merchant.merchantSignatoryName) {
-      addLine(`Authorized Signatory Name: ${merchant.merchantSignatoryName}`);
-    } else {
-      addLine("Authorized Signatory Name: _______________________________");
-    }
-    y += 5;
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, y, (contentWidth / 2) - 5, 85, 'F');
+    doc.rect(margin + (contentWidth / 2) + 5, y, (contentWidth / 2) - 5, 85, 'F');
+    
+    doc.setDrawColor(0, 66, 109);
+    doc.setLineWidth(0.5);
+    doc.rect(margin, y, (contentWidth / 2) - 5, 85, 'S');
+    doc.rect(margin + (contentWidth / 2) + 5, y, (contentWidth / 2) - 5, 85, 'S');
 
-    if (merchant.merchantSignDate) {
-      const date = new Date(merchant.merchantSignDate).toLocaleDateString();
-      addLine(`Date: ${date}`);
-    } else {
-      addLine("Date: _______________________________");
-    }
-    y += 5;
+    const leftBoxX = margin + 3;
+    const rightBoxX = margin + (contentWidth / 2) + 8;
+    const boxWidth = (contentWidth / 2) - 11;
+    let boxY = y + 8;
 
-    addLine("Signature:");
-    y += 3;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 66, 109);
+    doc.text("MERCHANT", leftBoxX, boxY);
+    doc.text("QATAR LIVING", rightBoxX, boxY);
+    boxY += 8;
+    doc.setTextColor(0, 0, 0);
 
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    
+    doc.text("Signature:", leftBoxX, boxY);
+    doc.text("Signature:", rightBoxX, boxY);
+    boxY += 3;
+    
     if (merchant.merchantSignature) {
       try {
-        doc.addImage(merchant.merchantSignature, "PNG", margin, y, 60, 25);
-        y += 30;
+        doc.addImage(merchant.merchantSignature, "PNG", leftBoxX, boxY, 50, 20);
       } catch {
-        doc.rect(margin, y, 80, 30);
-        y += 35;
+        doc.setDrawColor(180, 180, 180);
+        doc.rect(leftBoxX, boxY, boxWidth - 5, 20, 'S');
       }
     } else {
-      doc.rect(margin, y, 80, 30);
-      y += 35;
+      doc.setDrawColor(180, 180, 180);
+      doc.rect(leftBoxX, boxY, boxWidth - 5, 20, 'S');
     }
+    doc.setDrawColor(180, 180, 180);
+    doc.rect(rightBoxX, boxY, boxWidth - 5, 20, 'S');
+    boxY += 25;
 
-    y += 10;
-    addLine("Company Stamp:");
-    doc.rect(margin, y, 50, 50);
+    doc.text("Name: " + (merchant.merchantSignatoryName || "_______________________"), leftBoxX, boxY);
+    doc.text("Name: _______________________", rightBoxX, boxY);
+    boxY += 7;
+
+    doc.text("Title: _______________________", leftBoxX, boxY);
+    doc.text("Title: _______________________", rightBoxX, boxY);
+    boxY += 7;
+
+    const signDate = merchant.merchantSignDate 
+      ? new Date(merchant.merchantSignDate).toLocaleDateString() 
+      : "_______________________";
+    doc.text("Date: " + signDate, leftBoxX, boxY);
+    doc.text("Date: _______________________", rightBoxX, boxY);
+
+    y += 95;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Company Stamp:", margin, y);
+    doc.text("Company Stamp:", margin + (contentWidth / 2) + 5, y);
+    y += 5;
+    
+    doc.setDrawColor(180, 180, 180);
+    doc.setFillColor(255, 255, 255);
+    doc.rect(margin, y, 45, 45, 'FD');
+    doc.rect(margin + (contentWidth / 2) + 5, y, 45, 45, 'FD');
+    
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(150, 150, 150);
+    doc.text("(Merchant Stamp)", margin + 5, y + 25);
+    doc.text("(Qatar Living Stamp)", margin + (contentWidth / 2) + 10, y + 25);
+
     y += 55;
 
-    y += 10;
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     doc.setTextColor(100, 100, 100);
-    doc.text("Qatar Living Deals - Merchant Partnership Agreement", margin, y);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, margin, y + 5);
+    doc.setFont("helvetica", "normal");
+    doc.text("Qatar Living Deals - Merchant Partnership Agreement", pageWidth / 2, 285, { align: "center" });
+    doc.text(`Document Generated: ${new Date().toLocaleString()} | Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, 290, { align: "center" });
 
-    doc.save(`Qatar_Living_Merchant_Agreement_${merchant.companyName.replace(/\s+/g, '_')}.pdf`);
+    doc.save(`Qatar_Living_Agreement_${merchant.companyName.replace(/\s+/g, '_')}.pdf`);
     
     toast({
       title: "PDF Downloaded",
