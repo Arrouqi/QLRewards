@@ -726,18 +726,25 @@ export default function MerchantOnboarding() {
                 <CardTitle className="text-[#00426D]">Terms & Conditions</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="bg-slate-50 p-4 rounded-lg space-y-4 text-sm text-slate-700 max-h-64 overflow-y-auto">
-                  <h4 className="font-semibold">1. Merchant Obligations</h4>
-                  <p>The Merchant agrees to honor all deals published on the Qatar Living Deals platform. Failure to do so may result in removal from the program.</p>
+                <div className="bg-slate-50 p-4 rounded-lg space-y-4 text-sm text-slate-700 max-h-80 overflow-y-auto">
+                  <h4 className="font-semibold text-[#00426D]">Merchant Obligations</h4>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Merchant ensures goods/service meet quality standards and comply with regulations.</li>
+                    <li>Merchant will honor offers without extra fees or conditions.</li>
+                    <li>Merchant will resolve user complaints promptly at no cost to Qatar Living or the users.</li>
+                    <li>Merchant must provide an approved price list from the Ministry of Commerce and update Qatar Living on any changes.</li>
+                  </ul>
                   
-                  <h4 className="font-semibold">2. Merchant Indemnity</h4>
-                  <p>The Merchant shall indemnify and hold harmless Qatar Living from any claims arising from the Merchant's products or services.</p>
+                  <h4 className="font-semibold text-[#00426D] pt-3">Merchant Indemnity</h4>
+                  <p>Merchant agrees to indemnify, defend, and hold harmless Qatar Living from any claims, damages, liabilities, or losses arising from the Merchant's breach of this Agreement, any misrepresentations, or any failure to deliver the goods or services as promised.</p>
                   
-                  <h4 className="font-semibold">3. Entire Agreement</h4>
-                  <p>This agreement constitutes the entire agreement between the parties regarding the subject matter hereof.</p>
+                  <h4 className="font-semibold text-[#00426D] pt-3">Entire Agreement</h4>
+                  <p>The agreement, together with the attached offer details and the Terms of Use available on the Qatar Living website (<a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">https://www.qatarliving.com/terms-of-use</a>), constitutes the entire agreement between the parties. This Agreement and the attached documents represent the full and complete understanding between both parties and supersede all prior discussions, negotiations, or agreements.</p>
                   
-                  <h4 className="font-semibold">4. Confidentiality</h4>
-                  <p>Both parties agree to maintain the confidentiality of any proprietary information shared during the partnership.</p>
+                  <p className="pt-3">Please find the link to the Terms and Conditions below:<br/>
+                  <a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">https://www.qatarliving.com/terms-of-use</a></p>
+                  
+                  <p className="pt-3 font-medium border-t border-slate-200 mt-3 pt-3">By signing this Agreement, you acknowledge that you have read, understood, and agree to be bound by the Terms of Use published on the Qatar Living website.</p>
                 </div>
               </CardContent>
             </Card>

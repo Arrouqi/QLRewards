@@ -241,123 +241,118 @@ export default function MerchantSuccess() {
     }
 
     drawSectionHeader("TERMS AND CONDITIONS");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Merchant Obligations", margin, y);
+    y += 5;
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    const terms = [
-      "1. The Merchant agrees to honor all deals and offers as specified in this agreement.",
-      "2. Qatar Living reserves the right to feature, promote, or modify the display of deals on its platform.",
-      "3. The Merchant shall ensure all information provided is accurate and up-to-date.",
-      "4. Any changes to deal terms must be communicated to Qatar Living at least 7 days in advance.",
-      "5. The Merchant is responsible for training staff on deal redemption procedures.",
-      "6. Qatar Living is not liable for any disputes between the Merchant and customers.",
-      "7. This agreement may be terminated by either party with 30 days written notice.",
-      "8. The Merchant agrees to display Qatar Living promotional materials at their premises.",
-      "9. All deals must comply with Qatar's consumer protection laws and regulations.",
-      "10. This agreement is governed by the laws of the State of Qatar."
+    const merchantObligations = [
+      "• Merchant ensures goods/service meet quality standards and comply with regulations.",
+      "• Merchant will honor offers without extra fees or conditions.",
+      "• Merchant will resolve user complaints promptly at no cost to Qatar Living or the users.",
+      "• Merchant must provide an approved price list from the Ministry of Commerce and update Qatar Living on any changes."
     ];
-    terms.forEach(term => {
+    merchantObligations.forEach(item => {
       checkPageBreak(6);
-      const lines = doc.splitTextToSize(term, contentWidth);
+      const lines = doc.splitTextToSize(item, contentWidth);
       lines.forEach((line: string) => {
         doc.text(line, margin, y);
         y += 4;
       });
     });
+    y += 5;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Merchant Indemnity", margin, y);
+    y += 5;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    const indemnityText = "Merchant agrees to indemnify, defend, and hold harmless Qatar Living from any claims, damages, liabilities, or losses arising from the Merchant's breach of this Agreement, any misrepresentations, or any failure to deliver the goods or services as promised.";
+    const indemnityLines = doc.splitTextToSize(indemnityText, contentWidth);
+    indemnityLines.forEach((line: string) => {
+      checkPageBreak(5);
+      doc.text(line, margin, y);
+      y += 4;
+    });
+    y += 5;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Entire Agreement", margin, y);
+    y += 5;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    const entireAgreement = "The agreement, together with the attached offer details and the Terms of Use available on the Qatar Living website (https://www.qatarliving.com/terms-of-use), constitutes the entire agreement between the parties. This Agreement and the attached documents represent the full and complete understanding between both parties and supersede all prior discussions, negotiations, or agreements.";
+    const entireLines = doc.splitTextToSize(entireAgreement, contentWidth);
+    entireLines.forEach((line: string) => {
+      checkPageBreak(5);
+      doc.text(line, margin, y);
+      y += 4;
+    });
+    y += 3;
+    
+    doc.setFont("helvetica", "normal");
+    doc.text("Please find the link to the Terms and Conditions below:", margin, y);
+    y += 5;
+    doc.setTextColor(0, 66, 109);
+    doc.text("https://www.qatarliving.com/terms-of-use", margin, y);
+    doc.setTextColor(0, 0, 0);
+    y += 8;
+    
+    const acknowledgement = "By signing this Agreement, you acknowledge that you have read, understood, and agree to be bound by the Terms of Use published on the Qatar Living website.";
+    const ackLines = doc.splitTextToSize(acknowledgement, contentWidth);
+    ackLines.forEach((line: string) => {
+      checkPageBreak(5);
+      doc.text(line, margin, y);
+      y += 4;
+    });
     y += 8;
 
     doc.addPage();
-    y = 20;
-
-    drawSectionHeader("AUTHORIZATION & SIGNATURES");
     
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    const declaration = "We, the undersigned, hereby confirm that all information provided in this application is true and accurate. Both parties agree to the terms and conditions of the Qatar Living Deals Merchant Partnership Program as outlined above.";
-    const declLines = doc.splitTextToSize(declaration, contentWidth);
-    declLines.forEach((line: string) => {
-      doc.text(line, margin, y);
-      y += 5;
-    });
-    y += 10;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const footerY = pageHeight - 120;
+    y = footerY;
 
-    doc.setFillColor(245, 245, 245);
-    doc.rect(margin, y, (contentWidth / 2) - 5, 85, 'F');
-    doc.rect(margin + (contentWidth / 2) + 5, y, (contentWidth / 2) - 5, 85, 'F');
+    const underscores = "__________________________";
     
-    doc.setDrawColor(0, 66, 109);
-    doc.setLineWidth(0.5);
-    doc.rect(margin, y, (contentWidth / 2) - 5, 85, 'S');
-    doc.rect(margin + (contentWidth / 2) + 5, y, (contentWidth / 2) - 5, 85, 'S');
-
-    const leftBoxX = margin + 3;
-    const rightBoxX = margin + (contentWidth / 2) + 8;
-    const boxWidth = (contentWidth / 2) - 11;
-    let boxY = y + 8;
-
     doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 66, 109);
-    doc.text("MERCHANT", leftBoxX, boxY);
-    doc.text("QATAR LIVING", rightBoxX, boxY);
-    boxY += 8;
-    doc.setTextColor(0, 0, 0);
-
-    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
     
-    doc.text("Signature:", leftBoxX, boxY);
-    doc.text("Signature:", rightBoxX, boxY);
-    boxY += 3;
+    doc.text("Merchant Name: " + underscores, margin, y);
+    y += 10;
     
-    if (merchant.merchantSignature) {
-      try {
-        doc.addImage(merchant.merchantSignature, "PNG", leftBoxX, boxY, 50, 20);
-      } catch {
-        doc.setDrawColor(180, 180, 180);
-        doc.rect(leftBoxX, boxY, boxWidth - 5, 20, 'S');
-      }
-    } else {
-      doc.setDrawColor(180, 180, 180);
-      doc.rect(leftBoxX, boxY, boxWidth - 5, 20, 'S');
-    }
-    doc.setDrawColor(180, 180, 180);
-    doc.rect(rightBoxX, boxY, boxWidth - 5, 20, 'S');
-    boxY += 25;
+    doc.text("Authorized Signatory Name: " + underscores, margin, y);
+    y += 10;
+    
+    doc.text("Authorized Signatory Signature: " + underscores, margin, y);
+    y += 10;
+    
+    doc.text("Company Stamp: " + underscores, margin, y);
+    y += 10;
+    
+    doc.text("Date: " + underscores, margin, y);
+    y += 20;
 
-    doc.text("Name: " + (merchant.merchantSignatoryName || "_______________________"), leftBoxX, boxY);
-    doc.text("Name: _______________________", rightBoxX, boxY);
-    boxY += 7;
-
-    doc.text("Title: _______________________", leftBoxX, boxY);
-    doc.text("Title: _______________________", rightBoxX, boxY);
-    boxY += 7;
-
-    const signDate = merchant.merchantSignDate 
-      ? new Date(merchant.merchantSignDate).toLocaleDateString() 
-      : "_______________________";
-    doc.text("Date: " + signDate, leftBoxX, boxY);
-    doc.text("Date: _______________________", rightBoxX, boxY);
-
-    y += 95;
-
-    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("Company Stamp:", margin, y);
-    doc.text("Company Stamp:", margin + (contentWidth / 2) + 5, y);
-    y += 5;
+    doc.text("Qatar Living", margin, y);
+    doc.setFont("helvetica", "normal");
+    y += 10;
     
-    doc.setDrawColor(180, 180, 180);
-    doc.setFillColor(255, 255, 255);
-    doc.rect(margin, y, 45, 45, 'FD');
-    doc.rect(margin + (contentWidth / 2) + 5, y, 45, 45, 'FD');
+    doc.text("Signature: " + underscores, margin, y);
+    y += 10;
     
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "italic");
-    doc.setTextColor(150, 150, 150);
-    doc.text("(Merchant Stamp)", margin + 5, y + 25);
-    doc.text("(Qatar Living Stamp)", margin + (contentWidth / 2) + 10, y + 25);
-
-    y += 55;
+    doc.text("Name: " + underscores, margin, y);
+    y += 10;
+    
+    doc.text("Title: " + underscores, margin, y);
+    y += 10;
+    
+    doc.text("Date: " + underscores, margin, y);
+    y += 15;
 
     doc.setFontSize(7);
     doc.setTextColor(100, 100, 100);
