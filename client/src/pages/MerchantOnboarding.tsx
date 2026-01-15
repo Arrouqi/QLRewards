@@ -116,10 +116,7 @@ const dealSchema = z.object({
   isMultipleItems: z.boolean().default(false),
   discountPercentage: z.string().optional(),
   isTwoTranches: z.boolean().default(false),
-  tranche1StartDate: z.string().optional(),
-  tranche1EndDate: z.string().optional(),
-  tranche2StartDate: z.string().optional(),
-  tranche2EndDate: z.string().optional(),
+  trancheValidity: z.string().optional(),
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
   title: z.string().min(5, "Title must be at least 5 characters"),
@@ -248,10 +245,7 @@ export default function MerchantOnboarding() {
       isMultipleItems: false,
       discountPercentage: "",
       isTwoTranches: false,
-      tranche1StartDate: "",
-      tranche1EndDate: "",
-      tranche2StartDate: "",
-      tranche2EndDate: "",
+      trancheValidity: "",
       specificDays: false,
       days: daysOfWeek,
       title: "",
@@ -955,74 +949,54 @@ function TwoTranchesSection({ form, index }: { form: any; index: number }) {
   const isTwoTranches = useWatch({ control: form.control, name: `deals.${index}.isTwoTranches` });
   
   return (
-    <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
+    <div className="bg-orange-50/50 p-4 rounded-md border border-orange-100">
       <FormField
         control={form.control}
         name={`deals.${index}.isTwoTranches`}
         render={({ field }) => (
-          <FormItem className="flex flex-row items-center gap-3">
+          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
             <FormControl>
               <Checkbox
                 checked={field.value}
                 onCheckedChange={field.onChange}
               />
             </FormControl>
-            <FormLabel className="!mt-0 font-medium">Split into Two Tranches</FormLabel>
+            <FormLabel className="font-medium text-slate-700">
+              Is this deal valid for two tranches?
+            </FormLabel>
           </FormItem>
         )}
       />
       
       {isTwoTranches && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div className="mt-4 ml-7">
           <FormField
             control={form.control}
-            name={`deals.${index}.tranche1StartDate`}
+            name={`deals.${index}.trancheValidity`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Tranche 1 Start Date</FormLabel>
-                <FormControl>
-                  <Input {...field} type="date" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name={`deals.${index}.tranche1EndDate`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tranche 1 End Date</FormLabel>
-                <FormControl>
-                  <Input {...field} type="date" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name={`deals.${index}.tranche2StartDate`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tranche 2 Start Date</FormLabel>
-                <FormControl>
-                  <Input {...field} type="date" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name={`deals.${index}.tranche2EndDate`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tranche 2 End Date</FormLabel>
-                <FormControl>
-                  <Input {...field} type="date" />
-                </FormControl>
-                <FormMessage />
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Tranche Validity</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-11 bg-white">
+                      <SelectValue placeholder="Choose" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="1">1 Week</SelectItem>
+                    <SelectItem value="2">2 Weeks</SelectItem>
+                    <SelectItem value="3">3 Weeks</SelectItem>
+                    <SelectItem value="4">4 Weeks</SelectItem>
+                    <SelectItem value="5">5 Weeks</SelectItem>
+                    <SelectItem value="6">6 Weeks</SelectItem>
+                    <SelectItem value="7">7 Weeks</SelectItem>
+                    <SelectItem value="8">8 Weeks</SelectItem>
+                    <SelectItem value="9">9 Weeks</SelectItem>
+                    <SelectItem value="10">10 Weeks</SelectItem>
+                    <SelectItem value="11">11 Weeks</SelectItem>
+                    <SelectItem value="12">12 Weeks</SelectItem>
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}
           />
@@ -1140,12 +1114,19 @@ function DealFormSection({
   ];
 
   const categoryValue = useWatch({ control: form.control, name: `deals.${index}.category` });
+  const dealTypeValue = useWatch({ control: form.control, name: `deals.${index}.dealType` });
+  const redemptionValue = useWatch({ control: form.control, name: `deals.${index}.redemption` });
+  const isMultipleItemsValue = useWatch({ control: form.control, name: `deals.${index}.isMultipleItems` });
   const claimRulesValue = useWatch({ control: form.control, name: `deals.${index}.claimRules` }) || [];
   const generalRulesValue = useWatch({ control: form.control, name: `deals.${index}.generalRules` }) || [];
   const branchesValue = useWatch({ control: form.control, name: `deals.${index}.branches` }) || [];
   
   const selectedCategory = categories.find(c => c.name === categoryValue);
   const subCategories = selectedCategory?.subCategories || [];
+  
+  const isBogo = dealTypeValue === "bogo";
+  const isDiscount = dealTypeValue === "discount";
+  const isLimitedRedemption = redemptionValue === "limited";
 
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -1313,22 +1294,95 @@ function DealFormSection({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name={`deals.${index}.limitPerUser`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Limit Per User</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="number" placeholder="e.g., 1" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {isLimitedRedemption && (
+              <FormField
+                control={form.control}
+                name={`deals.${index}.limitPerUser`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Limit Per User *</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="number" placeholder="e.g., 1" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
 
-          <TwoTranchesSection form={form} index={index} />
+          {isBogo && <TwoTranchesSection form={form} index={index} />}
+
+          {(isDiscount || isBogo) && (
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name={`deals.${index}.isMultipleItems`}
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-medium text-slate-700">
+                      This Deal is for Multiple Items
+                    </FormLabel>
+                  </FormItem>
+                )}
+              />
+              
+              {isMultipleItemsValue && (
+                <div className="bg-[#FFF8E1] border border-[#FFE082] rounded-md p-3 flex items-start gap-3">
+                  <Info className="h-5 w-5 text-[#F57F17] flex-shrink-0" />
+                  <p className="text-[#5D4037] text-sm">
+                    If your deal is for multiple items, the price won't show on the deal card and details page.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!isMultipleItemsValue && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name={`deals.${index}.originalPrice`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{dealTypeValue === "voucher" ? "Voucher Amount" : "Original Price"} *</FormLabel>
+                    <div className="relative">
+                      <FormControl>
+                        <Input placeholder="0.00" className="pr-12" {...field} />
+                      </FormControl>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {isDiscount && (
+                <FormField
+                  control={form.control}
+                  name={`deals.${index}.discountPercentage`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Discount Percentage *</FormLabel>
+                      <div className="relative">
+                        <FormControl>
+                          <Input placeholder="0" className="pr-12" {...field} />
+                        </FormControl>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">%</div>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+          )}
 
           <FormField
             control={form.control}
