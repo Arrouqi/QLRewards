@@ -1,11 +1,10 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Button } from "./button";
 import { Eraser, Check } from "lucide-react";
 
 interface SignaturePadProps {
   onSignatureChange: (signature: string | null) => void;
   value?: string | null;
-  width?: number;
   height?: number;
   className?: string;
 }
@@ -13,15 +12,16 @@ interface SignaturePadProps {
 export function SignaturePad({ 
   onSignatureChange, 
   value,
-  width = 400, 
   height = 150,
   className = ""
 }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+  const [canvasWidth, setCanvasWidth] = useState(400);
 
-  useEffect(() => {
+  const initCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -34,8 +34,34 @@ export function SignaturePad({
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+  }, []);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateWidth = () => {
+      const newWidth = container.clientWidth;
+      if (newWidth > 0) {
+        setCanvasWidth(newWidth);
+      }
+    };
+
+    updateWidth();
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  useEffect(() => {
+    initCanvas();
+    
     if (value) {
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      if (!ctx || !canvas) return;
+      
       const img = new Image();
       img.onload = () => {
         ctx.drawImage(img, 0, 0);
@@ -43,7 +69,7 @@ export function SignaturePad({
       };
       img.src = value;
     }
-  }, [value]);
+  }, [value, canvasWidth, initCanvas]);
 
   const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
@@ -118,13 +144,13 @@ export function SignaturePad({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className="relative border-2 border-slate-300 rounded-lg overflow-hidden bg-white">
+      <div ref={containerRef} className="relative border-2 border-slate-300 rounded-lg overflow-hidden bg-white">
         <canvas
           ref={canvasRef}
-          width={width}
+          width={canvasWidth}
           height={height}
-          className="w-full touch-none cursor-crosshair"
-          style={{ maxWidth: `${width}px` }}
+          className="touch-none cursor-crosshair block"
+          style={{ width: '100%', height: `${height}px` }}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}

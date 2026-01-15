@@ -142,8 +142,7 @@ const merchantSchema = z.object({
   menuPriceList: z.string().optional(),
   merchantSignature: z.string().optional(),
   merchantSignatoryName: z.string().optional(),
-  companyStamp: z.string().optional(),
-  merchantSignDate: z.string().optional(),
+    merchantSignDate: z.string().optional(),
   deals: z.array(dealSchema).optional(),
 });
 
@@ -786,16 +785,6 @@ export default function MerchantOnboarding() {
                         onSignatureChange={field.onChange}
                       />
                     )}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Company Stamp (Optional)</Label>
-                  <DocumentUpload
-                    label=""
-                    field="companyStamp"
-                    form={form}
-                    onChange={handleFileUpload}
                   />
                 </div>
               </CardContent>
