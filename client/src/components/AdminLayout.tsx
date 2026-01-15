@@ -46,14 +46,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const menuItems = [
     {
-      label: "Deal Requests",
-      icon: LayoutDashboard,
-      href: "/admin/dashboard",
-    },
-    {
       label: "Merchant Onboarding",
       icon: Building2,
       href: "/admin/merchants",
+    },
+    {
+      label: "Deal Requests",
+      icon: LayoutDashboard,
+      href: "/admin/dashboard",
     },
     ...(session?.role === "admin" ? [
       {
