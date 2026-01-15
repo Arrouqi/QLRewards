@@ -830,6 +830,20 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/merchants/public/:id", async (req, res) => {
+    try {
+      const merchant = await storage.getMerchantById(req.params.id);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      
+      const deals = await storage.getMerchantDealsByMerchantId(merchant.id);
+      res.json({ ...merchant, deals });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/merchants/:id", requireAuth, async (req, res) => {
     try {
       const merchant = await storage.getMerchantById(req.params.id);

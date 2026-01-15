@@ -18,7 +18,11 @@ interface MerchantData {
   products: string[];
   businessCategories: string[];
   branches: string[];
-  deals: string[];
+  deals: any[];
+  crDocument?: string;
+  establishmentCard?: string;
+  tradeLicense?: string;
+  menuPriceList?: string;
   merchantSignature?: string;
   merchantSignatoryName?: string;
   merchantSignDate?: string;
@@ -45,7 +49,7 @@ export default function MerchantSuccess() {
 
   const fetchMerchant = async () => {
     try {
-      const response = await fetch(`/api/merchants/${merchantId}`);
+      const response = await fetch(`/api/merchants/public/${merchantId}`);
       if (response.ok) {
         const data = await response.json();
         setMerchant(data);
@@ -109,6 +113,15 @@ export default function MerchantSuccess() {
       addLine(`Business Categories: ${merchant.businessCategories.join(", ")}`);
     }
 
+    const documents = [];
+    if (merchant.crDocument) documents.push("CR Document");
+    if (merchant.establishmentCard) documents.push("Establishment Card");
+    if (merchant.tradeLicense) documents.push("Trade License");
+    if (merchant.menuPriceList) documents.push("Menu/Price List");
+    if (documents.length > 0) {
+      addLine(`Uploaded Documents: ${documents.join(", ")}`);
+    }
+
     if (merchant.branches?.length > 0) {
       addSection("Branch Locations");
       merchant.branches.forEach((branchStr, index) => {
@@ -126,28 +139,47 @@ export default function MerchantSuccess() {
 
     if (merchant.deals?.length > 0) {
       addSection("Deal Offers");
-      merchant.deals.forEach((dealStr, index) => {
-        try {
-          const deal = JSON.parse(dealStr);
-          addLine(`Deal ${index + 1}: ${deal.title || "Untitled"}`);
-          if (deal.category) addLine(`  Category: ${deal.category}`);
-          if (deal.dealType) addLine(`  Type: ${deal.dealType}`);
-          if (deal.startDate && deal.endDate) {
-            addLine(`  Validity: ${deal.startDate} to ${deal.endDate}`);
-          }
-          if (deal.description) addLine(`  Description: ${deal.description}`);
-          if (deal.originalPrice) addLine(`  Original Price: QAR ${deal.originalPrice}`);
-          if (deal.discountPercentage) addLine(`  Discount: ${deal.discountPercentage}%`);
-          if (deal.claimRules?.length > 0) {
-            addLine(`  Claim Rules: ${deal.claimRules.join("; ")}`);
-          }
-          if (deal.generalRules?.length > 0) {
-            addLine(`  General Rules: ${deal.generalRules.join("; ")}`);
-          }
-          if (deal.otherRules) addLine(`  Other Rules: ${deal.otherRules}`);
-        } catch {
-          addLine(`Deal ${index + 1}: ${dealStr}`);
+      merchant.deals.forEach((dealData, index) => {
+        const deal = typeof dealData === 'string' ? JSON.parse(dealData) : dealData;
+        addLine(`Deal ${index + 1}: ${deal.title || "Untitled"}`, 11, true);
+        if (deal.category) addLine(`  Category: ${deal.category}`);
+        if (deal.subCategory) addLine(`  Sub-Category: ${deal.subCategory}`);
+        if (deal.dealType) addLine(`  Deal Type: ${deal.dealType}`);
+        if (deal.startDate && deal.endDate) {
+          addLine(`  Validity: ${deal.startDate} to ${deal.endDate}`);
         }
+        if (deal.description) addLine(`  Description: ${deal.description}`);
+        if (deal.originalPrice) addLine(`  Original Price: QAR ${deal.originalPrice}`);
+        if (deal.discountPercentage) addLine(`  Discount: ${deal.discountPercentage}%`);
+        if (deal.redemption) {
+          addLine(`  Redemption Type: ${deal.redemption}`);
+          if (deal.redemption === 'limited' && deal.limitPerUser) {
+            addLine(`  Limit Per User: ${deal.limitPerUser}`);
+          }
+        }
+        if (deal.isTwoTranches && deal.trancheValidity) {
+          addLine(`  Two Tranches: Yes (${deal.trancheValidity} weeks per tranche)`);
+        }
+        if (deal.isMultipleItems) {
+          addLine(`  Multiple Items: Yes`);
+        }
+        if (deal.specificDays && deal.days?.length > 0) {
+          addLine(`  Specific Days: ${deal.days.join(", ")}`);
+        }
+        if (deal.claimRules?.length > 0) {
+          addLine(`  Claim Rules: ${deal.claimRules.join("; ")}`);
+        }
+        if (deal.generalRules?.length > 0) {
+          addLine(`  General Rules: ${deal.generalRules.join("; ")}`);
+        }
+        if (deal.otherRules) addLine(`  Other Rules: ${deal.otherRules}`);
+        if (deal.branches?.length > 0) {
+          addLine(`  Applicable Branches: ${deal.branches.join(", ")}`);
+        }
+        if (deal.images?.length > 0) {
+          addLine(`  Images: ${deal.images.length} image(s) uploaded`);
+        }
+        y += 3;
       });
     }
 
