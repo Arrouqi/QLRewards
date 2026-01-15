@@ -37,6 +37,7 @@ import { SignaturePad } from "@/components/ui/signature-pad";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -137,7 +138,10 @@ const merchantSchema = z.object({
   menuPriceList: z.string().optional(),
   merchantSignature: z.string().optional(),
   merchantSignatoryName: z.string().optional(),
-    merchantSignDate: z.string().optional(),
+  merchantSignDate: z.string().optional(),
+  termsAccepted: z.boolean().refine(val => val === true, {
+    message: "You must accept the terms and conditions to submit",
+  }),
   deals: z.array(dealSchema).optional(),
 });
 
@@ -202,6 +206,7 @@ export default function MerchantOnboarding() {
       branches: [],
       deals: [],
       merchantSignDate: new Date().toISOString().split('T')[0],
+      termsAccepted: false,
     },
   });
 
@@ -746,6 +751,31 @@ export default function MerchantOnboarding() {
                   
                   <p className="pt-3 font-medium border-t border-slate-200 mt-3 pt-3">By signing this Agreement, you acknowledge that you have read, understood, and agree to be bound by the Terms of Use published on the Qatar Living website.</p>
                 </div>
+                
+                <FormField
+                  control={form.control}
+                  name="termsAccepted"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-4 p-4 border rounded-lg bg-white">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-terms"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-sm font-medium">
+                          I agree to the Terms and Conditions
+                        </FormLabel>
+                        <FormDescription className="text-xs text-slate-500">
+                          By checking this box, you confirm that you have read, understood, and agree to be bound by the Terms of Use.
+                        </FormDescription>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 
@@ -797,16 +827,6 @@ export default function MerchantOnboarding() {
                     )}
                   />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Qatar Living Section - Display Only */}
-            <Card className="bg-slate-100">
-              <CardHeader>
-                <CardTitle className="text-slate-500">Qatar Living (For Office Use)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-slate-500">This section will be completed by the Qatar Living team.</p>
               </CardContent>
             </Card>
 
