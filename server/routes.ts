@@ -903,7 +903,7 @@ export async function registerRoutes(
   app.patch("/api/merchants/:id/status", requireAuth, async (req, res) => {
     try {
       const { status } = req.body;
-      if (!["pending", "approved", "rejected", "archived"].includes(status)) {
+      if (!["pending", "moderation", "archived"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
       

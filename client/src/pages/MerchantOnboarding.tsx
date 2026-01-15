@@ -92,7 +92,7 @@ function centerAspectCrop(
 const branchSchema = z.object({
   name: z.string().min(1, "Branch name is required"),
   location: z.string().optional(),
-  phone: z.string().optional(),
+  phone: z.string().min(1, "Branch phone is required"),
   detail: z.string().optional(),
 });
 
@@ -132,7 +132,7 @@ const merchantSchema = z.object({
   businessCategories: z.array(z.string()).min(1, "Select at least one category"),
   branches: z.array(branchSchema).optional(),
   subscriptionFee: z.string().default("0"),
-  transactionFee: z.string().default("3"),
+  transactionFee: z.string().default("3.00"),
   crDocument: z.string().optional(),
   establishmentCard: z.string().optional(),
   tradeLicense: z.string().optional(),
@@ -205,7 +205,7 @@ export default function MerchantOnboarding() {
       businessCategories: [],
       branches: [],
       subscriptionFee: "0",
-      transactionFee: "3",
+      transactionFee: "3.00",
       deals: [],
       commencementDate: new Date().toISOString().split('T')[0],
       termsAccepted: false,
@@ -675,7 +675,7 @@ export default function MerchantOnboarding() {
                         name={`branches.${index}.phone`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone</FormLabel>
+                            <FormLabel>Phone *</FormLabel>
                             <FormControl>
                               <PhoneInput
                                 value={field.value}
@@ -693,9 +693,9 @@ export default function MerchantOnboarding() {
                         name={`branches.${index}.detail`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Additional Details</FormLabel>
+                            <FormLabel>Address Details</FormLabel>
                             <FormControl>
-                              <Textarea {...field} placeholder="Additional details about this branch" rows={2} data-testid={`textarea-branch-detail-${index}`} />
+                              <Textarea {...field} placeholder="Branch address details" rows={2} data-testid={`textarea-branch-detail-${index}`} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

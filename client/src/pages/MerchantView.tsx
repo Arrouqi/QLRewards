@@ -373,17 +373,12 @@ export default function MerchantView() {
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(100, 100, 100);
-    doc.text("Authorized Signatory Signature:", margin, y);
+    doc.text("Signature & Company Stamp:", margin, y);
     y += 4;
     doc.setDrawColor(180, 180, 180);
     doc.setLineWidth(0.5);
-    doc.rect(margin, y, contentWidth, 22);
-    y += 26;
-    
-    doc.text("Company Stamp:", margin, y);
-    y += 4;
-    doc.rect(margin, y, contentWidth / 2, 25);
-    y += 32;
+    doc.rect(margin, y, contentWidth, 40);
+    y += 48;
     
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -406,11 +401,11 @@ export default function MerchantView() {
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(100, 100, 100);
-    doc.text("Signature:", margin, y);
+    doc.text("Signature & Company Stamp:", margin, y);
     y += 4;
     doc.setDrawColor(180, 180, 180);
-    doc.rect(margin, y, contentWidth, 22);
-    y += 30;
+    doc.rect(margin, y, contentWidth, 40);
+    y += 48;
 
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(7);
@@ -442,10 +437,6 @@ export default function MerchantView() {
         return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Pending</Badge>;
       case "moderation":
         return <Badge className="bg-blue-100 text-blue-700 border-blue-200">In Moderation</Badge>;
-      case "approved":
-        return <Badge className="bg-green-100 text-green-700 border-green-200">Approved</Badge>;
-      case "rejected":
-        return <Badge className="bg-red-100 text-red-700 border-red-200">Rejected</Badge>;
       case "archived":
         return <Badge className="bg-slate-100 text-slate-700 border-slate-200">Archived</Badge>;
       default:

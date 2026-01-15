@@ -382,17 +382,12 @@ export default function MerchantSuccess() {
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(100, 100, 100);
-    doc.text("Authorized Signatory Signature:", margin, y);
+    doc.text("Signature & Company Stamp:", margin, y);
     y += 4;
     doc.setDrawColor(180, 180, 180);
     doc.setLineWidth(0.5);
-    doc.rect(margin, y, contentWidth, 22);
-    y += 26;
-    
-    doc.text("Company Stamp:", margin, y);
-    y += 4;
-    doc.rect(margin, y, contentWidth / 2, 25);
-    y += 32;
+    doc.rect(margin, y, contentWidth, 40);
+    y += 48;
     
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -415,11 +410,11 @@ export default function MerchantSuccess() {
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(100, 100, 100);
-    doc.text("Signature:", margin, y);
+    doc.text("Signature & Company Stamp:", margin, y);
     y += 4;
     doc.setDrawColor(180, 180, 180);
-    doc.rect(margin, y, contentWidth, 22);
-    y += 30;
+    doc.rect(margin, y, contentWidth, 40);
+    y += 48;
 
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(7);
