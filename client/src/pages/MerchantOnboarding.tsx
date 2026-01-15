@@ -504,6 +504,29 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
+            {/* Conditions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-[#00426D]">Conditions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 text-sm text-slate-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
+                    <span>Merchant will provide offers to Qatar Living users via the Living Deals program as per the attached offer form.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
+                    <span>Merchant authorizes Qatar Living to promote these offers across its platforms, apps, newsletters, and marketing channels.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
+                    <span>Merchant guarantees all marketing information is accurate, lawful, and not misleading.</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
             {/* Products Selection */}
             <Card>
               <CardHeader>
