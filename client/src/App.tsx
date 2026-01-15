@@ -22,7 +22,8 @@ import MerchantManagement from "@/pages/MerchantManagement";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={CreateOffer} />
+      <Route path="/" component={MerchantOnboarding} />
+      <Route path="/create-deal" component={CreateOffer} />
       <Route path="/success" component={Success} />
       <Route path="/offer-request" component={OfferForm} />
       <Route path="/admin/login" component={AdminLogin} />
@@ -35,7 +36,6 @@ function Router() {
       <Route path="/admin/deals/:id/print" component={PrintDeal} />
       <Route path="/admin/settings" component={Settings} />
       <Route path="/admin/merchants" component={MerchantManagement} />
-      <Route path="/merchant-onboarding" component={MerchantOnboarding} />
       <Route component={NotFound} />
     </Switch>
   );
