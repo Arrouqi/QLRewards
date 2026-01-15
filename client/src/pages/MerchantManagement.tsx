@@ -5,18 +5,13 @@ import { format } from "date-fns";
 import { 
   Building2, 
   Eye, 
-  Check, 
-  X, 
+  Send, 
   Archive, 
   Search,
-  ChevronDown,
-  ChevronUp,
   ArrowLeft,
-  FileText,
-  Phone,
-  Mail,
-  MapPin,
-  ExternalLink
+  FileDown,
+  Download,
+  Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,21 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
 interface Merchant {
@@ -78,8 +58,6 @@ export default function MerchantManagement() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
 
   const { data: merchants = [], isLoading } = useQuery<Merchant[]>({
     queryKey: ["merchants"],
@@ -107,30 +85,14 @@ export default function MerchantManagement() {
       if (!res.ok) throw new Error("Failed to update status");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["merchants"] });
-      toast({ title: "Status updated successfully" });
+      toast({ title: variables.status === "moderation" ? "Forwarded to moderation" : "Status updated" });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
-
-  const fetchMerchantDetails = async (id: string) => {
-    const res = await fetch(`/api/merchants/${id}`, { credentials: "include" });
-    if (!res.ok) throw new Error("Failed to fetch merchant details");
-    return res.json();
-  };
-
-  const viewMerchant = async (merchant: Merchant) => {
-    try {
-      const details = await fetchMerchantDetails(merchant.id);
-      setSelectedMerchant(details);
-      setShowDetailDialog(true);
-    } catch (error) {
-      toast({ title: "Error loading merchant details", variant: "destructive" });
-    }
-  };
 
   const filteredMerchants = merchants.filter((merchant) => {
     const matchesSearch =
@@ -147,10 +109,10 @@ export default function MerchantManagement() {
     switch (status) {
       case "pending":
         return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
+      case "moderation":
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">In Moderation</Badge>;
       case "approved":
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approved</Badge>;
-      case "rejected":
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
       case "archived":
         return <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">Archived</Badge>;
       default:
@@ -161,8 +123,8 @@ export default function MerchantManagement() {
   const statusCounts = {
     all: merchants.length,
     pending: merchants.filter((m) => m.status === "pending").length,
+    moderation: merchants.filter((m) => m.status === "moderation").length,
     approved: merchants.filter((m) => m.status === "approved").length,
-    rejected: merchants.filter((m) => m.status === "rejected").length,
     archived: merchants.filter((m) => m.status === "archived").length,
   };
 
@@ -193,8 +155,8 @@ export default function MerchantManagement() {
           {[
             { label: "All", value: statusCounts.all, filter: "all" },
             { label: "Pending", value: statusCounts.pending, filter: "pending" },
+            { label: "In Moderation", value: statusCounts.moderation, filter: "moderation" },
             { label: "Approved", value: statusCounts.approved, filter: "approved" },
-            { label: "Rejected", value: statusCounts.rejected, filter: "rejected" },
             { label: "Archived", value: statusCounts.archived, filter: "archived" },
           ].map((stat) => (
             <Card
@@ -280,36 +242,63 @@ export default function MerchantManagement() {
                       {format(new Date(merchant.createdAt), "dd MMM yyyy")}
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => viewMerchant(merchant)}
+                          onClick={() => setLocation(`/admin/merchants/${merchant.id}`)}
                           data-testid={`button-view-${merchant.id}`}
+                          title="View"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setLocation(`/admin/merchants/${merchant.id}/edit`)}
+                          data-testid={`button-edit-${merchant.id}`}
+                          title="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => window.open(`/merchant-success/${merchant.id}`, '_blank')}
+                          data-testid={`button-pdf-${merchant.id}`}
+                          title="Download Agreement PDF"
+                        >
+                          <FileDown className="h-4 w-4" />
+                        </Button>
+                        {merchant.signedContractUpload && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              const link = document.createElement("a");
+                              link.href = merchant.signedContractUpload!;
+                              link.download = `Signed_Contract_${merchant.companyName.replace(/\s+/g, '_')}.pdf`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }}
+                            data-testid={`button-signed-${merchant.id}`}
+                            title="Download Signed Contract"
+                          >
+                            <Download className="h-4 w-4 text-green-600" />
+                          </Button>
+                        )}
                         {merchant.status === "pending" && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-green-600 hover:text-green-700"
-                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "approved" })}
-                              data-testid={`button-approve-${merchant.id}`}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "rejected" })}
-                              data-testid={`button-reject-${merchant.id}`}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-blue-600 hover:text-blue-700"
+                            onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "moderation" })}
+                            data-testid={`button-forward-${merchant.id}`}
+                            title="Forward to Moderation"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
                         )}
                         <Button
                           variant="ghost"
@@ -329,185 +318,6 @@ export default function MerchantManagement() {
           </Table>
         </Card>
       </main>
-
-      {/* Detail Dialog */}
-      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-[#00426D]" />
-              Merchant Details
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedMerchant && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-bold">{selectedMerchant.companyName}</h3>
-                  <p className="text-slate-500">{selectedMerchant.brandName}</p>
-                </div>
-                {getStatusBadge(selectedMerchant.status)}
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <FileText className="h-4 w-4 text-slate-400" />
-                    <span className="text-slate-500">CR Number:</span>
-                    <span className="font-medium">{selectedMerchant.crNumber}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-slate-400" />
-                    <span className="text-slate-500">Address:</span>
-                    <span className="font-medium">{selectedMerchant.address}</span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-slate-400" />
-                    <span className="text-slate-500">Email:</span>
-                    <a href={`mailto:${selectedMerchant.email}`} className="font-medium text-[#00426D] hover:underline">
-                      {selectedMerchant.email}
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-slate-400" />
-                    <span className="text-slate-500">Phone:</span>
-                    <span className="font-medium">{selectedMerchant.phone}</span>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h4 className="font-medium mb-2">Products</h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedMerchant.products?.map((p) => (
-                    <Badge key={p} variant="secondary">{p}</Badge>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Business Categories</h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedMerchant.businessCategories?.map((c) => (
-                    <Badge key={c} variant="outline">{c}</Badge>
-                  ))}
-                </div>
-              </div>
-
-              {selectedMerchant.branches && selectedMerchant.branches.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">Branches</h4>
-                  <div className="space-y-2">
-                    {selectedMerchant.branches.map((branch, index) => {
-                      try {
-                        const parsed = JSON.parse(branch);
-                        return (
-                          <div key={index} className="p-3 bg-slate-50 rounded-lg text-sm">
-                            <p className="font-medium">{parsed.name}</p>
-                            <p className="text-slate-500">{parsed.location}</p>
-                            {parsed.phone && <p className="text-slate-500">{parsed.phone}</p>}
-                          </div>
-                        );
-                      } catch {
-                        return (
-                          <div key={index} className="p-3 bg-slate-50 rounded-lg text-sm">{branch}</div>
-                        );
-                      }
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {selectedMerchant.deals && selectedMerchant.deals.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">Deals ({selectedMerchant.deals.length})</h4>
-                  <div className="space-y-2">
-                    {selectedMerchant.deals.map((deal, index) => (
-                      <div key={index} className="p-3 bg-slate-50 rounded-lg">
-                        <p className="font-medium">{deal.title}</p>
-                        <p className="text-sm text-slate-500">{deal.category} - {deal.dealType}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Separator />
-
-              <div>
-                <h4 className="font-medium mb-2">Documents</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "CR Document", value: selectedMerchant.crDocument },
-                    { label: "Establishment Card", value: selectedMerchant.establishmentCard },
-                    { label: "Trade License", value: selectedMerchant.tradeLicense },
-                    { label: "Menu/Price List", value: selectedMerchant.menuPriceList },
-                  ].map((doc) => (
-                    <div key={doc.label} className="flex items-center justify-between p-2 border rounded">
-                      <span className="text-sm">{doc.label}</span>
-                      {doc.value ? (
-                        <a href={doc.value} target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      ) : (
-                        <span className="text-xs text-slate-400">Not provided</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {selectedMerchant.merchantSignature && (
-                <div>
-                  <h4 className="font-medium mb-2">Signature</h4>
-                  <div className="border rounded-lg p-4 bg-white">
-                    <img src={selectedMerchant.merchantSignature} alt="Signature" className="max-h-24" />
-                    <p className="text-sm text-slate-500 mt-2">Signed by: {selectedMerchant.merchantSignatoryName}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <DialogFooter className="gap-2">
-            {selectedMerchant?.status === "pending" && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    updateStatusMutation.mutate({ id: selectedMerchant.id, status: "rejected" });
-                    setShowDetailDialog(false);
-                  }}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Reject
-                </Button>
-                <Button
-                  onClick={() => {
-                    updateStatusMutation.mutate({ id: selectedMerchant.id, status: "approved" });
-                    setShowDetailDialog(false);
-                  }}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <Check className="h-4 w-4 mr-1" />
-                  Approve
-                </Button>
-              </>
-            )}
-            <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

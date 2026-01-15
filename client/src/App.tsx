@@ -18,6 +18,8 @@ import PrintDeal from "@/pages/PrintDeal";
 import Settings from "@/pages/Settings";
 import MerchantOnboarding from "@/pages/MerchantOnboarding";
 import MerchantManagement from "@/pages/MerchantManagement";
+import MerchantView from "@/pages/MerchantView";
+import MerchantEdit from "@/pages/MerchantEdit";
 import MerchantSuccess from "@/pages/MerchantSuccess";
 
 function Router() {
@@ -37,6 +39,8 @@ function Router() {
       <Route path="/admin/deals/:id/print" component={PrintDeal} />
       <Route path="/admin/settings" component={Settings} />
       <Route path="/admin/merchants" component={MerchantManagement} />
+      <Route path="/admin/merchants/:id" component={MerchantView} />
+      <Route path="/admin/merchants/:id/edit" component={MerchantEdit} />
       <Route path="/merchant-success/:id" component={MerchantSuccess} />
       <Route component={NotFound} />
     </Switch>
