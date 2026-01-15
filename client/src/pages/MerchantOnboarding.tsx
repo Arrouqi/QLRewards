@@ -15,7 +15,6 @@ import {
   Loader2, 
   ChevronDown,
   ChevronUp,
-  Download,
   Pencil,
   Gift,
   Percent,
@@ -35,13 +34,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { SignaturePad } from "@/components/ui/signature-pad";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -167,9 +159,7 @@ export default function MerchantOnboarding() {
   const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedDeals, setExpandedDeals] = useState<number[]>([0]);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [submittedMerchantId, setSubmittedMerchantId] = useState<string | null>(null);
-  
+    
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -302,8 +292,7 @@ export default function MerchantOnboarding() {
       }
 
       const merchant = await response.json();
-      setSubmittedMerchantId(merchant.id);
-      setShowSuccessDialog(true);
+      setLocation(`/merchant-success/${merchant.id}`);
     } catch (error: any) {
       toast({
         title: "Submission Failed",
@@ -590,7 +579,7 @@ export default function MerchantOnboarding() {
                         name={`branches.${index}.location`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Location (Google Maps URL) *</FormLabel>
+                            <FormLabel>Location (Google Maps URL)</FormLabel>
                             <FormControl>
                               <Input {...field} placeholder="https://maps.google.com/..." data-testid={`input-branch-location-${index}`} />
                             </FormControl>
@@ -822,37 +811,6 @@ export default function MerchantOnboarding() {
           </form>
         </Form>
       </main>
-
-      {/* Success Dialog */}
-      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
-              <Check className="h-5 w-5" />
-              Application Submitted Successfully
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p>Thank you for submitting your merchant partnership application. Our team will review your application and get back to you soon.</p>
-            <div className="bg-slate-50 p-4 rounded-lg space-y-2">
-              <p className="text-sm font-medium">Optional: Upload Signed Contract</p>
-              <p className="text-xs text-slate-500">If you prefer, you can download the contract, sign it manually, and upload the signed copy.</p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-1" />
-                  Download PDF
-                </Button>
-                <UploadSignedContract merchantId={submittedMerchantId} />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setLocation("/")} className="bg-[#00426D] hover:bg-[#003557]">
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -911,61 +869,6 @@ function DocumentUpload({ label, field, form, onChange }: {
         </div>
       )}
     </div>
-  );
-}
-
-function UploadSignedContract({ merchantId }: { merchantId: string | null }) {
-  const [uploading, setUploading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-
-  const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !merchantId) return;
-
-    setUploading(true);
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const response = await fetch(`/api/merchants/${merchantId}/upload-signed`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signedContractUpload: reader.result }),
-        });
-
-        if (response.ok) {
-          toast({ title: "Signed contract uploaded successfully" });
-        } else {
-          throw new Error("Upload failed");
-        }
-      } catch (error) {
-        toast({ title: "Upload failed", variant: "destructive" });
-      } finally {
-        setUploading(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  return (
-    <>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*,.pdf"
-        className="hidden"
-        onChange={handleUpload}
-      />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => inputRef.current?.click()}
-        disabled={uploading}
-      >
-        {uploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
-        Upload Signed Copy
-      </Button>
-    </>
   );
 }
 

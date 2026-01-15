@@ -18,6 +18,7 @@ import PrintDeal from "@/pages/PrintDeal";
 import Settings from "@/pages/Settings";
 import MerchantOnboarding from "@/pages/MerchantOnboarding";
 import MerchantManagement from "@/pages/MerchantManagement";
+import MerchantSuccess from "@/pages/MerchantSuccess";
 
 function Router() {
   return (
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/admin/deals/:id/print" component={PrintDeal} />
       <Route path="/admin/settings" component={Settings} />
       <Route path="/admin/merchants" component={MerchantManagement} />
+      <Route path="/merchant-success/:id" component={MerchantSuccess} />
       <Route component={NotFound} />
     </Switch>
   );
