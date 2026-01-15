@@ -26,6 +26,7 @@ interface MerchantData {
   merchantSignature?: string;
   merchantSignatoryName?: string;
   merchantSignDate?: string;
+  commencementDate?: string;
   signedContractUpload?: string;
 }
 
@@ -93,6 +94,20 @@ export default function MerchantSuccess() {
       doc.setFontSize(9);
       doc.text(`Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, 31, { align: "center" });
       y = 45;
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      const commDate = merchant.commencementDate 
+        ? new Date(merchant.commencementDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '____________________';
+      const agreementText = `This AGREEMENT is made and entered into on ${commDate} ("Commencement Date") between Qatar Living ("Living Deals") 20/Floor, Tornado Tower, Majlis Al Tawoon Street, West Bay, Doha, Qatar. (CR NO: 60909)`;
+      const agreementLines = doc.splitTextToSize(agreementText, contentWidth);
+      agreementLines.forEach((line: string) => {
+        doc.text(line, margin, y);
+        y += 5;
+      });
+      y += 5;
     };
 
     const drawSectionHeader = (title: string) => {
@@ -112,17 +127,17 @@ export default function MerchantSuccess() {
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(80, 80, 80);
-      doc.text(label + ":", margin + indent, y);
+      doc.text(label + ": ", margin + indent, y);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(0, 0, 0);
       const labelWidth = doc.getTextWidth(label + ": ");
-      const valueLines = doc.splitTextToSize(value || "N/A", contentWidth - labelWidth - indent - 5);
-      doc.text(valueLines[0], margin + indent + labelWidth, y);
-      y += 5;
+      const valueLines = doc.splitTextToSize(value || "N/A", contentWidth - labelWidth - indent - 10);
+      doc.text(valueLines[0], margin + indent + labelWidth + 2, y);
+      y += 6;
       for (let i = 1; i < valueLines.length; i++) {
-        checkPageBreak(5);
-        doc.text(valueLines[i], margin + indent + labelWidth, y);
-        y += 5;
+        checkPageBreak(6);
+        doc.text(valueLines[i], margin + indent + labelWidth + 2, y);
+        y += 6;
       }
     };
 
@@ -147,6 +162,7 @@ export default function MerchantSuccess() {
     drawHeader();
 
     drawSectionHeader("COMPANY INFORMATION");
+    y += 2;
     drawField("Company Name", merchant.companyName);
     drawField("CR Number", merchant.crNumber);
     drawField("Brand Name", merchant.brandName);
@@ -160,7 +176,7 @@ export default function MerchantSuccess() {
     if (merchant.businessCategories?.length > 0) {
       drawField("Business Categories", merchant.businessCategories.join(", "));
     }
-    y += 3;
+    y += 4;
 
     const documents = [];
     if (merchant.crDocument) documents.push("CR Document");
@@ -170,23 +186,24 @@ export default function MerchantSuccess() {
     if (documents.length > 0) {
       drawField("Documents Uploaded", documents.join(", "));
     }
-    y += 5;
+    y += 6;
 
     if (merchant.branches?.length > 0) {
       drawSectionHeader("BRANCH LOCATIONS");
+      y += 2;
       merchant.branches.forEach((branchStr, index) => {
         try {
           const branch = typeof branchStr === 'string' ? JSON.parse(branchStr) : branchStr;
           drawSubsectionTitle(`Branch ${index + 1}: ${branch.name}`);
-          if (branch.location) drawField("Google Maps URL", branch.location, 5);
-          if (branch.phone) drawField("Phone", branch.phone, 5);
-          if (branch.detail) drawField("Details", branch.detail, 5);
-          y += 2;
+          if (branch.location) drawField("Google Maps URL", branch.location, 8);
+          if (branch.phone) drawField("Phone", branch.phone, 8);
+          if (branch.detail) drawField("Details", branch.detail, 8);
+          y += 4;
         } catch {
           drawField(`Branch ${index + 1}`, String(branchStr));
         }
       });
-      y += 3;
+      y += 4;
     }
 
     if (merchant.deals?.length > 0) {

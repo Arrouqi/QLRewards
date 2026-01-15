@@ -47,6 +47,7 @@ interface Merchant {
   merchantSignature?: string;
   merchantSignatoryName?: string;
   merchantSignDate?: string;
+  commencementDate?: string;
   companyStamp?: string;
   signedContractUpload?: string;
   deals?: any[];
@@ -133,6 +134,20 @@ export default function MerchantView() {
       doc.setFontSize(9);
       doc.text(`Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, 31, { align: "center" });
       y = 45;
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      const commDate = merchant.commencementDate 
+        ? new Date(merchant.commencementDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '____________________';
+      const agreementText = `This AGREEMENT is made and entered into on ${commDate} ("Commencement Date") between Qatar Living ("Living Deals") 20/Floor, Tornado Tower, Majlis Al Tawoon Street, West Bay, Doha, Qatar. (CR NO: 60909)`;
+      const agreementLines = doc.splitTextToSize(agreementText, contentWidth);
+      agreementLines.forEach((line: string) => {
+        doc.text(line, margin, y);
+        y += 5;
+      });
+      y += 5;
     };
 
     const drawSectionHeader = (title: string) => {
@@ -152,17 +167,17 @@ export default function MerchantView() {
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(80, 80, 80);
-      doc.text(label + ":", margin + indent, y);
+      doc.text(label + ": ", margin + indent, y);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(0, 0, 0);
       const labelWidth = doc.getTextWidth(label + ": ");
-      const valueLines = doc.splitTextToSize(value || "N/A", contentWidth - labelWidth - indent - 5);
-      doc.text(valueLines[0], margin + indent + labelWidth, y);
-      y += 5;
+      const valueLines = doc.splitTextToSize(value || "N/A", contentWidth - labelWidth - indent - 10);
+      doc.text(valueLines[0], margin + indent + labelWidth + 2, y);
+      y += 6;
       for (let i = 1; i < valueLines.length; i++) {
-        checkPageBreak(5);
-        doc.text(valueLines[i], margin + indent + labelWidth, y);
-        y += 5;
+        checkPageBreak(6);
+        doc.text(valueLines[i], margin + indent + labelWidth + 2, y);
+        y += 6;
       }
     };
 
@@ -372,8 +387,8 @@ export default function MerchantView() {
     doc.text("Title: _______________________", rightBoxX, boxY);
     boxY += 7;
 
-    const signDate = merchant.merchantSignDate 
-      ? new Date(merchant.merchantSignDate).toLocaleDateString() 
+    const signDate = merchant.commencementDate 
+      ? new Date(merchant.commencementDate).toLocaleDateString() 
       : "_______________________";
     doc.text("Date: " + signDate, leftBoxX, boxY);
     doc.text("Date: _______________________", rightBoxX, boxY);
@@ -829,10 +844,10 @@ export default function MerchantView() {
                 <div>
                   <p className="text-sm text-slate-500 mb-2">Signatory Name</p>
                   <p className="font-medium">{merchant.merchantSignatoryName}</p>
-                  {merchant.merchantSignDate && (
+                  {merchant.commencementDate && (
                     <>
-                      <p className="text-sm text-slate-500 mt-3 mb-1">Date</p>
-                      <p className="font-medium">{format(new Date(merchant.merchantSignDate), "MMMM d, yyyy")}</p>
+                      <p className="text-sm text-slate-500 mt-3 mb-1">Commencement Date</p>
+                      <p className="font-medium">{format(new Date(merchant.commencementDate), "MMMM d, yyyy")}</p>
                     </>
                   )}
                 </div>

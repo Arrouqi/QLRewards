@@ -170,6 +170,7 @@ export const merchants = pgTable("merchants", {
   merchantSignatoryName: text("merchant_signatory_name"),
   companyStamp: text("company_stamp"),
   merchantSignDate: text("merchant_sign_date"),
+  commencementDate: text("commencement_date"),
   qlSignature: text("ql_signature"),
   qlName: text("ql_name"),
   qlTitle: text("ql_title"),

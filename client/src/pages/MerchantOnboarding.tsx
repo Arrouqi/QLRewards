@@ -137,8 +137,8 @@ const merchantSchema = z.object({
   tradeLicense: z.string().optional(),
   menuPriceList: z.string().optional(),
   merchantSignature: z.string().optional(),
-  merchantSignatoryName: z.string().optional(),
-  merchantSignDate: z.string().optional(),
+  merchantSignatoryName: z.string().min(1, "Authorized signatory name is required"),
+  commencementDate: z.string().min(1, "Commencement date is required"),
   termsAccepted: z.boolean().refine(val => val === true, {
     message: "You must accept the terms and conditions to submit",
   }),
@@ -205,7 +205,7 @@ export default function MerchantOnboarding() {
       businessCategories: [],
       branches: [],
       deals: [],
-      merchantSignDate: new Date().toISOString().split('T')[0],
+      commencementDate: new Date().toISOString().split('T')[0],
       termsAccepted: false,
     },
   });
@@ -303,8 +303,7 @@ export default function MerchantOnboarding() {
         body: JSON.stringify({
           ...data,
           branches: formattedBranches,
-          merchantSignDate: new Date().toISOString(),
-        }),
+                  }),
       });
 
       if (!response.ok) {
@@ -356,6 +355,35 @@ export default function MerchantOnboarding() {
             });
           })} className="space-y-8">
             
+            {/* Agreement Header */}
+            <Card className="border-[#00426D]/20 bg-[#00426D]/5">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    This <span className="font-semibold">AGREEMENT</span> is made and entered into on{" "}
+                    <FormField
+                      control={form.control}
+                      name="commencementDate"
+                      render={({ field }) => (
+                        <span className="inline-block">
+                          <Input 
+                            {...field} 
+                            type="date" 
+                            className="w-40 inline-block mx-1 h-8 text-sm border-[#00426D]/30"
+                            data-testid="input-commencement-date"
+                          />
+                        </span>
+                      )}
+                    />
+                    {" "}("<span className="font-semibold">Commencement Date</span>") between{" "}
+                    <span className="font-semibold">Qatar Living</span> ("Living Deals"){" "}
+                    20/Floor, Tornado Tower, Majlis Al Tawoon Street, West Bay, Doha, Qatar.{" "}
+                    (CR NO: 60909)
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Company Information */}
             <Card>
               <CardHeader>
@@ -785,34 +813,19 @@ export default function MerchantOnboarding() {
                 <CardTitle className="text-[#00426D]">Merchant Signature</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="merchantSignatoryName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Authorized Signatory Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Full name of signatory" data-testid="input-signatory-name" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="merchantSignDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="date" data-testid="input-sign-date" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="merchantSignatoryName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Authorized Signatory Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Full name of signatory" data-testid="input-signatory-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="space-y-2">
                   <Label>Authorized Signatory Signature</Label>
