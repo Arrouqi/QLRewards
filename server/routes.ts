@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db } from "./db";
-import { sendNewDealNotification, sendModerationNotification, sendMerchantConfirmation } from "./email";
+import { sendNewDealNotification, sendModerationNotification, sendMerchantConfirmation, sendMerchantOnboardingNotification, sendMerchantModerationNotification, sendMerchantOnboardingConfirmation, sendMerchantSignedContractConfirmation } from "./email";
 import { uploadMultipleImages, migrateExistingImages } from "./azureStorage";
 
 const PgSession = connectPgSimple(session);
@@ -844,6 +844,20 @@ export async function registerRoutes(
         }
       }
       
+      // Send confirmation email to merchant
+      sendMerchantOnboardingConfirmation(merchant).catch(err => {
+        console.error("[Email] Error sending merchant onboarding confirmation:", err);
+      });
+      
+      // Send notification to sales team
+      const salesRecipients = await storage.getActiveEmailRecipientsByType("sales");
+      if (salesRecipients.length > 0) {
+        const emails = salesRecipients.map(r => r.email);
+        sendMerchantOnboardingNotification(merchant, emails).catch(err => {
+          console.error("[Email] Error sending merchant onboarding notification:", err);
+        });
+      }
+      
       res.status(201).json(merchant);
     } catch (error: any) {
       console.error("Merchant creation error:", error);
@@ -907,10 +921,27 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid status" });
       }
       
+      // Check if this is a transition to moderation
+      const existingMerchant = await storage.getMerchantById(req.params.id);
+      const wasNotModeration = existingMerchant?.status !== "moderation";
+      
       const merchant = await storage.updateMerchantStatus(req.params.id, status);
       if (!merchant) {
         return res.status(404).json({ error: "Merchant not found" });
       }
+      
+      // Send notification to moderation team when status changes to moderation
+      if (status === "moderation" && wasNotModeration) {
+        const moderationRecipients = await storage.getActiveEmailRecipientsByType("moderation");
+        if (moderationRecipients.length > 0) {
+          const emails = moderationRecipients.map(r => r.email);
+          const forwardedBy = req.session.username || "Unknown";
+          sendMerchantModerationNotification(merchant, emails, forwardedBy).catch(err => {
+            console.error("[Email] Error sending merchant moderation notification:", err);
+          });
+        }
+      }
+      
       res.json(merchant);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -940,6 +971,12 @@ export async function registerRoutes(
       if (!merchant) {
         return res.status(404).json({ error: "Merchant not found" });
       }
+      
+      // Send confirmation email to merchant
+      sendMerchantSignedContractConfirmation(merchant).catch(err => {
+        console.error("[Email] Error sending signed contract confirmation:", err);
+      });
+      
       res.json(merchant);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
