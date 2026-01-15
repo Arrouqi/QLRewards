@@ -731,10 +731,35 @@ export default function MerchantOnboarding() {
               <CardHeader>
                 <CardTitle className="text-[#00426D]">Fee Structure</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-600">Fee structure will be confirmed by the Qatar Living team after reviewing your application.</p>
+              <CardContent className="space-y-6">
+                <div className="bg-gradient-to-r from-[#00426D]/5 to-[#FF7F39]/5 p-6 rounded-xl border border-[#00426D]/10">
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                      <span className="text-lg font-bold text-[#00426D]">Subscription Fee:</span>
+                      <span className="text-xl font-bold text-[#FF7F39]">Free First Year</span>
+                      <span className="text-base text-slate-600">(Onwards 1500 QAR Per Year)</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                      <span className="text-lg font-bold text-[#00426D]">Redemption Fee:</span>
+                      <span className="text-xl font-bold text-[#FF7F39]">3 QAR per transaction</span>
+                    </div>
+                  </div>
                 </div>
+                
+                <ul className="space-y-3 text-sm text-slate-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
+                    <span><strong>Subscription Payment:</strong> 100% advance upon signing or renewal.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
+                    <span><strong>Redemption Fees:</strong> Qatar Living will issue a monthly invoice for redeemed transactions; payments due within 15 days.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
+                    <span>Unpaid balances may lead to suspension of offers until cleared.</span>
+                  </li>
+                </ul>
               </CardContent>
             </Card>
 
