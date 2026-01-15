@@ -19,13 +19,13 @@ interface MerchantData {
   businessCategories: string[];
   branches: string[];
   deals: any[];
+  subscriptionFee?: string;
+  transactionFee?: string;
   crDocument?: string;
   establishmentCard?: string;
   tradeLicense?: string;
   menuPriceList?: string;
-  merchantSignature?: string;
   merchantSignatoryName?: string;
-  merchantSignDate?: string;
   commencementDate?: string;
   signedContractUpload?: string;
 }
@@ -188,6 +188,30 @@ export default function MerchantSuccess() {
     }
     y += 6;
 
+    drawSectionHeader("FEE STRUCTURE");
+    y += 2;
+    const subscriptionFee = merchant.subscriptionFee || "0";
+    const transactionFee = merchant.transactionFee || "3";
+    drawField("Subscription Fee", `${subscriptionFee} QAR per year`);
+    drawField("Transaction Fee", `${transactionFee} QAR per transaction`);
+    y += 2;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    const feeNotes = [
+      "• Subscription Payment: 100% advance upon signing or renewal.",
+      "• Redemption Fees: Qatar Living will issue a monthly invoice for redeemed transactions; payments due within 15 days.",
+      "• Unpaid balances may lead to suspension of offers until cleared."
+    ];
+    feeNotes.forEach(note => {
+      checkPageBreak(6);
+      const lines = doc.splitTextToSize(note, contentWidth);
+      lines.forEach((line: string) => {
+        doc.text(line, margin, y);
+        y += 4;
+      });
+    });
+    y += 6;
+
     if (merchant.branches?.length > 0) {
       drawSectionHeader("BRANCH LOCATIONS");
       y += 2;
@@ -329,53 +353,79 @@ export default function MerchantSuccess() {
 
     doc.addPage();
     
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const footerY = pageHeight - 120;
-    y = footerY;
-
-    const underscores = "__________________________";
+    drawSectionHeader("SIGNATURE PAGE");
+    y += 5;
+    
+    const signDate = merchant.commencementDate 
+      ? new Date(merchant.commencementDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 66, 109);
+    doc.text("MERCHANT", margin, y);
+    doc.setTextColor(0, 0, 0);
+    y += 8;
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 0, 0);
+    doc.text("Company Name: " + merchant.companyName, margin, y);
+    y += 8;
     
-    doc.text("Merchant Name: " + underscores, margin, y);
-    y += 10;
+    doc.text("Authorized Signatory Name: " + (merchant.merchantSignatoryName || ""), margin, y);
+    y += 8;
     
-    doc.text("Authorized Signatory Name: " + underscores, margin, y);
-    y += 10;
+    doc.text("Date: " + signDate, margin, y);
+    y += 12;
     
-    doc.text("Authorized Signatory Signature: " + underscores, margin, y);
-    y += 10;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(100, 100, 100);
+    doc.text("Authorized Signatory Signature:", margin, y);
+    y += 5;
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.5);
+    doc.rect(margin, y, contentWidth, 25);
+    y += 30;
     
-    doc.text("Company Stamp: " + underscores, margin, y);
-    y += 10;
+    doc.text("Company Stamp:", margin, y);
+    y += 5;
+    doc.rect(margin, y, contentWidth / 2, 30);
+    y += 40;
     
-    doc.text("Date: " + underscores, margin, y);
-    y += 20;
-
+    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("Qatar Living", margin, y);
+    doc.setTextColor(0, 66, 109);
+    doc.text("QATAR LIVING", margin, y);
+    doc.setTextColor(0, 0, 0);
+    y += 8;
+    
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    y += 10;
+    doc.text("Name: ________________________________________", margin, y);
+    y += 8;
     
-    doc.text("Signature: " + underscores, margin, y);
-    y += 10;
+    doc.text("Title: ________________________________________", margin, y);
+    y += 8;
     
-    doc.text("Name: " + underscores, margin, y);
-    y += 10;
+    doc.text("Date: ________________________________________", margin, y);
+    y += 12;
     
-    doc.text("Title: " + underscores, margin, y);
-    y += 10;
-    
-    doc.text("Date: " + underscores, margin, y);
-    y += 15;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(100, 100, 100);
+    doc.text("Signature:", margin, y);
+    y += 5;
+    doc.setDrawColor(180, 180, 180);
+    doc.rect(margin, y, contentWidth, 25);
+    y += 35;
 
+    const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(7);
     doc.setTextColor(100, 100, 100);
     doc.setFont("helvetica", "normal");
-    doc.text("Qatar Living Deals - Merchant Partnership Agreement", pageWidth / 2, 285, { align: "center" });
-    doc.text(`Document Generated: ${new Date().toLocaleString()} | Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, 290, { align: "center" });
+    doc.text("Qatar Living Deals - Merchant Partnership Agreement", pageWidth / 2, pageHeight - 15, { align: "center" });
+    doc.text(`Document Generated: ${new Date().toLocaleString()} | Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, pageHeight - 10, { align: "center" });
 
     doc.save(`Qatar_Living_Agreement_${merchant.companyName.replace(/\s+/g, '_')}.pdf`);
     

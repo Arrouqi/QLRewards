@@ -33,7 +33,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { SignaturePad } from "@/components/ui/signature-pad";
 import {
   Form,
   FormControl,
@@ -132,11 +131,12 @@ const merchantSchema = z.object({
   products: z.array(z.string()).min(1, "Select at least one product"),
   businessCategories: z.array(z.string()).min(1, "Select at least one category"),
   branches: z.array(branchSchema).optional(),
+  subscriptionFee: z.string().default("0"),
+  transactionFee: z.string().default("3"),
   crDocument: z.string().optional(),
   establishmentCard: z.string().optional(),
   tradeLicense: z.string().optional(),
   menuPriceList: z.string().optional(),
-  merchantSignature: z.string().optional(),
   merchantSignatoryName: z.string().min(1, "Authorized signatory name is required"),
   commencementDate: z.string().min(1, "Commencement date is required"),
   termsAccepted: z.boolean().refine(val => val === true, {
@@ -204,9 +204,12 @@ export default function MerchantOnboarding() {
       products: [],
       businessCategories: [],
       branches: [],
+      subscriptionFee: "0",
+      transactionFee: "3",
       deals: [],
       commencementDate: new Date().toISOString().split('T')[0],
       termsAccepted: false,
+      merchantSignatoryName: "",
     },
   });
 
@@ -732,16 +735,55 @@ export default function MerchantOnboarding() {
                 <CardTitle className="text-[#00426D]">Fee Structure</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="bg-gradient-to-r from-[#00426D]/5 to-[#FF7F39]/5 p-6 rounded-xl border border-[#00426D]/10">
+                <div className="bg-gradient-to-r from-[#00426D]/5 to-[#FF7F39]/5 p-4 sm:p-6 rounded-xl border border-[#00426D]/10">
                   <div className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                      <span className="text-lg font-bold text-[#00426D]">Subscription Fee:</span>
-                      <span className="text-xl font-bold text-[#FF7F39]">Free First Year</span>
-                      <span className="text-base text-slate-600">(Onwards 1500 QAR Per Year)</span>
+                    <div className="flex flex-col gap-2">
+                      <span className="text-base sm:text-lg font-bold text-[#00426D]">Subscription Fee (QAR per year):</span>
+                      <FormField
+                        control={form.control}
+                        name="subscriptionFee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="flex items-center gap-2">
+                                <Input 
+                                  {...field} 
+                                  type="number" 
+                                  min="0"
+                                  className="w-32 text-xl font-bold text-[#FF7F39] border-[#00426D]/30" 
+                                  data-testid="input-subscription-fee"
+                                />
+                                <span className="text-base text-slate-600">QAR</span>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                      <span className="text-lg font-bold text-[#00426D]">Redemption Fee:</span>
-                      <span className="text-xl font-bold text-[#FF7F39]">3 QAR per transaction</span>
+                    <div className="flex flex-col gap-2">
+                      <span className="text-base sm:text-lg font-bold text-[#00426D]">Transaction Fee (QAR per transaction):</span>
+                      <FormField
+                        control={form.control}
+                        name="transactionFee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="flex items-center gap-2">
+                                <Input 
+                                  {...field} 
+                                  type="number" 
+                                  min="0"
+                                  className="w-32 text-xl font-bold text-[#FF7F39] border-[#00426D]/30" 
+                                  data-testid="input-transaction-fee"
+                                />
+                                <span className="text-base text-slate-600">QAR per transaction</span>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </div>
                 </div>
@@ -855,12 +897,12 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
-            {/* Signatures */}
+            {/* Authorized Signatory */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#00426D]">Merchant Signature</CardTitle>
+                <CardTitle className="text-[#00426D]">Authorized Signatory</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent>
                 <FormField
                   control={form.control}
                   name="merchantSignatoryName"
@@ -868,26 +910,15 @@ export default function MerchantOnboarding() {
                     <FormItem>
                       <FormLabel>Authorized Signatory Name *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Full name of signatory" data-testid="input-signatory-name" />
+                        <Input {...field} placeholder="Full name of authorized signatory" data-testid="input-signatory-name" />
                       </FormControl>
+                      <FormDescription className="text-xs text-slate-500">
+                        The signature and stamp will be added manually after downloading the PDF agreement.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
-                <div className="space-y-2">
-                  <Label>Authorized Signatory Signature</Label>
-                  <FormField
-                    control={form.control}
-                    name="merchantSignature"
-                    render={({ field }) => (
-                      <SignaturePad
-                        value={field.value}
-                        onSignatureChange={field.onChange}
-                      />
-                    )}
-                  />
-                </div>
               </CardContent>
             </Card>
 

@@ -161,6 +161,7 @@ export const merchants = pgTable("merchants", {
   businessCategories: text("business_categories").array().notNull(),
   branches: text("branches").array(),
   subscriptionFee: text("subscription_fee"),
+  transactionFee: text("transaction_fee"),
   redemptionFee: text("redemption_fee"),
   crDocument: text("cr_document"),
   establishmentCard: text("establishment_card"),
