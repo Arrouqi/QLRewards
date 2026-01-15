@@ -643,7 +643,15 @@ export default function MerchantOnboarding() {
                           <FormItem>
                             <FormLabel>Branch Name *</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="Branch name" data-testid={`input-branch-name-${index}`} />
+                              <Input 
+                                {...field} 
+                                placeholder="Branch name" 
+                                data-testid={`input-branch-name-${index}`}
+                                onBlur={(e) => {
+                                  field.onBlur();
+                                  form.trigger(`branches.${index}.name`);
+                                }}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

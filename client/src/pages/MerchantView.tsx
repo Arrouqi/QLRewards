@@ -343,9 +343,10 @@ export default function MerchantView() {
     y += 8;
 
     doc.addPage();
+    y = 25;
     
     drawSectionHeader("SIGNATURE PAGE");
-    y += 5;
+    y += 3;
     
     const signDate = merchant.commencementDate 
       ? new Date(merchant.commencementDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -356,67 +357,67 @@ export default function MerchantView() {
     doc.setTextColor(0, 66, 109);
     doc.text("MERCHANT", margin, y);
     doc.setTextColor(0, 0, 0);
-    y += 8;
+    y += 7;
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("Company Name: " + merchant.companyName, margin, y);
-    y += 8;
+    y += 7;
     
     doc.text("Authorized Signatory Name: " + (merchant.merchantSignatoryName || ""), margin, y);
-    y += 8;
+    y += 7;
     
     doc.text("Date: " + signDate, margin, y);
-    y += 12;
+    y += 10;
     
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(100, 100, 100);
     doc.text("Authorized Signatory Signature:", margin, y);
-    y += 5;
+    y += 4;
     doc.setDrawColor(180, 180, 180);
     doc.setLineWidth(0.5);
-    doc.rect(margin, y, contentWidth, 25);
-    y += 30;
+    doc.rect(margin, y, contentWidth, 22);
+    y += 26;
     
     doc.text("Company Stamp:", margin, y);
-    y += 5;
-    doc.rect(margin, y, contentWidth / 2, 30);
-    y += 40;
+    y += 4;
+    doc.rect(margin, y, contentWidth / 2, 25);
+    y += 32;
     
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 66, 109);
     doc.text("QATAR LIVING", margin, y);
     doc.setTextColor(0, 0, 0);
-    y += 8;
+    y += 7;
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("Name: ________________________________________", margin, y);
-    y += 8;
+    y += 7;
     
     doc.text("Title: ________________________________________", margin, y);
-    y += 8;
+    y += 7;
     
     doc.text("Date: ________________________________________", margin, y);
-    y += 12;
+    y += 10;
     
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(100, 100, 100);
     doc.text("Signature:", margin, y);
-    y += 5;
+    y += 4;
     doc.setDrawColor(180, 180, 180);
-    doc.rect(margin, y, contentWidth, 25);
-    y += 35;
+    doc.rect(margin, y, contentWidth, 22);
+    y += 30;
 
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(7);
     doc.setTextColor(100, 100, 100);
     doc.setFont("helvetica", "normal");
-    doc.text("Qatar Living Deals - Merchant Partnership Agreement", pageWidth / 2, pageHeight - 15, { align: "center" });
-    doc.text(`Document Generated: ${new Date().toLocaleString()} | Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, pageHeight - 10, { align: "center" });
+    doc.text("Qatar Living Deals - Merchant Partnership Agreement", pageWidth / 2, pageHeight - 12, { align: "center" });
+    doc.text(`Document Generated: ${new Date().toLocaleString()} | Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, pageHeight - 7, { align: "center" });
 
     doc.save(`Qatar_Living_Agreement_${merchant.companyName.replace(/\s+/g, '_')}.pdf`);
     
