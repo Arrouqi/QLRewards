@@ -784,10 +784,33 @@ export async function registerRoutes(
         }
       }
       
+      // Parse branches to get branch names for validation and auto-assignment
+      const parsedBranches = (merchantData.branches || []).map((b: string, idx: number) => {
+        try {
+          const parsed = typeof b === 'string' ? JSON.parse(b) : b;
+          return parsed?.name || `Branch ${idx + 1}`;
+        } catch {
+          return b;
+        }
+      });
+      
+      // Validate all deals BEFORE creating merchant (atomic validation)
+      if (deals && Array.isArray(deals)) {
+        for (const deal of deals) {
+          const dealBranches = deal.branches || [];
+          // Require branches when multiple branches exist
+          if (parsedBranches.length > 1 && (!dealBranches || dealBranches.length === 0)) {
+            return res.status(400).json({ 
+              error: `Deal "${deal.title}" requires at least one branch when multiple branches exist` 
+            });
+          }
+        }
+      }
+      
       const validatedMerchant = insertMerchantSchema.parse(merchantData);
       const merchant = await storage.createMerchant(validatedMerchant);
       
-      // Create associated deals
+      // Create associated deals (already validated above)
       if (deals && Array.isArray(deals)) {
         for (const deal of deals) {
           try {
@@ -801,10 +824,17 @@ export async function registerRoutes(
               }
             }
             
+            // Auto-assign branch if only 1 branch exists and deal has no branches
+            let dealBranches = deal.branches || [];
+            if (parsedBranches.length === 1 && (!dealBranches || dealBranches.length === 0)) {
+              dealBranches = [parsedBranches[0]];
+            }
+            
             const dealData = {
               ...deal,
               merchantId: merchant.id,
               images: imageUrls,
+              branches: dealBranches,
             };
             const validatedDeal = insertMerchantDealSchema.parse(dealData);
             await storage.createMerchantDeal(validatedDeal);

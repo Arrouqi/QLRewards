@@ -116,7 +116,7 @@ const dealSchema = z.object({
   claimRules: z.array(z.string()).optional(),
   generalRules: z.array(z.string()).optional(),
   otherRules: z.string().optional(),
-  branches: z.array(z.string()).min(1, "Select at least one branch"),
+  branches: z.array(z.string()).optional(),
   images: z.array(z.string()).optional(),
 });
 
@@ -275,6 +275,22 @@ export default function MerchantOnboarding() {
 
     try {
       const formattedBranches = data.branches?.map(b => JSON.stringify(b)) || [];
+      
+      // Validate that multi-branch merchants have selected branches for each deal
+      if ((data.branches?.length || 0) > 1 && data.deals && data.deals.length > 0) {
+        for (let i = 0; i < data.deals.length; i++) {
+          const deal = data.deals[i];
+          if (!deal.branches || deal.branches.length === 0) {
+            toast({
+              title: "Branch Selection Required",
+              description: `Please select at least one branch for Deal ${i + 1}: ${deal.title}`,
+              variant: "destructive",
+            });
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
 
       const response = await fetch("/api/merchants", {
         method: "POST",
@@ -1397,12 +1413,23 @@ function DealFormSection({
             )}
           />
 
-          <div>
-            <Label>Applicable Branches *</Label>
-            {branches.length === 0 ? (
+          {branches.length === 0 ? (
+            <div>
+              <Label>Applicable Branches</Label>
               <p className="text-sm text-slate-500 mt-2">Add branches above first</p>
-            ) : (
-              <div className="space-y-2 mt-2">
+            </div>
+          ) : branches.length === 1 ? (
+            <div>
+              <Label>Applicable Branch</Label>
+              <p className="text-sm text-slate-600 mt-2 p-2 bg-slate-50 rounded border">
+                {branches[0]?.name || "Branch 1"} (automatically selected)
+              </p>
+            </div>
+          ) : (
+            <div>
+              <Label>Applicable Branches *</Label>
+              <p className="text-xs text-slate-500 mb-2">Select at least one branch</p>
+              <div className="space-y-2">
                 {branches.map((branch: any, branchIndex: number) => {
                   const displayName = branch?.name || `Branch ${branchIndex + 1}`;
                   const isSelected = branchesValue.includes(displayName);
@@ -1428,8 +1455,11 @@ function DealFormSection({
                   );
                 })}
               </div>
-            )}
-          </div>
+              {branchesValue.length === 0 && (
+                <p className="text-sm text-red-500 mt-1">Please select at least one branch</p>
+              )}
+            </div>
+          )}
 
           <DealImageUpload form={form} index={index} />
         </div>

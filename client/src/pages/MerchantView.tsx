@@ -786,8 +786,8 @@ export default function MerchantView() {
                           <div className="bg-white p-3 rounded border col-span-full">
                             <span className="text-slate-500 block text-xs mb-1">Applicable Branches</span>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {deal.branches.map((branch: string) => (
-                                <Badge key={branch} variant="outline" className="text-xs">{branch}</Badge>
+                              {[...new Set(deal.branches as string[])].map((branch: string, idx: number) => (
+                                <Badge key={`${branch}-${idx}`} variant="outline" className="text-xs">{branch}</Badge>
                               ))}
                             </div>
                           </div>
