@@ -99,7 +99,7 @@ function centerAspectCrop(
 
 const branchSchema = z.object({
   name: z.string().min(1, "Branch name is required"),
-  location: z.string().min(1, "Location is required"),
+  location: z.string().optional(),
   phone: z.string().optional(),
   detail: z.string().optional(),
 });
@@ -121,8 +121,8 @@ const dealSchema = z.object({
   days: z.array(z.string()).optional(),
   title: z.string().min(5, "Title must be at least 5 characters"),
   description: z.string().optional(),
-  claimRules: z.array(z.string()).min(1, "Select at least one claim rule"),
-  generalRules: z.array(z.string()).min(1, "Select at least one general rule"),
+  claimRules: z.array(z.string()).optional(),
+  generalRules: z.array(z.string()).optional(),
   otherRules: z.string().optional(),
   branches: z.array(z.string()).min(1, "Select at least one branch"),
   images: z.array(z.string()).optional(),
@@ -211,6 +211,7 @@ export default function MerchantOnboarding() {
       businessCategories: [],
       branches: [],
       deals: [],
+      merchantSignDate: new Date().toISOString().split('T')[0],
     },
   });
 
@@ -330,7 +331,20 @@ export default function MerchantOnboarding() {
 
       <main className="container mx-auto max-w-5xl py-8 px-4">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            console.log("Form validation errors:", errors);
+            toast({
+              title: "Please fix the errors below",
+              description: Object.keys(errors).map(key => {
+                const error = errors[key as keyof typeof errors];
+                if (Array.isArray(error)) {
+                  return `${key}: Check all required fields`;
+                }
+                return `${key}: ${(error as any)?.message || 'Invalid'}`;
+              }).join(', '),
+              variant: "destructive",
+            });
+          })} className="space-y-8">
             
             {/* Company Information */}
             <Card>
@@ -743,9 +757,19 @@ export default function MerchantOnboarding() {
                       </FormItem>
                     )}
                   />
-                  <div className="flex items-end">
-                    <p className="text-sm text-slate-500">Date: {new Date().toLocaleDateString()}</p>
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="merchantSignDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Date</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="date" data-testid="input-sign-date" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="space-y-2">
