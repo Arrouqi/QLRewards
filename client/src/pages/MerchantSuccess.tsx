@@ -241,9 +241,7 @@ export default function MerchantSuccess() {
         if (deal.category) drawField("Category", deal.category, 5);
         if (deal.subCategory) drawField("Sub-Category", deal.subCategory, 5);
         if (deal.dealType) drawField("Deal Type", deal.dealType, 5);
-        if (deal.startDate && deal.endDate) {
-          drawField("Validity Period", `${deal.startDate} to ${deal.endDate}`, 5);
-        }
+        if (deal.duration) drawField("Duration", deal.duration, 5);
         if (deal.description) drawField("Description", deal.description, 5);
         if (deal.originalPrice) drawField("Original Price", `QAR ${deal.originalPrice}`, 5);
         if (deal.discountPercentage) drawField("Discount", `${deal.discountPercentage}%`, 5);
@@ -525,7 +523,7 @@ export default function MerchantSuccess() {
             <CardContent>
               <p className="text-slate-600 mb-4">
                 Download the PDF containing all your submitted information. 
-                {!merchant.merchantSignature && " The document includes spaces for your signature and company stamp."}
+                {!merchant.merchantSignatoryName && " The document includes spaces for your signature and company stamp."}
               </p>
               <Button onClick={generatePDF} className="bg-[#00426D] hover:bg-[#003557]" data-testid="button-download-pdf">
                 <Download className="h-4 w-4 mr-2" />
