@@ -100,8 +100,7 @@ const dealSchema = z.object({
   category: z.string().min(1, "Category is required"),
   subCategory: z.string().min(1, "Sub-category is required"),
   dealType: z.string().min(1, "Deal type is required"),
-  startDate: z.string().min(1, "Start date is required"),
-  endDate: z.string().min(1, "End date is required"),
+  duration: z.string().min(1, "Duration is required"),
   redemption: z.string().min(1, "Redemption is required"),
   limitPerUser: z.string().optional(),
   originalPrice: z.string().optional(),
@@ -236,8 +235,7 @@ export default function MerchantOnboarding() {
       category: "",
       subCategory: "",
       dealType: "",
-      startDate: "",
-      endDate: "",
+      duration: "",
       redemption: "",
       limitPerUser: "",
       originalPrice: "",
@@ -1316,27 +1314,16 @@ function DealFormSection({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name={`deals.${index}.startDate`}
+              name={`deals.${index}.duration`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Start Date *</FormLabel>
+                  <FormLabel>Duration *</FormLabel>
                   <FormControl>
-                    <Input {...field} type="date" />
+                    <Input {...field} placeholder="e.g., 3 months, 6 weeks, 1 year" />
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name={`deals.${index}.endDate`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>End Date *</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="date" />
-                  </FormControl>
+                  <FormDescription>
+                    How long will this deal be valid?
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
