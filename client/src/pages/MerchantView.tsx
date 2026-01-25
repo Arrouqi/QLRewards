@@ -266,7 +266,7 @@ export default function MerchantView() {
       y += 3;
     }
 
-    if (merchant.deals?.length > 0) {
+    if (merchant.deals && merchant.deals.length > 0) {
       drawSectionHeader("DEAL OFFERS");
       merchant.deals.forEach((dealData, index) => {
         const deal = typeof dealData === 'string' ? JSON.parse(dealData) : dealData;
@@ -277,9 +277,7 @@ export default function MerchantView() {
         if (deal.category) drawField("Category", deal.category, 5);
         if (deal.subCategory) drawField("Sub-Category", deal.subCategory, 5);
         if (deal.dealType) drawField("Deal Type", deal.dealType, 5);
-        if (deal.startDate && deal.endDate) {
-          drawField("Validity Period", `${deal.startDate} to ${deal.endDate}`, 5);
-        }
+        if (deal.duration) drawField("Duration", deal.duration, 5);
         if (deal.description) drawField("Description", deal.description, 5);
         if (deal.originalPrice) drawField("Original Price", `QAR ${deal.originalPrice}`, 5);
         if (deal.discountPercentage) drawField("Discount", `${deal.discountPercentage}%`, 5);
@@ -718,16 +716,10 @@ export default function MerchantView() {
                             <span className="font-medium text-green-600">{deal.discountPercentage}%</span>
                           </div>
                         )}
-                        {deal.startDate && (
+                        {deal.duration && (
                           <div className="bg-white p-3 rounded border">
-                            <span className="text-slate-500 block text-xs mb-1">Start Date</span>
-                            <span className="font-medium">{deal.startDate}</span>
-                          </div>
-                        )}
-                        {deal.endDate && (
-                          <div className="bg-white p-3 rounded border">
-                            <span className="text-slate-500 block text-xs mb-1">End Date</span>
-                            <span className="font-medium">{deal.endDate}</span>
+                            <span className="text-slate-500 block text-xs mb-1">Duration</span>
+                            <span className="font-medium">{deal.duration}</span>
                           </div>
                         )}
                         {deal.redemption && (
@@ -791,7 +783,7 @@ export default function MerchantView() {
                           <div className="bg-white p-3 rounded border col-span-full">
                             <span className="text-slate-500 block text-xs mb-1">Applicable Branches</span>
                             <div className="flex flex-wrap gap-1 mt-1">
-                              {[...new Set(deal.branches as string[])].map((branch: string, idx: number) => (
+                              {Array.from(new Set(deal.branches as string[])).map((branch: string, idx: number) => (
                                 <Badge key={`${branch}-${idx}`} variant="outline" className="text-xs">{branch}</Badge>
                               ))}
                             </div>
@@ -818,19 +810,13 @@ export default function MerchantView() {
           </Card>
         )}
 
-        {merchant.merchantSignature && (
+        {merchant.merchantSignatoryName && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-[#00426D]">Signature</CardTitle>
+              <CardTitle className="text-[#00426D]">Signature Information</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-start gap-8">
-                <div>
-                  <p className="text-sm text-slate-500 mb-2">Merchant Signature</p>
-                  <div className="border rounded-lg p-4 bg-white">
-                    <img src={merchant.merchantSignature} alt="Signature" className="max-h-24" />
-                  </div>
-                </div>
                 <div>
                   <p className="text-sm text-slate-500 mb-2">Signatory Name</p>
                   <p className="font-medium">{merchant.merchantSignatoryName}</p>
