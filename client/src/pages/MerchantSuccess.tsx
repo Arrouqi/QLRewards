@@ -414,12 +414,19 @@ export default function MerchantSuccess() {
     doc.rect(margin, y, contentWidth, 40);
     y += 48;
 
+    // Add footer with page numbers to all pages
     const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setFontSize(7);
-    doc.setTextColor(100, 100, 100);
-    doc.setFont("helvetica", "normal");
-    doc.text("Qatar Living Deals - Merchant Partnership Agreement", pageWidth / 2, pageHeight - 12, { align: "center" });
-    doc.text(`Document Generated: ${new Date().toLocaleString()} | Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, pageHeight - 7, { align: "center" });
+    const totalPages = (doc as any).internal.getNumberOfPages();
+    
+    for (let i = 1; i <= totalPages; i++) {
+      (doc as any).setPage(i);
+      doc.setFontSize(7);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont("helvetica", "normal");
+      doc.text("Qatar Living Deals - Merchant Partnership Agreement", pageWidth / 2, pageHeight - 15, { align: "center" });
+      doc.text(`Document Generated: ${new Date().toLocaleString()} | Reference: ${merchant.id.substring(0, 8).toUpperCase()}`, pageWidth / 2, pageHeight - 10, { align: "center" });
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 5, { align: "center" });
+    }
 
     doc.save(`Qatar_Living_Agreement_${merchant.companyName.replace(/\s+/g, '_')}.pdf`);
     
