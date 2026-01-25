@@ -904,11 +904,48 @@ export async function registerRoutes(
 
   app.patch("/api/merchants/:id", requireAuth, async (req, res) => {
     try {
-      const merchant = await storage.updateMerchant(req.params.id, req.body);
+      const { deals: dealUpdates, ...merchantData } = req.body;
+      
+      // Update merchant data
+      const merchant = await storage.updateMerchant(req.params.id, merchantData);
       if (!merchant) {
         return res.status(404).json({ error: "Merchant not found" });
       }
-      res.json(merchant);
+      
+      // Update deals if provided
+      if (dealUpdates && Array.isArray(dealUpdates)) {
+        for (const deal of dealUpdates) {
+          if (deal.id) {
+            // Update existing deal with all fields
+            await storage.updateMerchantDeal(deal.id, {
+              category: deal.category,
+              subCategory: deal.subCategory,
+              dealType: deal.dealType,
+              duration: deal.duration,
+              redemption: deal.redemption,
+              limitPerUser: deal.limitPerUser || null,
+              originalPrice: deal.originalPrice || null,
+              isMultipleItems: deal.isMultipleItems || false,
+              discountPercentage: deal.discountPercentage || null,
+              isTwoTranches: deal.isTwoTranches || false,
+              trancheValidity: deal.trancheValidity || null,
+              specificDays: deal.specificDays || false,
+              days: deal.days || [],
+              title: deal.title,
+              description: deal.description || null,
+              claimRules: deal.claimRules || [],
+              generalRules: deal.generalRules || [],
+              otherRules: deal.otherRules || null,
+              branches: deal.branches || [],
+              images: deal.images || [],
+            });
+          }
+        }
+      }
+      
+      // Fetch updated deals to return
+      const updatedDeals = await storage.getMerchantDealsByMerchantId(merchant.id);
+      res.json({ ...merchant, deals: updatedDeals });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
