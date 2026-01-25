@@ -268,12 +268,6 @@ export default function MerchantSuccess() {
         if (deal.otherRules) {
           drawField("Other Rules", deal.otherRules, 5);
         }
-        if (deal.branches?.length > 0) {
-          drawField("Applicable Branches", deal.branches.join(", "), 5);
-        }
-        if (deal.images?.length > 0) {
-          drawField("Images", `${deal.images.length} image(s) uploaded`, 5);
-        }
         
         drawDivider();
       });
