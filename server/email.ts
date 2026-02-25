@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import type { Deal, Merchant } from "@shared/schema";
 import { storage } from "./storage";
 
-const DASHBOARD_URL = process.env.DASHBOARD_URL || "https://reqardsform-dzbbephca5gdgcgh.westeurope-01.azurewebsites.net";
+const DASHBOARD_URL = process.env.DASHBOARD_URL || "https://ql-deal-creation.qatarliving.com";
 
 async function getEmailTransporter(ignoreEnabledCheck: boolean = false) {
   const settings = await storage.getEmailSettings();

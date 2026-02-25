@@ -7,12 +7,12 @@ import {
   Send, 
   Archive, 
   Search,
-  ArrowLeft,
   FileDown,
   Download,
   Pencil,
   MoreHorizontal
 } from "lucide-react";
+import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +64,7 @@ export default function MerchantManagement() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending");
 
   const { data: merchants = [], isLoading } = useQuery<Merchant[]>({
     queryKey: ["merchants"],
@@ -133,27 +133,12 @@ export default function MerchantManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-[#00426D] text-white py-4 px-6">
-        <div className="container mx-auto max-w-7xl flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setLocation("/admin/dashboard")}
-              className="text-white hover:bg-white/10"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-6 w-6" />
-              <h1 className="text-xl font-bold">Merchant Management</h1>
-            </div>
-          </div>
+    <AdminLayout>
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Merchant Onboarding</h1>
+          <p className="text-slate-500">Manage merchant applications</p>
         </div>
-      </header>
-
-      <main className="container mx-auto max-w-7xl py-6 px-4">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           {[
@@ -319,7 +304,7 @@ export default function MerchantManagement() {
             </TableBody>
           </Table>
         </Card>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
