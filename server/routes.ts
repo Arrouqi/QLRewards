@@ -954,12 +954,20 @@ export async function registerRoutes(
   app.patch("/api/merchants/:id/status", requireAuth, async (req, res) => {
     try {
       const { status } = req.body;
-      if (!["pending", "moderation", "archived"].includes(status)) {
+      if (!["pending", "moderation", "archived", "created"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
       
-      // Check if this is a transition to moderation
       const existingMerchant = await storage.getMerchantById(req.params.id);
+      
+      if (status === "created" && existingMerchant?.status !== "moderation") {
+        return res.status(400).json({ error: "Can only mark as Created from In Moderation status" });
+      }
+      
+      if (status === "pending" && existingMerchant?.status !== "moderation") {
+        return res.status(400).json({ error: "Can only move back to Pending from In Moderation status" });
+      }
+      
       const wasNotModeration = existingMerchant?.status !== "moderation";
       
       const merchant = await storage.updateMerchantStatus(req.params.id, status);

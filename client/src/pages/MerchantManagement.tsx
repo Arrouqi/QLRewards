@@ -10,7 +10,9 @@ import {
   FileDown,
   Download,
   Pencil,
-  MoreHorizontal
+  MoreHorizontal,
+  CheckCircle2,
+  Undo2
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -94,7 +96,13 @@ export default function MerchantManagement() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["merchants"] });
-      toast({ title: variables.status === "moderation" ? "Forwarded to moderation" : "Status updated" });
+      const messages: Record<string, string> = {
+        moderation: "Forwarded to moderation",
+        created: "Marked as Created",
+        pending: "Moved back to Pending",
+        archived: "Archived",
+      };
+      toast({ title: messages[variables.status] || "Status updated" });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -118,6 +126,8 @@ export default function MerchantManagement() {
         return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
       case "moderation":
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">In Moderation</Badge>;
+      case "created":
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Created</Badge>;
       case "archived":
         return <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">Archived</Badge>;
       default:
@@ -129,6 +139,7 @@ export default function MerchantManagement() {
     all: merchants.length,
     pending: merchants.filter((m) => m.status === "pending").length,
     moderation: merchants.filter((m) => m.status === "moderation").length,
+    created: merchants.filter((m) => m.status === "created").length,
     archived: merchants.filter((m) => m.status === "archived").length,
   };
 
@@ -145,6 +156,7 @@ export default function MerchantManagement() {
             { label: "All", value: statusCounts.all, filter: "all" },
             { label: "Pending", value: statusCounts.pending, filter: "pending" },
             { label: "In Moderation", value: statusCounts.moderation, filter: "moderation" },
+            { label: "Created", value: statusCounts.created, filter: "created" },
             { label: "Archived", value: statusCounts.archived, filter: "archived" },
           ].map((stat) => (
             <Card
@@ -286,6 +298,26 @@ export default function MerchantManagement() {
                               <Send className="h-4 w-4 mr-2" />
                               Forward to Moderation
                             </DropdownMenuItem>
+                          )}
+                          {merchant.status === "moderation" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "created" })}
+                                className="text-green-600"
+                                data-testid={`menu-created-${merchant.id}`}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Mark as Created
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "pending" })}
+                                className="text-amber-600"
+                                data-testid={`menu-back-pending-${merchant.id}`}
+                              >
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                Move to Pending
+                              </DropdownMenuItem>
+                            </>
                           )}
                           <DropdownMenuItem
                             onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "archived" })}

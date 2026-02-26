@@ -95,7 +95,13 @@ export default function MerchantView() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error("Failed to update status");
-      toast({ title: status === "moderation" ? "Forwarded to moderation" : "Status updated" });
+      const messages: Record<string, string> = {
+        moderation: "Forwarded to moderation",
+        created: "Marked as Created",
+        pending: "Moved back to Pending",
+        archived: "Archived",
+      };
+      toast({ title: messages[status] || "Status updated" });
       await fetchMerchant();
     } catch (error) {
       toast({ title: "Error updating status", variant: "destructive" });
@@ -436,6 +442,8 @@ export default function MerchantView() {
         return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Pending</Badge>;
       case "moderation":
         return <Badge className="bg-blue-100 text-blue-700 border-blue-200">In Moderation</Badge>;
+      case "created":
+        return <Badge className="bg-green-100 text-green-700 border-green-200">Created</Badge>;
       case "archived":
         return <Badge className="bg-slate-100 text-slate-700 border-slate-200">Archived</Badge>;
       default:
@@ -833,7 +841,7 @@ export default function MerchantView() {
           </Card>
         )}
 
-        {merchant.status === "pending" && (
+        {(merchant.status === "pending" || merchant.status === "moderation") && (
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -851,14 +859,35 @@ export default function MerchantView() {
                     <Archive className="h-4 w-4 mr-2" />
                     Archive
                   </Button>
-                  <Button
-                    onClick={() => updateStatus("moderation")}
-                    className="bg-green-600 hover:bg-green-700"
-                    data-testid="button-forward"
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Forward to Moderation
-                  </Button>
+                  {merchant.status === "pending" && (
+                    <Button
+                      onClick={() => updateStatus("moderation")}
+                      className="bg-blue-600 hover:bg-blue-700"
+                      data-testid="button-forward"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Forward to Moderation
+                    </Button>
+                  )}
+                  {merchant.status === "moderation" && (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => updateStatus("pending")}
+                        className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                        data-testid="button-back-pending"
+                      >
+                        Move to Pending
+                      </Button>
+                      <Button
+                        onClick={() => updateStatus("created")}
+                        className="bg-green-600 hover:bg-green-700"
+                        data-testid="button-created"
+                      >
+                        Mark as Created
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>

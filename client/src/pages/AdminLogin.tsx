@@ -55,6 +55,7 @@ export default function AdminLogin() {
         throw new Error(error.error || "Login failed");
       }
 
+      const result = await response.json();
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/session"] });
 
       toast({
@@ -62,7 +63,11 @@ export default function AdminLogin() {
         description: "Logged in successfully",
       });
 
-      setLocation("/admin/dashboard");
+      if (result.role === "admin") {
+        setLocation("/admin/dashboard");
+      } else {
+        setLocation("/admin/merchants");
+      }
     } catch (error) {
       toast({
         title: "Error",
