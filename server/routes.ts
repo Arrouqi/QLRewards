@@ -1001,7 +1001,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Sales order file is required" });
       }
 
-      const existing = await storage.getMerchant(req.params.id);
+      const existing = await storage.getMerchantById(req.params.id);
       if (!existing) {
         return res.status(404).json({ error: "Merchant not found" });
       }
@@ -1030,7 +1030,7 @@ export async function registerRoutes(
 
   app.delete("/api/merchants/:id/sales-order", requireAuth, async (req, res) => {
     try {
-      const existing = await storage.getMerchant(req.params.id);
+      const existing = await storage.getMerchantById(req.params.id);
       if (!existing) {
         return res.status(404).json({ error: "Merchant not found" });
       }
