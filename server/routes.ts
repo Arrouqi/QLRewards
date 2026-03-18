@@ -993,6 +993,55 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/merchants/:id/sales-order", requireAuth, async (req, res) => {
+    try {
+      const { salesOrder } = req.body;
+
+      if (!salesOrder) {
+        return res.status(400).json({ error: "Sales order file is required" });
+      }
+
+      const existing = await storage.getMerchant(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+
+      let uploadUrl = salesOrder;
+      if (salesOrder.startsWith('data:')) {
+        const mimeMatch = salesOrder.match(/^data:([^;]+);base64,/);
+        if (!mimeMatch || !mimeMatch[1].includes('pdf')) {
+          return res.status(400).json({ error: "Only PDF files are allowed" });
+        }
+        try {
+          const urls = await uploadMultipleImages([salesOrder], `merchant-${req.params.id}-sales-order`);
+          uploadUrl = urls[0];
+        } catch (uploadError) {
+          console.error("[Azure] Sales order upload failed:", uploadError);
+          return res.status(500).json({ error: "Failed to upload sales order" });
+        }
+      }
+
+      const merchant = await storage.updateMerchant(req.params.id, { salesOrder: uploadUrl });
+      res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/merchants/:id/sales-order", requireAuth, async (req, res) => {
+    try {
+      const existing = await storage.getMerchant(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+
+      const merchant = await storage.updateMerchant(req.params.id, { salesOrder: null });
+      res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/merchants/:id/upload-signed", async (req, res) => {
     try {
       const { signedContractUpload } = req.body;

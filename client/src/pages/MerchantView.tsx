@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import { format } from "date-fns";
 import { 
@@ -16,7 +16,10 @@ import {
   Download,
   Calendar,
   User,
-  Tag
+  Tag,
+  Upload,
+  X,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +52,7 @@ interface Merchant {
   merchantSignatoryName?: string;
   commencementDate?: string;
   signedContractUpload?: string;
+  salesOrder?: string;
   deals?: any[];
 }
 
@@ -58,6 +62,8 @@ export default function MerchantView() {
   const [, params] = useRoute("/admin/merchants/:id");
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploadingSalesOrder, setIsUploadingSalesOrder] = useState(false);
+  const salesOrderFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchMerchant();
@@ -105,6 +111,51 @@ export default function MerchantView() {
       await fetchMerchant();
     } catch (error) {
       toast({ title: "Error updating status", variant: "destructive" });
+    }
+  };
+
+  const handleSalesOrderUpload = async (file: File) => {
+    if (!merchant) return;
+    setIsUploadingSalesOrder(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const res = await fetch(`/api/merchants/${merchant.id}/sales-order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ salesOrder: reader.result }),
+          });
+          if (!res.ok) throw new Error("Failed to upload sales order");
+          const updated = await res.json();
+          setMerchant({ ...merchant, salesOrder: updated.salesOrder });
+          toast({ title: "Sales order uploaded successfully" });
+        } catch (error) {
+          toast({ title: "Error uploading sales order", variant: "destructive" });
+        } finally {
+          setIsUploadingSalesOrder(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setIsUploadingSalesOrder(false);
+      toast({ title: "Error reading file", variant: "destructive" });
+    }
+  };
+
+  const handleRemoveSalesOrder = async () => {
+    if (!merchant) return;
+    try {
+      const res = await fetch(`/api/merchants/${merchant.id}/sales-order`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to remove sales order");
+      setMerchant({ ...merchant, salesOrder: undefined });
+      toast({ title: "Sales order removed" });
+    } catch {
+      toast({ title: "Error removing sales order", variant: "destructive" });
     }
   };
 
@@ -840,6 +891,106 @@ export default function MerchantView() {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#00426D]">Sales Order</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <input
+              type="file"
+              ref={salesOrderFileRef}
+              accept=".pdf,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleSalesOrderUpload(file);
+                e.target.value = "";
+              }}
+              data-testid="input-sales-order-file-view"
+            />
+            {merchant.salesOrder ? (
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-[#00426D]" />
+                  <div>
+                    <p className="font-medium text-sm">Sales Order PDF</p>
+                    <a
+                      href={merchant.salesOrder}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline"
+                      data-testid="link-sales-order-view"
+                    >
+                      View Document
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const link = document.createElement("a");
+                      link.href = merchant.salesOrder!;
+                      link.download = `Sales_Order_${merchant.companyName.replace(/\s+/g, '_')}.pdf`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    data-testid="button-download-sales-order-view"
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => salesOrderFileRef.current?.click()}
+                    disabled={isUploadingSalesOrder}
+                    data-testid="button-replace-sales-order-view"
+                  >
+                    <Upload className="h-4 w-4 mr-1" />
+                    Replace
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRemoveSalesOrder}
+                    className="text-red-600 hover:text-red-700"
+                    data-testid="button-remove-sales-order-view"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg">
+                <FileText className="h-8 w-8 text-slate-400 mb-2" />
+                <p className="text-sm text-slate-500 mb-3">No sales order attached</p>
+                <Button
+                  variant="outline"
+                  onClick={() => salesOrderFileRef.current?.click()}
+                  disabled={isUploadingSalesOrder}
+                  data-testid="button-upload-sales-order-view"
+                >
+                  {isUploadingSalesOrder ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Sales Order PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {(merchant.status === "pending" || merchant.status === "moderation") && (
           <Card>

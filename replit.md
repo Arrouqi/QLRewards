@@ -34,6 +34,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Data Models
 - **deals**: Stores merchant deal submissions with fields for category, pricing, discount info, rules, and approval status
+- **merchants**: Stores merchant onboarding applications with company info, documents (CR, trade license, etc.), sales order PDF (Azure URL), signed contract, and status flow (pending → moderation → created, archived)
 - **adminUsers**: Stores admin credentials for the dashboard
 - **session**: PostgreSQL session store table (auto-created)
 
@@ -66,9 +67,16 @@ Preferred communication style: Simple, everyday language.
 - **PostgreSQL**: Primary database, connection via `DATABASE_URL` environment variable
 - Session store uses the same PostgreSQL database
 
+### File Storage
+- **Azure Blob Storage**: Used for document uploads (CR documents, trade licenses, signed contracts, sales order PDFs, deal images)
+- Connection via `AZURE_STORAGE_CONNECTION_STRING` environment variable
+- Container: `deals-clients`
+- Upload pattern: client FileReader → base64 → POST to server → upload to Azure → store URL in DB
+
 ### Required Environment Variables
 - `DATABASE_URL`: PostgreSQL connection string (required)
 - `SESSION_SECRET`: Secret for session encryption (optional, has default)
+- `AZURE_STORAGE_CONNECTION_STRING`: Azure Blob Storage connection (required for file uploads)
 
 ### Third-Party UI Libraries
 - Radix UI primitives for accessible components

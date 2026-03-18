@@ -177,6 +177,7 @@ export const merchants = pgTable("merchants", {
   qlTitle: text("ql_title"),
   qlSignDate: text("ql_sign_date"),
   signedContractUpload: text("signed_contract_upload"),
+  salesOrder: text("sales_order"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

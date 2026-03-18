@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
@@ -12,7 +12,8 @@ import {
   Pencil,
   MoreHorizontal,
   CheckCircle2,
-  Undo2
+  Undo2,
+  Upload
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ interface Merchant {
   merchantSignatoryName?: string;
   companyStamp?: string;
   signedContractUpload?: string;
+  salesOrder?: string;
   deals?: any[];
 }
 
@@ -67,6 +69,36 @@ export default function MerchantManagement() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
+  const salesOrderFileRef = useRef<HTMLInputElement>(null);
+  const [uploadingMerchantId, setUploadingMerchantId] = useState<string | null>(null);
+
+  const handleSalesOrderUpload = async (merchantId: string, file: File) => {
+    setUploadingMerchantId(merchantId);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const res = await fetch(`/api/merchants/${merchantId}/sales-order`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ salesOrder: reader.result }),
+          });
+          if (!res.ok) throw new Error("Failed to upload sales order");
+          toast({ title: "Sales order uploaded successfully" });
+          queryClient.invalidateQueries({ queryKey: ["merchants"] });
+        } catch {
+          toast({ title: "Error uploading sales order", variant: "destructive" });
+        } finally {
+          setUploadingMerchantId(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setUploadingMerchantId(null);
+      toast({ title: "Error reading file", variant: "destructive" });
+    }
+  };
 
   const { data: merchants = [], isLoading } = useQuery<Merchant[]>({
     queryKey: ["merchants"],
@@ -145,6 +177,18 @@ export default function MerchantManagement() {
 
   return (
     <AdminLayout>
+      <input
+        type="file"
+        ref={salesOrderFileRef}
+        accept=".pdf,application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file && uploadingMerchantId) handleSalesOrderUpload(uploadingMerchantId, file);
+          e.target.value = "";
+        }}
+        data-testid="input-sales-order-file-list"
+      />
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Merchant Onboarding</h1>
@@ -286,6 +330,33 @@ export default function MerchantManagement() {
                             >
                               <Download className="h-4 w-4 mr-2 text-green-600" />
                               Download Signed Contract
+                            </DropdownMenuItem>
+                          )}
+                          {merchant.salesOrder ? (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const link = document.createElement("a");
+                                link.href = merchant.salesOrder!;
+                                link.download = `Sales_Order_${merchant.companyName.replace(/\s+/g, '_')}.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                              data-testid={`menu-download-sales-order-${merchant.id}`}
+                            >
+                              <Download className="h-4 w-4 mr-2 text-purple-600" />
+                              Download Sales Order
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setUploadingMerchantId(merchant.id);
+                                salesOrderFileRef.current?.click();
+                              }}
+                              data-testid={`menu-upload-sales-order-${merchant.id}`}
+                            >
+                              <Upload className="h-4 w-4 mr-2 text-purple-600" />
+                              Upload Sales Order
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuSeparator />
