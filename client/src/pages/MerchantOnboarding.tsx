@@ -1081,8 +1081,6 @@ function TwoTranchesSection({ form, index }: { form: any; index: number }) {
   );
 }
 
-const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
 function OfferAvailabilityDays({ form, index }: { form: any; index: number }) {
   const specificDays = useWatch({ control: form.control, name: `deals.${index}.specificDays` }) || false;
   const days = useWatch({ control: form.control, name: `deals.${index}.days` }) || [];
