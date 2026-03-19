@@ -64,7 +64,7 @@ interface Merchant {
   status: string;
 }
 
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function MerchantEdit() {
   const { toast } = useToast();
@@ -279,6 +279,16 @@ export default function MerchantEdit() {
 
   const handleSave = async () => {
     if (!merchant) return;
+    
+    const dealsWithLowImages = deals.filter(d => (d.images || []).length < 4);
+    if (dealsWithLowImages.length > 0) {
+      toast({
+        title: "Each deal requires at least 4 images",
+        description: `${dealsWithLowImages.length} deal(s) have fewer than 4 images.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsSaving(true);
     try {
@@ -870,6 +880,26 @@ export default function MerchantEdit() {
                       {deal.specificDays && (
                         <div className="space-y-2">
                           <Label>Valid Days</Label>
+                          <div className="flex gap-2 mb-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDealChange(index, "days", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"])}
+                              data-testid={`button-weekdays-edit-${index}`}
+                            >
+                              Weekdays
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDealChange(index, "days", ["Friday", "Saturday"])}
+                              data-testid={`button-weekends-edit-${index}`}
+                            >
+                              Weekends
+                            </Button>
+                          </div>
                           <div className="flex flex-wrap gap-2">
                             {daysOfWeek.map((day) => (
                               <div key={day} className="flex items-center space-x-2">

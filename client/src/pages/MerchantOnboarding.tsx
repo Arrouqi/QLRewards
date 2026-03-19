@@ -829,19 +829,19 @@ export default function MerchantOnboarding() {
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Establishment Card"
+                    label="Establishment Card *"
                     field="establishmentCard"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Trade License"
+                    label="Trade License *"
                     field="tradeLicense"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Menu / Price List"
+                    label="Menu / Price List *"
                     field="menuPriceList"
                     form={form}
                     onChange={handleFileUpload}
@@ -1075,6 +1075,75 @@ function TwoTranchesSection({ form, index }: { form: any; index: number }) {
               </FormItem>
             )}
           />
+        </div>
+      )}
+    </div>
+  );
+}
+
+const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function OfferAvailabilityDays({ form, index }: { form: any; index: number }) {
+  const specificDays = useWatch({ control: form.control, name: `deals.${index}.specificDays` }) || false;
+  const days = useWatch({ control: form.control, name: `deals.${index}.days` }) || [];
+
+  const toggleDay = (day: string) => {
+    const updated = days.includes(day) ? days.filter((d: string) => d !== day) : [...days, day];
+    form.setValue(`deals.${index}.days`, updated);
+  };
+
+  const setWeekdays = () => {
+    form.setValue(`deals.${index}.days`, ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"]);
+  };
+
+  const setWeekends = () => {
+    form.setValue(`deals.${index}.days`, ["Friday", "Saturday"]);
+  };
+
+  return (
+    <div className="bg-orange-50/50 p-4 rounded-md border border-orange-100">
+      <FormField
+        control={form.control}
+        name={`deals.${index}.specificDays`}
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+            <FormControl>
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                data-testid={`checkbox-specific-days-${index}`}
+              />
+            </FormControl>
+            <FormLabel className="font-medium text-slate-700">
+              Available on specific days only
+            </FormLabel>
+          </FormItem>
+        )}
+      />
+
+      {specificDays && (
+        <div className="mt-4 ml-7 space-y-3">
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={setWeekdays} data-testid={`button-weekdays-${index}`}>
+              Weekdays
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={setWeekends} data-testid={`button-weekends-${index}`}>
+              Weekends
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {daysOfWeek.map((day) => (
+              <label key={day} className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50" data-testid={`label-day-${day}-${index}`}>
+                <input
+                  type="checkbox"
+                  checked={days.includes(day)}
+                  onChange={() => toggleDay(day)}
+                  className="h-4 w-4 accent-[#FF7F39]"
+                />
+                <span className="text-sm">{day}</span>
+              </label>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -1376,6 +1445,8 @@ function DealFormSection({
           </div>
 
           {isBogo && <TwoTranchesSection form={form} index={index} />}
+
+          <OfferAvailabilityDays form={form} index={index} />
 
           {(isDiscount || isBogo) && (
             <div className="space-y-4">

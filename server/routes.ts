@@ -938,6 +938,14 @@ export async function registerRoutes(
           }
         }
 
+        // Validate min 4 images per deal
+        for (const deal of dealUpdates) {
+          const imgCount = (deal.images || []).length;
+          if (imgCount < 4) {
+            return res.status(400).json({ error: `Each deal requires at least 4 images. "${deal.title || 'Untitled Deal'}" has ${imgCount}.` });
+          }
+        }
+
         // Pre-upload all images before making any DB changes
         const processedDeals: Array<{ deal: any; images: string[] }> = [];
         for (const deal of dealUpdates) {
