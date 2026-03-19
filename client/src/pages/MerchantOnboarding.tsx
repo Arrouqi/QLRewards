@@ -132,10 +132,10 @@ const merchantSchema = z.object({
   branches: z.array(branchSchema).optional(),
   subscriptionFee: z.string().default("0"),
   transactionFee: z.string().default("3.00"),
-  crDocument: z.string().optional(),
-  establishmentCard: z.string().optional(),
-  tradeLicense: z.string().optional(),
-  menuPriceList: z.string().optional(),
+  crDocument: z.string().min(1, "CR Document is required"),
+  establishmentCard: z.string().min(1, "Establishment Card is required"),
+  tradeLicense: z.string().min(1, "Trade License is required"),
+  menuPriceList: z.string().min(1, "Menu / Price List is required"),
   taxCardDocument: z.string().optional(),
   merchantSignatoryName: z.string().min(1, "Authorized signatory name is required"),
   commencementDate: z.string().min(1, "Commencement date is required"),
@@ -207,6 +207,11 @@ export default function MerchantOnboarding() {
       subscriptionFee: "0",
       transactionFee: "3.00",
       deals: [],
+      crDocument: "",
+      establishmentCard: "",
+      tradeLicense: "",
+      menuPriceList: "",
+      taxCardDocument: "",
       commencementDate: new Date().toISOString().split('T')[0],
       termsAccepted: false,
       merchantSignatoryName: "",
@@ -983,6 +988,8 @@ function DocumentUpload({ label, field, form, onChange }: {
     if (inputRef.current) inputRef.current.value = "";
   };
 
+  const fieldError = form.formState.errors?.[field];
+
   return (
     <div className="space-y-2">
       {label && <Label>{label}</Label>}
@@ -1010,11 +1017,16 @@ function DocumentUpload({ label, field, form, onChange }: {
       ) : (
         <div
           onClick={() => inputRef.current?.click()}
-          className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors"
+          className={`flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+            fieldError ? 'border-red-300 bg-red-50/50 hover:border-red-500' : 'border-slate-300 hover:border-[#FF7F39] hover:bg-[#FF7F39]/5'
+          }`}
         >
-          <Upload className="h-5 w-5 text-slate-400" />
-          <span className="text-sm text-slate-500">Click to upload</span>
+          <Upload className={`h-5 w-5 ${fieldError ? 'text-red-400' : 'text-slate-400'}`} />
+          <span className={`text-sm ${fieldError ? 'text-red-500' : 'text-slate-500'}`}>Click to upload</span>
         </div>
+      )}
+      {fieldError && (
+        <p className="text-sm text-red-500" data-testid={`text-error-${field}`}>{fieldError.message as string}</p>
       )}
     </div>
   );
