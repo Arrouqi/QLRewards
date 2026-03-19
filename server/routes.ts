@@ -804,6 +804,12 @@ export async function registerRoutes(
               error: `Deal "${deal.title}" requires at least one branch when multiple branches exist` 
             });
           }
+          const imgCount = (deal.images || []).length;
+          if (imgCount < 4) {
+            return res.status(400).json({
+              error: `Each deal requires at least 4 images. "${deal.title || 'Untitled Deal'}" has ${imgCount}.`
+            });
+          }
         }
       }
       
