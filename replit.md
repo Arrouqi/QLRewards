@@ -34,7 +34,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Data Models
 - **deals**: Stores merchant deal submissions with fields for category, pricing, discount info, rules, and approval status
-- **merchants**: Stores merchant onboarding applications with company info, documents (CR, trade license, etc.), sales order PDF (Azure URL), signed contract, and status flow (pending → moderation → created, archived)
+- **merchants**: Stores merchant onboarding applications with company info, documents (CR, trade license, tax card, etc.), sales order PDF (Azure URL), signed contract, and status flow (pending ↔ moderation → created; any → archived; archived → pending/moderation)
 - **adminUsers**: Stores admin credentials for the dashboard
 - **session**: PostgreSQL session store table (auto-created)
 

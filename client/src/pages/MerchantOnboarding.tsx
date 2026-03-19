@@ -116,7 +116,7 @@ const dealSchema = z.object({
   generalRules: z.array(z.string()).optional(),
   otherRules: z.string().optional(),
   branches: z.array(z.string()).optional(),
-  images: z.array(z.string()).optional(),
+  images: z.array(z.string()).min(4, "At least 4 images are required per deal"),
 });
 
 const merchantSchema = z.object({
@@ -136,6 +136,7 @@ const merchantSchema = z.object({
   establishmentCard: z.string().optional(),
   tradeLicense: z.string().optional(),
   menuPriceList: z.string().optional(),
+  taxCardDocument: z.string().optional(),
   merchantSignatoryName: z.string().min(1, "Authorized signatory name is required"),
   commencementDate: z.string().min(1, "Commencement date is required"),
   termsAccepted: z.boolean().refine(val => val === true, {
@@ -842,6 +843,12 @@ export default function MerchantOnboarding() {
                   <DocumentUpload
                     label="Menu / Price List"
                     field="menuPriceList"
+                    form={form}
+                    onChange={handleFileUpload}
+                  />
+                  <DocumentUpload
+                    label="Tax Card (Optional)"
+                    field="taxCardDocument"
                     form={form}
                     onChange={handleFileUpload}
                   />

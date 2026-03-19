@@ -123,7 +123,10 @@ export default function MerchantManagement() {
         credentials: "include",
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Failed to update status");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to update status");
+      }
       return res.json();
     },
     onSuccess: (_, variables) => {
@@ -136,8 +139,8 @@ export default function MerchantManagement() {
       };
       toast({ title: messages[variables.status] || "Status updated" });
     },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Cannot proceed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -390,14 +393,36 @@ export default function MerchantManagement() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "archived" })}
-                            className="text-slate-600"
-                            data-testid={`menu-archive-${merchant.id}`}
-                          >
-                            <Archive className="h-4 w-4 mr-2" />
-                            Archive
-                          </DropdownMenuItem>
+                          {merchant.status === "archived" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "pending" })}
+                                className="text-amber-600"
+                                data-testid={`menu-restore-pending-${merchant.id}`}
+                              >
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                Restore to Pending
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "moderation" })}
+                                className="text-blue-600"
+                                data-testid={`menu-restore-moderation-${merchant.id}`}
+                              >
+                                <Send className="h-4 w-4 mr-2" />
+                                Restore to Moderation
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {merchant.status !== "archived" && (
+                            <DropdownMenuItem
+                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "archived" })}
+                              className="text-slate-600"
+                              data-testid={`menu-archive-${merchant.id}`}
+                            >
+                              <Archive className="h-4 w-4 mr-2" />
+                              Archive
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

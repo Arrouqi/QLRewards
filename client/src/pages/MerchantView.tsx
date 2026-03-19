@@ -53,6 +53,7 @@ interface Merchant {
   commencementDate?: string;
   signedContractUpload?: string;
   salesOrder?: string;
+  taxCardDocument?: string;
   deals?: any[];
 }
 
@@ -100,7 +101,11 @@ export default function MerchantView() {
         credentials: "include",
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error("Failed to update status");
+      if (!res.ok) {
+        const errorData = await res.json();
+        toast({ title: "Cannot proceed", description: errorData.error, variant: "destructive" });
+        return;
+      }
       const messages: Record<string, string> = {
         moderation: "Forwarded to moderation",
         created: "Marked as Created",
@@ -658,16 +663,20 @@ export default function MerchantView() {
             <CardTitle className="text-[#00426D]">Documents</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {[
-                { label: "CR Document", value: merchant.crDocument },
-                { label: "Establishment Card", value: merchant.establishmentCard },
-                { label: "Trade License", value: merchant.tradeLicense },
-                { label: "Menu/Price List", value: merchant.menuPriceList },
+                { label: "CR Document", value: merchant.crDocument, required: true },
+                { label: "Establishment Card", value: merchant.establishmentCard, required: true },
+                { label: "Trade License", value: merchant.tradeLicense, required: true },
+                { label: "Menu/Price List", value: merchant.menuPriceList, required: true },
+                { label: "Tax Card", value: merchant.taxCardDocument, required: false },
               ].map((doc) => (
-                <div key={doc.label} className="p-4 border rounded-lg text-center">
-                  <FileText className="h-8 w-8 mx-auto mb-2 text-slate-400" />
-                  <p className="text-sm font-medium mb-2">{doc.label}</p>
+                <div key={doc.label} className={`p-4 border rounded-lg text-center ${doc.required && !doc.value ? 'border-red-200 bg-red-50/50' : ''}`}>
+                  <FileText className={`h-8 w-8 mx-auto mb-2 ${doc.value ? 'text-green-500' : doc.required ? 'text-red-400' : 'text-slate-400'}`} />
+                  <p className="text-sm font-medium mb-1">
+                    {doc.label}
+                    {doc.required && <span className="text-red-500 ml-1">*</span>}
+                  </p>
                   {doc.value ? (
                     <a 
                       href={doc.value} 
@@ -679,7 +688,9 @@ export default function MerchantView() {
                       View
                     </a>
                   ) : (
-                    <span className="text-xs text-slate-400">Not provided</span>
+                    <span className={`text-xs ${doc.required ? 'text-red-400 font-medium' : 'text-slate-400'}`}>
+                      {doc.required ? 'Missing' : 'Not provided'}
+                    </span>
                   )}
                 </div>
               ))}
@@ -992,15 +1003,15 @@ export default function MerchantView() {
           </CardContent>
         </Card>
 
-        {(merchant.status === "pending" || merchant.status === "moderation") && (
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium">Actions</h4>
-                  <p className="text-sm text-slate-500">Review and take action on this application</p>
-                </div>
-                <div className="flex items-center gap-3">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium">Actions</h4>
+                <p className="text-sm text-slate-500">Review and take action on this application</p>
+              </div>
+              <div className="flex items-center gap-3">
+                {merchant.status !== "archived" && (
                   <Button
                     variant="outline"
                     onClick={() => updateStatus("archived")}
@@ -1010,40 +1021,60 @@ export default function MerchantView() {
                     <Archive className="h-4 w-4 mr-2" />
                     Archive
                   </Button>
-                  {merchant.status === "pending" && (
+                )}
+                {merchant.status === "archived" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => updateStatus("pending")}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                      data-testid="button-restore-pending"
+                    >
+                      Restore to Pending
+                    </Button>
                     <Button
                       onClick={() => updateStatus("moderation")}
                       className="bg-blue-600 hover:bg-blue-700"
-                      data-testid="button-forward"
+                      data-testid="button-restore-moderation"
                     >
                       <Send className="h-4 w-4 mr-2" />
-                      Forward to Moderation
+                      Restore to Moderation
                     </Button>
-                  )}
-                  {merchant.status === "moderation" && (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => updateStatus("pending")}
-                        className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                        data-testid="button-back-pending"
-                      >
-                        Move to Pending
-                      </Button>
-                      <Button
-                        onClick={() => updateStatus("created")}
-                        className="bg-green-600 hover:bg-green-700"
-                        data-testid="button-created"
-                      >
-                        Mark as Created
-                      </Button>
-                    </>
-                  )}
-                </div>
+                  </>
+                )}
+                {merchant.status === "pending" && (
+                  <Button
+                    onClick={() => updateStatus("moderation")}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    data-testid="button-forward"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Forward to Moderation
+                  </Button>
+                )}
+                {merchant.status === "moderation" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => updateStatus("pending")}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                      data-testid="button-back-pending"
+                    >
+                      Move to Pending
+                    </Button>
+                    <Button
+                      onClick={() => updateStatus("created")}
+                      className="bg-green-600 hover:bg-green-700"
+                      data-testid="button-created"
+                    >
+                      Mark as Created
+                    </Button>
+                  </>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );

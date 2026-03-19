@@ -56,6 +56,11 @@ interface Merchant {
   branches: string[];
   deals?: Deal[];
   salesOrder?: string;
+  taxCardDocument?: string;
+  crDocument?: string;
+  establishmentCard?: string;
+  tradeLicense?: string;
+  menuPriceList?: string;
   status: string;
 }
 
@@ -71,6 +76,10 @@ export default function MerchantEdit() {
   const [expandedDeals, setExpandedDeals] = useState<number[]>([]);
   const [isUploadingSalesOrder, setIsUploadingSalesOrder] = useState(false);
   const salesOrderFileRef = useRef<HTMLInputElement>(null);
+  const dealImageFileRef = useRef<HTMLInputElement>(null);
+  const [activeDealImageIndex, setActiveDealImageIndex] = useState<number | null>(null);
+  const documentFileRef = useRef<HTMLInputElement>(null);
+  const [activeDocField, setActiveDocField] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -220,29 +229,87 @@ export default function MerchantEdit() {
     }
   };
 
+  const addNewDeal = () => {
+    const newDeal: Deal = {
+      category: "",
+      subCategory: "",
+      dealType: "",
+      duration: "",
+      redemption: "",
+      title: "",
+      description: "",
+      claimRules: [],
+      generalRules: [],
+      branches: [],
+      images: [],
+    };
+    setDeals(prev => [...prev, newDeal]);
+    setExpandedDeals(prev => [...prev, deals.length]);
+  };
+
+  const removeDeal = (index: number) => {
+    setDeals(prev => prev.filter((_, i) => i !== index));
+    setExpandedDeals(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
+  };
+
+  const handleDealImageAdd = (index: number, file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setDeals(prev => prev.map((deal, i) => 
+        i === index ? { ...deal, images: [...(deal.images || []), base64] } : deal
+      ));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDealImageRemove = (dealIndex: number, imageIndex: number) => {
+    setDeals(prev => prev.map((deal, i) => 
+      i === dealIndex ? { ...deal, images: (deal.images || []).filter((_, j) => j !== imageIndex) } : deal
+    ));
+  };
+
+  const handleDocumentUpload = (field: string, file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setMerchant(prev => prev ? { ...prev, [field]: reader.result as string } : prev);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = async () => {
     if (!merchant) return;
     
     setIsSaving(true);
     try {
+      const updateData: any = {
+        ...formData,
+        products: formData.products.split(",").map(p => p.trim()).filter(Boolean),
+        businessCategories: formData.businessCategories.split(",").map(c => c.trim()).filter(Boolean),
+        deals: deals,
+      };
+      if (merchant.taxCardDocument) updateData.taxCardDocument = merchant.taxCardDocument;
+      if (merchant.crDocument) updateData.crDocument = merchant.crDocument;
+      if (merchant.establishmentCard) updateData.establishmentCard = merchant.establishmentCard;
+      if (merchant.tradeLicense) updateData.tradeLicense = merchant.tradeLicense;
+      if (merchant.menuPriceList) updateData.menuPriceList = merchant.menuPriceList;
+      
       const res = await fetch(`/api/merchants/${merchant.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          ...formData,
-          products: formData.products.split(",").map(p => p.trim()).filter(Boolean),
-          businessCategories: formData.businessCategories.split(",").map(c => c.trim()).filter(Boolean),
-          deals: deals,
-        }),
+        body: JSON.stringify(updateData),
       });
       
-      if (!res.ok) throw new Error("Failed to update merchant");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to update merchant");
+      }
       
       toast({ title: "Merchant updated successfully" });
       setLocation(`/admin/merchants/${merchant.id}`);
-    } catch (error) {
-      toast({ title: "Error updating merchant", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: error.message || "Error updating merchant", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -432,6 +499,18 @@ export default function MerchantEdit() {
               }}
               data-testid="input-sales-order-file"
             />
+            <input
+              type="file"
+              ref={dealImageFileRef}
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && activeDealImageIndex !== null) handleDealImageAdd(activeDealImageIndex, file);
+                e.target.value = "";
+              }}
+              data-testid="input-deal-image-file"
+            />
             {merchant.salesOrder ? (
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
                 <div className="flex items-center gap-3">
@@ -515,11 +594,84 @@ export default function MerchantEdit() {
           </CardContent>
         </Card>
 
+        {/* Documents Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#00426D]">Documents</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <input
+              type="file"
+              ref={documentFileRef}
+              accept="image/*,.pdf,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && activeDocField) handleDocumentUpload(activeDocField, file);
+                e.target.value = "";
+              }}
+              data-testid="input-document-file"
+            />
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {[
+                { label: "CR Document", field: "crDocument", required: true },
+                { label: "Establishment Card", field: "establishmentCard", required: true },
+                { label: "Trade License", field: "tradeLicense", required: true },
+                { label: "Menu/Price List", field: "menuPriceList", required: true },
+                { label: "Tax Card", field: "taxCardDocument", required: false },
+              ].map((doc) => {
+                const value = merchant[doc.field as keyof Merchant] as string | undefined;
+                const isUploaded = !!value;
+                return (
+                  <div key={doc.field} className={`p-4 border rounded-lg text-center ${doc.required && !isUploaded ? 'border-red-200 bg-red-50/50' : ''}`}>
+                    <FileText className={`h-8 w-8 mx-auto mb-2 ${isUploaded ? 'text-green-500' : doc.required ? 'text-red-400' : 'text-slate-400'}`} />
+                    <p className="text-sm font-medium mb-1">
+                      {doc.label}
+                      {doc.required && <span className="text-red-500 ml-1">*</span>}
+                    </p>
+                    {isUploaded ? (
+                      <div className="space-y-1">
+                        {!value?.startsWith('data:') && (
+                          <a href={value} target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline text-xs block">View</a>
+                        )}
+                        <button
+                          type="button"
+                          className="text-xs text-blue-600 hover:underline"
+                          onClick={() => { setActiveDocField(doc.field); documentFileRef.current?.click(); }}
+                        >
+                          Replace
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-xs text-blue-600 hover:underline"
+                        onClick={() => { setActiveDocField(doc.field); documentFileRef.current?.click(); }}
+                      >
+                        Upload
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Deals Section */}
         <Card>
           <CardHeader>
             <CardTitle className="text-[#00426D] flex items-center justify-between">
               <span>Deals ({deals.length})</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addNewDeal}
+                data-testid="button-add-deal"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Deal
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -536,12 +688,28 @@ export default function MerchantEdit() {
                       <Badge variant="outline" className="bg-white">Deal {index + 1}</Badge>
                       <span className="font-medium">{deal.title || "Untitled Deal"}</span>
                       <span className="text-sm text-slate-500">{deal.category}</span>
+                      {(deal.images || []).length < 4 && (
+                        <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
+                          {(deal.images || []).length}/4 images
+                        </Badge>
+                      )}
                     </div>
-                    {expandedDeals.includes(index) ? (
-                      <ChevronUp className="h-5 w-5 text-slate-500" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-slate-500" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={(e) => { e.stopPropagation(); removeDeal(index); }}
+                        data-testid={`button-remove-deal-${index}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      {expandedDeals.includes(index) ? (
+                        <ChevronUp className="h-5 w-5 text-slate-500" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-slate-500" />
+                      )}
+                    </div>
                   </div>
                   
                   {expandedDeals.includes(index) && (
@@ -765,18 +933,45 @@ export default function MerchantEdit() {
                         </div>
                       )}
                       
-                      {deal.images && deal.images.length > 0 && (
-                        <div className="space-y-2">
-                          <Label>Deal Images</Label>
-                          <div className="flex flex-wrap gap-2">
-                            {deal.images.map((img, i) => (
-                              <a key={i} href={img} target="_blank" rel="noopener noreferrer">
-                                <img src={img} alt={`Deal image ${i + 1}`} className="h-16 w-16 object-cover rounded border" />
-                              </a>
-                            ))}
-                          </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Deal Images ({(deal.images || []).length}/4 minimum)</Label>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setActiveDealImageIndex(index);
+                              dealImageFileRef.current?.click();
+                            }}
+                            data-testid={`button-add-deal-image-${index}`}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Image
+                          </Button>
                         </div>
-                      )}
+                        {(deal.images || []).length < 4 && (
+                          <p className="text-xs text-red-500">At least 4 images required for moderation</p>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {(deal.images || []).map((img, i) => (
+                            <div key={i} className="relative group">
+                              <img
+                                src={img}
+                                alt={`Deal image ${i + 1}`}
+                                className="h-20 w-20 object-cover rounded border"
+                              />
+                              <button
+                                type="button"
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleDealImageRemove(index, i)}
+                                data-testid={`button-remove-deal-image-${index}-${i}`}
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

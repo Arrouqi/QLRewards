@@ -772,7 +772,7 @@ export async function registerRoutes(
       const { deals, ...merchantData } = req.body;
       
       // Upload document files if provided
-      const documentFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'companyStamp', 'signedContractUpload'];
+      const documentFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'companyStamp', 'signedContractUpload', 'taxCardDocument'];
       for (const field of documentFields) {
         if (merchantData[field] && merchantData[field].startsWith('data:')) {
           try {
@@ -906,6 +906,19 @@ export async function registerRoutes(
     try {
       const { deals: dealUpdates, ...merchantData } = req.body;
       
+      // Upload document files if provided as base64
+      const docFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'taxCardDocument'];
+      for (const field of docFields) {
+        if (merchantData[field] && merchantData[field].startsWith('data:')) {
+          try {
+            const urls = await uploadMultipleImages([merchantData[field]], `merchant-${req.params.id}-${field}`);
+            merchantData[field] = urls[0];
+          } catch (uploadError) {
+            console.error(`[Azure] ${field} upload failed:`, uploadError);
+          }
+        }
+      }
+      
       // Update merchant data
       const merchant = await storage.updateMerchant(req.params.id, merchantData);
       if (!merchant) {
@@ -914,9 +927,58 @@ export async function registerRoutes(
       
       // Update deals if provided
       if (dealUpdates && Array.isArray(dealUpdates)) {
+        const existingDeals = await storage.getMerchantDealsByMerchantId(merchant.id);
+        const existingDealIds = new Set(existingDeals.map(d => d.id));
+
+        // Validate ownership: all deal IDs in the update must belong to this merchant
+        const updatedDealIds = dealUpdates.filter((d: any) => d.id).map((d: any) => d.id);
+        for (const dealId of updatedDealIds) {
+          if (!existingDealIds.has(dealId)) {
+            return res.status(400).json({ error: `Deal ${dealId} does not belong to this merchant` });
+          }
+        }
+
+        // Pre-upload all images before making any DB changes
+        const processedDeals: Array<{ deal: any; images: string[] }> = [];
         for (const deal of dealUpdates) {
+          let dealImages = deal.images || [];
+          const hasNewImages = dealImages.some((img: string) => img && img.startsWith("data:"));
+          if (hasNewImages) {
+            const uploadedUrls = await uploadMultipleImages(dealImages, `merchant-${merchant.id}-deal`);
+            dealImages = uploadedUrls;
+          }
+          processedDeals.push({ deal, images: dealImages });
+        }
+
+        // Validate new deals before any DB mutations
+        const newDealPayloads: any[] = [];
+        for (const { deal, images } of processedDeals) {
+          if (!deal.id) {
+            const dealData = {
+              ...deal,
+              merchantId: merchant.id,
+              images,
+              branches: deal.branches || [],
+              claimRules: deal.claimRules || [],
+              generalRules: deal.generalRules || [],
+            };
+            const validatedDeal = insertMerchantDealSchema.parse(dealData);
+            newDealPayloads.push(validatedDeal);
+          }
+        }
+
+        // All validation passed — now apply DB changes
+        // Delete removed deals
+        const updatedDealIdSet = new Set(updatedDealIds);
+        for (const existing of existingDeals) {
+          if (!updatedDealIdSet.has(existing.id)) {
+            await storage.deleteMerchantDeal(existing.id);
+          }
+        }
+
+        // Update existing deals
+        for (const { deal, images } of processedDeals) {
           if (deal.id) {
-            // Update existing deal with all fields
             await storage.updateMerchantDeal(deal.id, {
               category: deal.category,
               subCategory: deal.subCategory,
@@ -937,9 +999,14 @@ export async function registerRoutes(
               generalRules: deal.generalRules || [],
               otherRules: deal.otherRules || null,
               branches: deal.branches || [],
-              images: deal.images || [],
+              images,
             });
           }
+        }
+
+        // Create new deals
+        for (const validatedDeal of newDealPayloads) {
+          await storage.createMerchantDeal(validatedDeal);
         }
       }
       
@@ -959,16 +1026,48 @@ export async function registerRoutes(
       }
       
       const existingMerchant = await storage.getMerchantById(req.params.id);
+      if (!existingMerchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
       
-      if (status === "created" && existingMerchant?.status !== "moderation") {
+      if (status === "created" && existingMerchant.status !== "moderation") {
         return res.status(400).json({ error: "Can only mark as Created from In Moderation status" });
       }
       
-      if (status === "pending" && existingMerchant?.status !== "moderation") {
-        return res.status(400).json({ error: "Can only move back to Pending from In Moderation status" });
+      if (status === "pending" && existingMerchant.status !== "moderation" && existingMerchant.status !== "archived") {
+        return res.status(400).json({ error: "Can only move to Pending from In Moderation or Archived status" });
       }
       
-      const wasNotModeration = existingMerchant?.status !== "moderation";
+      if (status === "moderation" && existingMerchant.status !== "pending" && existingMerchant.status !== "archived") {
+        return res.status(400).json({ error: "Can only forward to Moderation from Pending or Archived status" });
+      }
+      
+      if (status === "moderation") {
+        const missingDocs: string[] = [];
+        if (!existingMerchant.crDocument) missingDocs.push("CR Document");
+        if (!existingMerchant.establishmentCard) missingDocs.push("Establishment Card");
+        if (!existingMerchant.tradeLicense) missingDocs.push("Trade License");
+        if (!existingMerchant.menuPriceList) missingDocs.push("Menu/Price List");
+        if (!existingMerchant.salesOrder) missingDocs.push("Sales Order");
+        
+        if (missingDocs.length > 0) {
+          return res.status(400).json({ 
+            error: `Missing required documents: ${missingDocs.join(", ")}`,
+            missingDocs
+          });
+        }
+        
+        const merchantDeals = await storage.getMerchantDealsByMerchantId(req.params.id);
+        const dealsWithFewImages = merchantDeals.filter(d => !d.images || d.images.length < 4);
+        if (dealsWithFewImages.length > 0) {
+          return res.status(400).json({ 
+            error: `Each deal must have at least 4 images. ${dealsWithFewImages.length} deal(s) have fewer than 4 images.`,
+            dealsWithFewImages: dealsWithFewImages.map(d => d.title)
+          });
+        }
+      }
+      
+      const wasNotModeration = existingMerchant.status !== "moderation";
       
       const merchant = await storage.updateMerchantStatus(req.params.id, status);
       if (!merchant) {
