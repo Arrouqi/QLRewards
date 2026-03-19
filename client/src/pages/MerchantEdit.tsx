@@ -292,13 +292,13 @@ export default function MerchantEdit() {
     
     setIsSaving(true);
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         ...formData,
         products: formData.products.split(",").map(p => p.trim()).filter(Boolean),
         businessCategories: formData.businessCategories.split(",").map(c => c.trim()).filter(Boolean),
         deals: deals,
+        taxCardDocument: merchant.taxCardDocument || null,
       };
-      if (merchant.taxCardDocument) updateData.taxCardDocument = merchant.taxCardDocument;
       if (merchant.crDocument) updateData.crDocument = merchant.crDocument;
       if (merchant.establishmentCard) updateData.establishmentCard = merchant.establishmentCard;
       if (merchant.tradeLicense) updateData.tradeLicense = merchant.tradeLicense;
@@ -651,6 +651,16 @@ export default function MerchantEdit() {
                         >
                           Replace
                         </button>
+                        {!doc.required && (
+                          <button
+                            type="button"
+                            className="text-xs text-red-500 hover:underline"
+                            onClick={() => setMerchant(prev => prev ? { ...prev, [doc.field]: undefined } : prev)}
+                            data-testid={`button-remove-${doc.field}`}
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <button

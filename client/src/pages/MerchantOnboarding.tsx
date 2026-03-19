@@ -1185,9 +1185,16 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
     form.setValue(`deals.${index}.images`, updated);
   };
 
+  const imageError = form.formState.errors?.deals?.[index]?.images;
+
   return (
     <div className="space-y-3">
-      <Label>Deal Images</Label>
+      <Label>Deal Images ({images.length}/4 minimum) *</Label>
+      {imageError && (
+        <p className="text-sm text-red-500" data-testid={`text-deal-images-error-${index}`}>
+          At least 4 images are required for this deal
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
         {images.map((img: string, imgIndex: number) => (
           <div key={imgIndex} className="relative group">
@@ -1205,7 +1212,9 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="w-24 h-24 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:border-[#FF7F39] hover:text-[#FF7F39] transition-colors"
+          className={`w-24 h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center transition-colors ${
+            imageError ? 'border-red-300 text-red-400 hover:border-red-500' : 'border-slate-300 text-slate-400 hover:border-[#FF7F39] hover:text-[#FF7F39]'
+          }`}
         >
           {uploading ? (
             <Loader2 className="h-6 w-6 animate-spin" />
