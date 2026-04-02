@@ -1062,7 +1062,6 @@ export async function registerRoutes(
         if (!existingMerchant.establishmentCard) missingDocs.push("Establishment Card");
         if (!existingMerchant.tradeLicense) missingDocs.push("Trade License");
         if (!existingMerchant.menuPriceList) missingDocs.push("Menu/Price List");
-        if (!existingMerchant.salesOrder) missingDocs.push("Sales Order");
         
         if (missingDocs.length > 0) {
           return res.status(400).json({ 
