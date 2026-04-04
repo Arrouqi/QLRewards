@@ -1086,7 +1086,7 @@ export default function MerchantView() {
               <p className="text-sm text-slate-500 text-center py-4">No notes yet</p>
             ) : (
               <div className="space-y-3 max-h-80 overflow-y-auto">
-                {notes
+                {[...notes]
                   .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
                   .map((note) => (
                   <div key={note.id} className="bg-slate-50 rounded-lg p-3 border" data-testid={`note-${note.id}`}>

@@ -64,7 +64,7 @@ export interface IStorage {
   getMerchantDealById(id: string): Promise<MerchantDeal | undefined>;
   updateMerchantDeal(id: string, data: Partial<InsertMerchantDeal>): Promise<MerchantDeal | undefined>;
   deleteMerchantDeal(id: string): Promise<void>;
-  updateMerchantSubmittedBy(id: string, submittedBy: string): Promise<Merchant | undefined>;
+  updateMerchantSubmittedBy(id: string, submittedBy: string | null): Promise<Merchant | undefined>;
   getMerchantNotes(merchantId: string): Promise<MerchantNote[]>;
   createMerchantNote(note: InsertMerchantNote): Promise<MerchantNote>;
 }
@@ -392,7 +392,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(merchantDeals).where(eq(merchantDeals.id, id));
   }
 
-  async updateMerchantSubmittedBy(id: string, submittedBy: string): Promise<Merchant | undefined> {
+  async updateMerchantSubmittedBy(id: string, submittedBy: string | null): Promise<Merchant | undefined> {
     const [updated] = await db.update(merchants).set({ submittedBy }).where(eq(merchants.id, id)).returning();
     return updated;
   }

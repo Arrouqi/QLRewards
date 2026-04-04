@@ -1104,6 +1104,10 @@ export async function registerRoutes(
           });
         }
       }
+
+      if (status === "pending") {
+        await storage.updateMerchantSubmittedBy(req.params.id, null);
+      }
       
       const updatedMerchant = await storage.getMerchantById(req.params.id);
       res.json(updatedMerchant);
