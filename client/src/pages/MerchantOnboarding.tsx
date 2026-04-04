@@ -106,6 +106,7 @@ const dealSchema = z.object({
   originalPrice: z.string().optional(),
   isMultipleItems: z.boolean().default(false),
   discountPercentage: z.string().optional(),
+  discountedPrice: z.string().optional(),
   isTwoTranches: z.boolean().default(false),
   trancheValidity: z.string().optional(),
   specificDays: z.boolean().default(false),
@@ -137,6 +138,9 @@ const merchantSchema = z.object({
   tradeLicense: z.string().min(1, "Trade License is required"),
   menuPriceList: z.string().min(1, "Menu / Price List is required"),
   taxCardDocument: z.string().optional(),
+  logo: z.string().optional(),
+  coverImage: z.string().optional(),
+  whatsapp: z.string().optional(),
   merchantSignatoryName: z.string().min(1, "Authorized signatory name is required"),
   commencementDate: z.string().min(1, "Commencement date is required"),
   termsAccepted: z.boolean().refine(val => val === true, {
@@ -212,6 +216,9 @@ export default function MerchantOnboarding() {
       tradeLicense: "",
       menuPriceList: "",
       taxCardDocument: "",
+      logo: "",
+      coverImage: "",
+      whatsapp: "",
       commencementDate: new Date().toISOString().split('T')[0],
       termsAccepted: false,
       merchantSignatoryName: "",
@@ -247,6 +254,7 @@ export default function MerchantOnboarding() {
       originalPrice: "",
       isMultipleItems: false,
       discountPercentage: "",
+      discountedPrice: "",
       isTwoTranches: false,
       trancheValidity: "",
       specificDays: false,
@@ -460,7 +468,7 @@ export default function MerchantOnboarding() {
 
                 <Separator />
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
                     name="contactPerson"
@@ -469,6 +477,20 @@ export default function MerchantOnboarding() {
                         <FormLabel>Contact Person *</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Full name" data-testid="input-contact-person" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address *</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" placeholder="email@company.com" data-testid="input-email" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -496,12 +518,17 @@ export default function MerchantOnboarding() {
 
                   <FormField
                     control={form.control}
-                    name="email"
+                    name="whatsapp"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email Address *</FormLabel>
+                        <FormLabel>WhatsApp Number</FormLabel>
                         <FormControl>
-                          <Input {...field} type="email" placeholder="email@company.com" data-testid="input-email" />
+                          <PhoneInput
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            placeholder="WhatsApp number"
+                            data-testid="input-whatsapp"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -537,7 +564,7 @@ export default function MerchantOnboarding() {
             {/* Products Selection */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#00426D]">Living Deals Products</CardTitle>
+                <CardTitle className="text-[#00426D]">Living Deals Products <span className="text-sm font-normal text-slate-500">(select all that apply)</span></CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -762,6 +789,7 @@ export default function MerchantOnboarding() {
                                   {...field} 
                                   type="number" 
                                   min="0"
+                                  step="0.01"
                                   className="w-32 text-xl font-bold text-[#FF7F39] border-[#00426D]/30" 
                                   data-testid="input-subscription-fee"
                                 />
@@ -786,6 +814,7 @@ export default function MerchantOnboarding() {
                                   {...field} 
                                   type="number" 
                                   min="0"
+                                  step="0.01"
                                   className="w-32 text-xl font-bold text-[#FF7F39] border-[#00426D]/30" 
                                   data-testid="input-transaction-fee"
                                 />
@@ -857,6 +886,28 @@ export default function MerchantOnboarding() {
                     form={form}
                     onChange={handleFileUpload}
                   />
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="font-medium text-[#00426D] mb-4">Brand Assets (Optional)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <DocumentUpload
+                      label="Logo"
+                      field="logo"
+                      form={form}
+                      onChange={handleFileUpload}
+                      accept="image/*"
+                    />
+                    <DocumentUpload
+                      label="Cover Image"
+                      field="coverImage"
+                      form={form}
+                      onChange={handleFileUpload}
+                      accept="image/*"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -968,11 +1019,12 @@ export default function MerchantOnboarding() {
   );
 }
 
-function DocumentUpload({ label, field, form, onChange }: {
+function DocumentUpload({ label, field, form, onChange, accept }: {
   label: string;
   field: keyof MerchantFormValues;
   form: any;
   onChange: (field: keyof MerchantFormValues, e: ChangeEvent<HTMLInputElement>) => void;
+  accept?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [hasValue, setHasValue] = useState(false);
@@ -996,7 +1048,7 @@ function DocumentUpload({ label, field, form, onChange }: {
       <input
         ref={inputRef}
         type="file"
-        accept="image/*,.pdf"
+        accept={accept || "image/*,.pdf"}
         className="hidden"
         onChange={handleChange}
       />
@@ -1283,6 +1335,7 @@ function DealFormSection({
   const claimRulesValue = useWatch({ control: form.control, name: `deals.${index}.claimRules` }) || [];
   const generalRulesValue = useWatch({ control: form.control, name: `deals.${index}.generalRules` }) || [];
   const branchesValue = useWatch({ control: form.control, name: `deals.${index}.branches` }) || [];
+  const [discountType, setDiscountType] = useState<"percentage" | "discountedPrice">("percentage");
   
   const selectedCategory = categories.find(c => c.name === categoryValue);
   const subCategories = selectedCategory?.subCategories || [];
@@ -1518,22 +1571,77 @@ function DealFormSection({
               />
 
               {isDiscount && (
-                <FormField
-                  control={form.control}
-                  name={`deals.${index}.discountPercentage`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Discount Percentage *</FormLabel>
-                      <div className="relative">
-                        <FormControl>
-                          <Input placeholder="0" className="pr-12" {...field} />
-                        </FormControl>
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">%</div>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiscountType("percentage");
+                        form.setValue(`deals.${index}.discountedPrice`, "");
+                      }}
+                      className={cn(
+                        "px-3 py-1.5 text-sm rounded-md border transition-colors",
+                        discountType === "percentage"
+                          ? "bg-[#00426D] text-white border-[#00426D]"
+                          : "bg-white text-slate-600 border-slate-300 hover:border-[#00426D]"
+                      )}
+                      data-testid={`button-discount-percentage-${index}`}
+                    >
+                      Discount %
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiscountType("discountedPrice");
+                        form.setValue(`deals.${index}.discountPercentage`, "");
+                      }}
+                      className={cn(
+                        "px-3 py-1.5 text-sm rounded-md border transition-colors",
+                        discountType === "discountedPrice"
+                          ? "bg-[#00426D] text-white border-[#00426D]"
+                          : "bg-white text-slate-600 border-slate-300 hover:border-[#00426D]"
+                      )}
+                      data-testid={`button-discount-price-${index}`}
+                    >
+                      Discounted Price
+                    </button>
+                  </div>
+                  {discountType === "percentage" ? (
+                    <FormField
+                      control={form.control}
+                      name={`deals.${index}.discountPercentage`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Discount Percentage *</FormLabel>
+                          <div className="relative">
+                            <FormControl>
+                              <Input placeholder="0" className="pr-12" {...field} />
+                            </FormControl>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">%</div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name={`deals.${index}.discountedPrice`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Discounted Price *</FormLabel>
+                          <div className="relative">
+                            <FormControl>
+                              <Input placeholder="0.00" className="pr-12" {...field} />
+                            </FormControl>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </div>
               )}
             </div>
           )}

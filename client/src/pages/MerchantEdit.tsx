@@ -29,6 +29,7 @@ interface Deal {
   originalPrice?: string;
   isMultipleItems?: boolean;
   discountPercentage?: string;
+  discountedPrice?: string;
   isTwoTranches?: boolean;
   trancheValidity?: string;
   specificDays?: boolean;
@@ -61,6 +62,9 @@ interface Merchant {
   establishmentCard?: string;
   tradeLicense?: string;
   menuPriceList?: string;
+  logo?: string;
+  coverImage?: string;
+  whatsapp?: string;
   status: string;
 }
 
@@ -89,6 +93,7 @@ export default function MerchantEdit() {
     contactPerson: "",
     email: "",
     phone: "",
+    whatsapp: "",
     products: "",
     businessCategories: "",
   });
@@ -121,6 +126,7 @@ export default function MerchantEdit() {
         contactPerson: data.contactPerson || "",
         email: data.email || "",
         phone: data.phone || "",
+        whatsapp: data.whatsapp || "",
         products: data.products?.join(", ") || "",
         businessCategories: data.businessCategories?.join(", ") || "",
       });
@@ -140,6 +146,7 @@ export default function MerchantEdit() {
             originalPrice: deal.originalPrice || "",
             isMultipleItems: deal.isMultipleItems || false,
             discountPercentage: deal.discountPercentage || "",
+            discountedPrice: deal.discountedPrice || "",
             isTwoTranches: deal.isTwoTranches || false,
             trancheValidity: deal.trancheValidity || "",
             specificDays: deal.specificDays || false,
@@ -298,6 +305,8 @@ export default function MerchantEdit() {
         businessCategories: formData.businessCategories.split(",").map(c => c.trim()).filter(Boolean),
         deals: deals,
         taxCardDocument: merchant.taxCardDocument || null,
+        logo: merchant.logo || null,
+        coverImage: merchant.coverImage || null,
       };
       if (merchant.crDocument) updateData.crDocument = merchant.crDocument;
       if (merchant.establishmentCard) updateData.establishmentCard = merchant.establishmentCard;
@@ -449,6 +458,18 @@ export default function MerchantEdit() {
                   value={formData.phone}
                   onChange={handleChange}
                   data-testid="input-phone"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="whatsapp">WhatsApp Number</Label>
+                <Input
+                  id="whatsapp"
+                  name="whatsapp"
+                  value={formData.whatsapp}
+                  onChange={handleChange}
+                  placeholder="WhatsApp number"
+                  data-testid="input-whatsapp"
                 />
               </div>
             </div>
@@ -629,6 +650,8 @@ export default function MerchantEdit() {
                 { label: "Trade License", field: "tradeLicense", required: true },
                 { label: "Menu/Price List", field: "menuPriceList", required: true },
                 { label: "Tax Card", field: "taxCardDocument", required: false },
+                { label: "Logo", field: "logo", required: false },
+                { label: "Cover Image", field: "coverImage", required: false },
               ].map((doc) => {
                 const value = merchant[doc.field as keyof Merchant] as string | undefined;
                 const isUploaded = !!value;
@@ -827,14 +850,54 @@ export default function MerchantEdit() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label>Discount Percentage</Label>
-                          <Input
-                            value={deal.discountPercentage || ""}
-                            onChange={(e) => handleDealChange(index, "discountPercentage", e.target.value)}
-                            placeholder="e.g., 20"
-                            data-testid={`input-deal-discount-${index}`}
-                          />
+                          <Label>Discount Type</Label>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant={!deal.discountedPrice ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => {
+                                handleDealChange(index, "discountedPrice", "");
+                              }}
+                              data-testid={`button-discount-type-percentage-${index}`}
+                            >
+                              Percentage
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={deal.discountedPrice ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => {
+                                handleDealChange(index, "discountPercentage", "");
+                              }}
+                              data-testid={`button-discount-type-price-${index}`}
+                            >
+                              Discounted Price
+                            </Button>
+                          </div>
                         </div>
+                        
+                        {!deal.discountedPrice ? (
+                          <div className="space-y-2">
+                            <Label>Discount Percentage</Label>
+                            <Input
+                              value={deal.discountPercentage || ""}
+                              onChange={(e) => handleDealChange(index, "discountPercentage", e.target.value)}
+                              placeholder="e.g., 20"
+                              data-testid={`input-deal-discount-${index}`}
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <Label>Discounted Price (QAR)</Label>
+                            <Input
+                              value={deal.discountedPrice || ""}
+                              onChange={(e) => handleDealChange(index, "discountedPrice", e.target.value)}
+                              placeholder="e.g., 49.99"
+                              data-testid={`input-deal-discounted-price-${index}`}
+                            />
+                          </div>
+                        )}
                       </div>
                       
                       <div className="space-y-2">

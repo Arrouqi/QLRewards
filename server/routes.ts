@@ -772,7 +772,7 @@ export async function registerRoutes(
       const { deals, ...merchantData } = req.body;
       
       // Upload document files if provided
-      const documentFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'companyStamp', 'signedContractUpload', 'taxCardDocument'];
+      const documentFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'companyStamp', 'signedContractUpload', 'taxCardDocument', 'logo', 'coverImage'];
       for (const field of documentFields) {
         if (merchantData[field] && merchantData[field].startsWith('data:')) {
           try {
@@ -913,7 +913,7 @@ export async function registerRoutes(
       const { deals: dealUpdates, ...merchantData } = req.body;
       
       // Upload document files if provided as base64
-      const docFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'taxCardDocument'];
+      const docFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'taxCardDocument', 'logo', 'coverImage'];
       for (const field of docFields) {
         if (merchantData[field] && merchantData[field].startsWith('data:')) {
           try {
@@ -1003,6 +1003,7 @@ export async function registerRoutes(
               originalPrice: deal.originalPrice || null,
               isMultipleItems: deal.isMultipleItems || false,
               discountPercentage: deal.discountPercentage || null,
+              discountedPrice: deal.discountedPrice || null,
               isTwoTranches: deal.isTwoTranches || false,
               trancheValidity: deal.trancheValidity || null,
               specificDays: deal.specificDays || false,

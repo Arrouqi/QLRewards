@@ -179,6 +179,9 @@ export const merchants = pgTable("merchants", {
   signedContractUpload: text("signed_contract_upload"),
   salesOrder: text("sales_order"),
   taxCardDocument: text("tax_card_document"),
+  logo: text("logo"),
+  coverImage: text("cover_image"),
+  whatsapp: text("whatsapp"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -204,6 +207,7 @@ export const merchantDeals = pgTable("merchant_deals", {
   originalPrice: text("original_price"),
   isMultipleItems: boolean("is_multiple_items").notNull().default(false),
   discountPercentage: text("discount_percentage"),
+  discountedPrice: text("discounted_price"),
   isTwoTranches: boolean("is_two_tranches").notNull().default(false),
   trancheValidity: text("tranche_validity"),
   specificDays: boolean("specific_days").notNull().default(false),

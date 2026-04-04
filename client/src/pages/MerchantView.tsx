@@ -54,6 +54,9 @@ interface Merchant {
   signedContractUpload?: string;
   salesOrder?: string;
   taxCardDocument?: string;
+  logo?: string;
+  coverImage?: string;
+  whatsapp?: string;
   deals?: any[];
 }
 
@@ -343,6 +346,7 @@ export default function MerchantView() {
         if (deal.description) drawField("Description", deal.description, 5);
         if (deal.originalPrice) drawField("Original Price", `QAR ${deal.originalPrice}`, 5);
         if (deal.discountPercentage) drawField("Discount", `${deal.discountPercentage}%`, 5);
+        if (deal.discountedPrice) drawField("Discounted Price", `QAR ${deal.discountedPrice}`, 5);
         if (deal.redemption) {
           drawField("Redemption", deal.redemption === 'limited' 
             ? `Limited (${deal.limitPerUser || 'N/A'} per user)` 
@@ -634,6 +638,15 @@ export default function MerchantView() {
                     <p className="font-medium">{merchant.phone}</p>
                   </div>
                 </div>
+                {merchant.whatsapp && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-5 w-5 text-slate-400" />
+                    <div>
+                      <p className="text-xs text-slate-500">WhatsApp</p>
+                      <p className="font-medium">{merchant.whatsapp}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -670,6 +683,8 @@ export default function MerchantView() {
                 { label: "Trade License", value: merchant.tradeLicense, required: true },
                 { label: "Menu/Price List", value: merchant.menuPriceList, required: true },
                 { label: "Tax Card", value: merchant.taxCardDocument, required: false },
+                { label: "Logo", value: merchant.logo, required: false },
+                { label: "Cover Image", value: merchant.coverImage, required: false },
               ].map((doc) => (
                 <div key={doc.label} className={`p-4 border rounded-lg text-center ${doc.required && !doc.value ? 'border-red-200 bg-red-50/50' : ''}`}>
                   <FileText className={`h-8 w-8 mx-auto mb-2 ${doc.value ? 'text-green-500' : doc.required ? 'text-red-400' : 'text-slate-400'}`} />
@@ -785,6 +800,12 @@ export default function MerchantView() {
                           <div className="bg-white p-3 rounded border">
                             <span className="text-slate-500 block text-xs mb-1">Discount</span>
                             <span className="font-medium text-green-600">{deal.discountPercentage}%</span>
+                          </div>
+                        )}
+                        {deal.discountedPrice && (
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">Discounted Price</span>
+                            <span className="font-medium text-green-600">QAR {deal.discountedPrice}</span>
                           </div>
                         )}
                         {deal.duration && (
