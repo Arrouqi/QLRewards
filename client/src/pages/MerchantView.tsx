@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
 import jsPDF from "jspdf";
@@ -57,7 +58,16 @@ interface Merchant {
   logo?: string;
   coverImage?: string;
   whatsapp?: string;
+  submittedBy?: string;
   deals?: any[];
+}
+
+interface MerchantNote {
+  id: string;
+  merchantId: string;
+  author: string;
+  content: string;
+  createdAt: string;
 }
 
 export default function MerchantView() {
@@ -68,6 +78,9 @@ export default function MerchantView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadingSalesOrder, setIsUploadingSalesOrder] = useState(false);
   const salesOrderFileRef = useRef<HTMLInputElement>(null);
+  const [notes, setNotes] = useState<MerchantNote[]>([]);
+  const [newNote, setNewNote] = useState("");
+  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
 
   useEffect(() => {
     fetchMerchant();
@@ -87,11 +100,45 @@ export default function MerchantView() {
       if (!res.ok) throw new Error("Failed to fetch merchant");
       const data = await res.json();
       setMerchant(data);
+      fetchNotes(params.id);
     } catch (error) {
       toast({ title: "Error loading merchant", variant: "destructive" });
       setLocation("/admin/merchants");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchNotes = async (merchantId: string) => {
+    try {
+      const res = await fetch(`/api/merchants/${merchantId}/notes`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setNotes(data);
+      }
+    } catch {
+    }
+  };
+
+  const submitNote = async () => {
+    if (!merchant || !newNote.trim()) return;
+    setIsSubmittingNote(true);
+    try {
+      const res = await fetch(`/api/merchants/${merchant.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ content: newNote.trim() }),
+      });
+      if (!res.ok) throw new Error("Failed to add note");
+      const note = await res.json();
+      setNotes(prev => [...prev, note]);
+      setNewNote("");
+      toast({ title: "Note added" });
+    } catch {
+      toast({ title: "Error adding note", variant: "destructive" });
+    } finally {
+      setIsSubmittingNote(false);
     }
   };
 
@@ -1024,6 +1071,58 @@ export default function MerchantView() {
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5 text-[#00426D]" />
+              Internal Notes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {notes.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-4">No notes yet</p>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {notes
+                  .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                  .map((note) => (
+                  <div key={note.id} className="bg-slate-50 rounded-lg p-3 border" data-testid={`note-${note.id}`}>
+                    <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
+                      <User className="h-3 w-3" />
+                      <span className="font-medium">{note.author}</span>
+                      <span>•</span>
+                      <span>{format(new Date(note.createdAt), "dd MMM yyyy, HH:mm")}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Textarea
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Add a note..."
+                rows={2}
+                className="flex-1"
+                data-testid="input-note"
+              />
+              <Button
+                onClick={submitNote}
+                disabled={!newNote.trim() || isSubmittingNote}
+                className="self-end bg-[#00426D] hover:bg-[#003557]"
+                data-testid="button-submit-note"
+              >
+                {isSubmittingNote ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

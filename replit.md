@@ -34,8 +34,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Data Models
 - **deals**: Stores merchant deal submissions with fields for category, pricing, discount info, rules, and approval status
-- **merchants**: Stores merchant onboarding applications with company info, documents (CR, trade license, tax card, logo, cover image, etc.), WhatsApp number, sales order PDF (Azure URL), signed contract, and status flow (pending ↔ moderation → created; any → archived; archived → pending/moderation)
+- **merchants**: Stores merchant onboarding applications with company info, documents (CR, trade license, tax card, logo, cover image, etc.), WhatsApp number, sales order PDF (Azure URL), signed contract, `submittedBy` (admin who forwarded to moderation), and status flow (pending ↔ moderation → created; any → archived; archived → pending/moderation)
 - **merchantDeals**: Stores deal offers per merchant with category, pricing, discount percentage OR discounted price, rules, images, and availability days
+- **merchantNotes**: Internal notes/comments on merchant applications (author, content, timestamp); thread-style, add-only
 - **adminUsers**: Stores admin credentials for the dashboard
 - **session**: PostgreSQL session store table (auto-created)
 

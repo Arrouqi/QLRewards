@@ -60,6 +60,7 @@ interface Merchant {
   companyStamp?: string;
   signedContractUpload?: string;
   salesOrder?: string;
+  submittedBy?: string;
   deals?: any[];
 }
 
@@ -243,6 +244,7 @@ export default function MerchantManagement() {
                 <TableHead>Contact</TableHead>
                 <TableHead>Products</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Submitted By</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -250,11 +252,11 @@ export default function MerchantManagement() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               ) : filteredMerchants.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                     No merchants found
                   </TableCell>
                 </TableRow>
@@ -290,6 +292,9 @@ export default function MerchantManagement() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(merchant.status)}</TableCell>
+                    <TableCell className="text-sm text-slate-500">
+                      {merchant.submittedBy || "—"}
+                    </TableCell>
                     <TableCell className="text-sm text-slate-500">
                       {format(new Date(merchant.createdAt), "dd MMM yyyy")}
                     </TableCell>

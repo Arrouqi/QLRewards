@@ -182,6 +182,7 @@ export const merchants = pgTable("merchants", {
   logo: text("logo"),
   coverImage: text("cover_image"),
   whatsapp: text("whatsapp"),
+  submittedBy: text("submitted_by"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -189,6 +190,7 @@ export const merchants = pgTable("merchants", {
 export const insertMerchantSchema = createInsertSchema(merchants).omit({
   id: true,
   status: true,
+  submittedBy: true,
   createdAt: true,
 });
 
@@ -231,3 +233,19 @@ export const insertMerchantDealSchema = createInsertSchema(merchantDeals).omit({
 
 export type InsertMerchantDeal = z.infer<typeof insertMerchantDealSchema>;
 export type MerchantDeal = typeof merchantDeals.$inferSelect;
+
+export const merchantNotes = pgTable("merchant_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  merchantId: varchar("merchant_id").notNull().references(() => merchants.id),
+  author: text("author").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertMerchantNoteSchema = createInsertSchema(merchantNotes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMerchantNote = z.infer<typeof insertMerchantNoteSchema>;
+export type MerchantNote = typeof merchantNotes.$inferSelect;

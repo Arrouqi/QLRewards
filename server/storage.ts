@@ -8,7 +8,8 @@ import {
   type EmailSettings, type InsertEmailSettings,
   type Merchant, type InsertMerchant,
   type MerchantDeal, type InsertMerchantDeal,
-  deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantDeals 
+  type MerchantNote, type InsertMerchantNote,
+  deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantDeals, merchantNotes 
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, inArray, and } from "drizzle-orm";
@@ -63,6 +64,9 @@ export interface IStorage {
   getMerchantDealById(id: string): Promise<MerchantDeal | undefined>;
   updateMerchantDeal(id: string, data: Partial<InsertMerchantDeal>): Promise<MerchantDeal | undefined>;
   deleteMerchantDeal(id: string): Promise<void>;
+  updateMerchantSubmittedBy(id: string, submittedBy: string): Promise<Merchant | undefined>;
+  getMerchantNotes(merchantId: string): Promise<MerchantNote[]>;
+  createMerchantNote(note: InsertMerchantNote): Promise<MerchantNote>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -386,6 +390,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMerchantDeal(id: string): Promise<void> {
     await db.delete(merchantDeals).where(eq(merchantDeals.id, id));
+  }
+
+  async updateMerchantSubmittedBy(id: string, submittedBy: string): Promise<Merchant | undefined> {
+    const [updated] = await db.update(merchants).set({ submittedBy }).where(eq(merchants.id, id)).returning();
+    return updated;
+  }
+
+  async getMerchantNotes(merchantId: string): Promise<MerchantNote[]> {
+    return await db.select().from(merchantNotes).where(eq(merchantNotes.merchantId, merchantId)).orderBy(merchantNotes.createdAt);
+  }
+
+  async createMerchantNote(note: InsertMerchantNote): Promise<MerchantNote> {
+    const [newNote] = await db.insert(merchantNotes).values(note).returning();
+    return newNote;
   }
 }
 

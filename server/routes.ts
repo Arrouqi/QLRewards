@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema } from "@shared/schema";
+import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema, insertMerchantNoteSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -1092,19 +1092,21 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Merchant not found" });
       }
       
-      // Send notification to moderation team when status changes to moderation
       if (status === "moderation" && wasNotModeration) {
+        const submitter = req.session.username || "Unknown";
+        await storage.updateMerchantSubmittedBy(req.params.id, submitter);
+        
         const moderationRecipients = await storage.getActiveEmailRecipientsByType("moderation");
         if (moderationRecipients.length > 0) {
           const emails = moderationRecipients.map(r => r.email);
-          const forwardedBy = req.session.username || "Unknown";
-          sendMerchantModerationNotification(merchant, emails, forwardedBy).catch(err => {
+          sendMerchantModerationNotification(merchant, emails, submitter).catch(err => {
             console.error("[Email] Error sending merchant moderation notification:", err);
           });
         }
       }
       
-      res.json(merchant);
+      const updatedMerchant = await storage.getMerchantById(req.params.id);
+      res.json(updatedMerchant);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1154,6 +1156,37 @@ export async function registerRoutes(
 
       const merchant = await storage.updateMerchant(req.params.id, { salesOrder: null });
       res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/merchants/:id/notes", requireAuth, async (req, res) => {
+    try {
+      const notes = await storage.getMerchantNotes(req.params.id);
+      res.json(notes);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/merchants/:id/notes", requireAuth, async (req, res) => {
+    try {
+      const merchant = await storage.getMerchantById(req.params.id);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      const { content } = req.body;
+      if (!content || !content.trim()) {
+        return res.status(400).json({ error: "Note content is required" });
+      }
+      const author = req.session.username || "Unknown";
+      const note = await storage.createMerchantNote({
+        merchantId: req.params.id,
+        author,
+        content: content.trim(),
+      });
+      res.status(201).json(note);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
