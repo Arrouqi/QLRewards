@@ -977,6 +977,8 @@ export async function registerRoutes(
               branches: deal.branches || [],
               claimRules: deal.claimRules || [],
               generalRules: deal.generalRules || [],
+              discountPercentage: deal.discountedPrice ? null : (deal.discountPercentage || null),
+              discountedPrice: deal.discountedPrice || null,
             };
             const validatedDeal = insertMerchantDealSchema.parse(dealData);
             newDealPayloads.push(validatedDeal);
