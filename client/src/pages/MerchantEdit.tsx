@@ -65,6 +65,8 @@ interface Merchant {
   logo?: string;
   coverImage?: string;
   whatsapp?: string;
+  subscriptionFee?: string;
+  transactionFee?: string;
   status: string;
 }
 
@@ -94,6 +96,8 @@ export default function MerchantEdit() {
     email: "",
     phone: "",
     whatsapp: "",
+    subscriptionFee: "",
+    transactionFee: "",
     products: "",
     businessCategories: "",
   });
@@ -128,6 +132,8 @@ export default function MerchantEdit() {
         email: data.email || "",
         phone: data.phone || "",
         whatsapp: data.whatsapp || "",
+        subscriptionFee: data.subscriptionFee || "",
+        transactionFee: data.transactionFee || "",
         products: data.products?.join(", ") || "",
         businessCategories: data.businessCategories?.join(", ") || "",
       });
@@ -492,6 +498,35 @@ export default function MerchantEdit() {
               />
             </div>
             
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="subscriptionFee">Subscription Fee (QAR)</Label>
+                <Input
+                  id="subscriptionFee"
+                  name="subscriptionFee"
+                  type="number"
+                  step="0.01"
+                  value={formData.subscriptionFee}
+                  onChange={handleChange}
+                  placeholder="e.g., 99.99"
+                  data-testid="input-subscription-fee"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="transactionFee">Transaction Fee (QAR)</Label>
+                <Input
+                  id="transactionFee"
+                  name="transactionFee"
+                  type="number"
+                  step="0.01"
+                  value={formData.transactionFee}
+                  onChange={handleChange}
+                  placeholder="e.g., 2.50"
+                  data-testid="input-transaction-fee"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="products">Products (comma-separated)</Label>
               <Input
