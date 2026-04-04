@@ -99,6 +99,7 @@ export default function MerchantEdit() {
   });
 
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [discountTypes, setDiscountTypes] = useState<Record<number, "percentage" | "discountedPrice">>({});
 
   useEffect(() => {
     fetchMerchant();
@@ -161,7 +162,11 @@ export default function MerchantEdit() {
           };
         });
         setDeals(parsedDeals);
-        // Expand all deals by default
+        const types: Record<number, "percentage" | "discountedPrice"> = {};
+        parsedDeals.forEach((d: Deal, i: number) => {
+          types[i] = d.discountedPrice ? "discountedPrice" : "percentage";
+        });
+        setDiscountTypes(types);
         setExpandedDeals(parsedDeals.map((_: any, i: number) => i));
       }
     } catch (error) {
@@ -251,6 +256,7 @@ export default function MerchantEdit() {
       images: [],
     };
     setDeals(prev => [...prev, newDeal]);
+    setDiscountTypes(prev => ({ ...prev, [deals.length]: "percentage" }));
     setExpandedDeals(prev => [...prev, deals.length]);
   };
 
@@ -854,9 +860,10 @@ export default function MerchantEdit() {
                           <div className="flex gap-2">
                             <Button
                               type="button"
-                              variant={!deal.discountedPrice ? "default" : "outline"}
+                              variant={(discountTypes[index] || "percentage") === "percentage" ? "default" : "outline"}
                               size="sm"
                               onClick={() => {
+                                setDiscountTypes(prev => ({ ...prev, [index]: "percentage" }));
                                 handleDealChange(index, "discountedPrice", "");
                               }}
                               data-testid={`button-discount-type-percentage-${index}`}
@@ -865,9 +872,10 @@ export default function MerchantEdit() {
                             </Button>
                             <Button
                               type="button"
-                              variant={deal.discountedPrice ? "default" : "outline"}
+                              variant={(discountTypes[index] || "percentage") === "discountedPrice" ? "default" : "outline"}
                               size="sm"
                               onClick={() => {
+                                setDiscountTypes(prev => ({ ...prev, [index]: "discountedPrice" }));
                                 handleDealChange(index, "discountPercentage", "");
                               }}
                               data-testid={`button-discount-type-price-${index}`}
@@ -877,7 +885,7 @@ export default function MerchantEdit() {
                           </div>
                         </div>
                         
-                        {!deal.discountedPrice ? (
+                        {(discountTypes[index] || "percentage") === "percentage" ? (
                           <div className="space-y-2">
                             <Label>Discount Percentage</Label>
                             <Input
