@@ -244,8 +244,11 @@ export default function MerchantSuccess() {
         if (deal.duration) drawField("Duration", deal.duration, 5);
         if (deal.description) drawField("Description", deal.description, 5);
         if (deal.originalPrice) drawField("Original Price", `QAR ${deal.originalPrice}`, 5);
-        if (deal.discountPercentage) drawField("Discount", `${deal.discountPercentage}%`, 5);
-        if (deal.discountedPrice) drawField("Discounted Price", `QAR ${deal.discountedPrice}`, 5);
+        if (deal.discountedPrice) {
+          drawField("Discounted Price", `QAR ${deal.discountedPrice}`, 5);
+        } else if (deal.discountPercentage) {
+          drawField("Discount", `${deal.discountPercentage}%`, 5);
+        }
         if (deal.redemption) {
           drawField("Redemption", deal.redemption === 'limited' 
             ? `Limited (${deal.limitPerUser || 'N/A'} per user)` 

@@ -841,6 +841,8 @@ export async function registerRoutes(
               merchantId: merchant.id,
               images: imageUrls,
               branches: dealBranches,
+              discountPercentage: deal.discountedPrice ? null : (deal.discountPercentage || null),
+              discountedPrice: deal.discountedPrice || null,
             };
             const validatedDeal = insertMerchantDealSchema.parse(dealData);
             await storage.createMerchantDeal(validatedDeal);
@@ -1002,7 +1004,7 @@ export async function registerRoutes(
               limitPerUser: deal.limitPerUser || null,
               originalPrice: deal.originalPrice || null,
               isMultipleItems: deal.isMultipleItems || false,
-              discountPercentage: deal.discountPercentage || null,
+              discountPercentage: deal.discountedPrice ? null : (deal.discountPercentage || null),
               discountedPrice: deal.discountedPrice || null,
               isTwoTranches: deal.isTwoTranches || false,
               trancheValidity: deal.trancheValidity || null,
