@@ -163,6 +163,10 @@ export default function MerchantView() {
         archived: "Archived",
       };
       toast({ title: messages[status] || "Status updated" });
+      if (status === "moderation") {
+        setLocation("/admin/merchants");
+        return;
+      }
       await fetchMerchant();
     } catch (error) {
       toast({ title: "Error updating status", variant: "destructive" });
