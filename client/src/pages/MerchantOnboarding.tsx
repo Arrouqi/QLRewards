@@ -22,7 +22,12 @@ import {
   ShoppingBag,
   Check,
   Info,
-  ImageIcon
+  ImageIcon,
+  HelpCircle,
+  Users,
+  TrendingUp,
+  Zap,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -341,13 +346,31 @@ export default function MerchantOnboarding() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-[#00426D] text-white py-6 px-4">
+      <header className="bg-gradient-to-br from-[#00426D] via-[#00395D] to-[#002A45] text-white py-10 px-4">
         <div className="container mx-auto max-w-5xl">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 mb-6">
             <img src="/ql-logo.png" alt="Qatar Living" className="h-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-            <div>
-              <h1 className="text-2xl font-bold">Merchant Partnership Application</h1>
-              <p className="text-white/80 text-sm">Join Qatar Living Deals as a partner merchant</p>
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold mb-3">Grow Your Business with Qatar Living Deals</h1>
+          <p className="text-white/80 text-lg mb-8 max-w-2xl">
+            Partner with Qatar's largest community platform and reach thousands of new customers ready to discover your offers.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
+              <Users className="h-5 w-5 text-[#FF7F39] flex-shrink-0" />
+              <span className="text-sm text-white/90">Massive Audience Reach</span>
+            </div>
+            <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
+              <TrendingUp className="h-5 w-5 text-[#FF7F39] flex-shrink-0" />
+              <span className="text-sm text-white/90">Boost Your Revenue</span>
+            </div>
+            <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
+              <Zap className="h-5 w-5 text-[#FF7F39] flex-shrink-0" />
+              <span className="text-sm text-white/90">Quick & Easy Setup</span>
+            </div>
+            <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
+              <Shield className="h-5 w-5 text-[#FF7F39] flex-shrink-0" />
+              <span className="text-sm text-white/90">Trusted Platform</span>
             </div>
           </div>
         </div>
@@ -428,7 +451,15 @@ export default function MerchantOnboarding() {
                     name="crNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>CR Number *</FormLabel>
+                        <FormLabel className="flex items-center gap-1.5">
+                          CR Number *
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
+                              <TooltipContent><p className="max-w-xs text-xs">Your Commercial Registration number issued by the Ministry of Commerce. Usually 6-8 digits.</p></TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="6-8 digit number" maxLength={8} data-testid="input-cr-number" />
                         </FormControl>
@@ -1100,8 +1131,14 @@ function TwoTranchesSection({ form, index }: { form: any; index: number }) {
                 onCheckedChange={field.onChange}
               />
             </FormControl>
-            <FormLabel className="font-medium text-slate-700">
+            <FormLabel className="font-medium text-slate-700 flex items-center gap-1.5">
               Is this deal valid for two tranches?
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
+                  <TooltipContent><p className="max-w-xs text-xs">A two-tranche deal splits the offer into two usage periods. For example, "Buy 1 Get 1" can be redeemed in two separate visits.</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </FormLabel>
           </FormItem>
         )}
@@ -1176,8 +1213,14 @@ function OfferAvailabilityDays({ form, index }: { form: any; index: number }) {
                 data-testid={`checkbox-specific-days-${index}`}
               />
             </FormControl>
-            <FormLabel className="font-medium text-slate-700">
+            <FormLabel className="font-medium text-slate-700 flex items-center gap-1.5">
               Available on specific days only
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
+                  <TooltipContent><p className="max-w-xs text-xs">Restrict this deal to certain days of the week. Useful for weekday-only or weekend-only promotions.</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </FormLabel>
           </FormItem>
         )}
@@ -1465,13 +1508,18 @@ function DealFormSection({
               name={`deals.${index}.duration`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Duration *</FormLabel>
+                  <FormLabel className="flex items-center gap-1.5">
+                    Duration *
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
+                        <TooltipContent><p className="max-w-xs text-xs">How long this deal stays active on the platform. E.g., "3 months", "6 weeks", or "1 year".</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="e.g., 3 months, 6 weeks, 1 year" />
                   </FormControl>
-                  <FormDescription>
-                    How long will this deal be valid?
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -1482,7 +1530,15 @@ function DealFormSection({
               name={`deals.${index}.redemption`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Redemption *</FormLabel>
+                  <FormLabel className="flex items-center gap-1.5">
+                    Redemption *
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
+                        <TooltipContent><p className="max-w-xs text-xs">Choose "Unlimited" to let customers use this deal as many times as they want, or "Limited" to set a maximum per customer.</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -1533,8 +1589,14 @@ function DealFormSection({
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
-                    <FormLabel className="font-medium text-slate-700">
+                    <FormLabel className="font-medium text-slate-700 flex items-center gap-1.5">
                       This Deal is for Multiple Items
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
+                          <TooltipContent><p className="max-w-xs text-xs">Enable this if the deal covers multiple products or menu items. Pricing won't be displayed on the deal card when enabled.</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </FormLabel>
                   </FormItem>
                 )}

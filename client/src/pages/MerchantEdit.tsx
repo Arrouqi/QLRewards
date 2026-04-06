@@ -942,65 +942,71 @@ export default function MerchantEdit() {
                           </div>
                         )}
                         
-                        <div className="space-y-2">
-                          <Label>Original Price (QAR)</Label>
-                          <Input
-                            value={deal.originalPrice || ""}
-                            onChange={(e) => handleDealChange(index, "originalPrice", e.target.value)}
-                            data-testid={`input-deal-price-${index}`}
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label>Discount Type</Label>
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              variant={(discountTypes[index] || "percentage") === "percentage" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => {
-                                setDiscountTypes(prev => ({ ...prev, [index]: "percentage" }));
-                                handleDealChange(index, "discountedPrice", "");
-                              }}
-                              data-testid={`button-discount-type-percentage-${index}`}
-                            >
-                              Percentage
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={(discountTypes[index] || "percentage") === "discountedPrice" ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => {
-                                setDiscountTypes(prev => ({ ...prev, [index]: "discountedPrice" }));
-                                handleDealChange(index, "discountPercentage", "");
-                              }}
-                              data-testid={`button-discount-type-price-${index}`}
-                            >
-                              Discounted Price
-                            </Button>
-                          </div>
-                        </div>
-                        
-                        {(discountTypes[index] || "percentage") === "percentage" ? (
+                        {!deal.isMultipleItems && (
                           <div className="space-y-2">
-                            <Label>Discount Percentage</Label>
+                            <Label>{deal.dealType === "voucher" ? "Voucher Amount (QAR)" : "Original Price (QAR)"}</Label>
                             <Input
-                              value={deal.discountPercentage || ""}
-                              onChange={(e) => handleDealChange(index, "discountPercentage", e.target.value)}
-                              placeholder="e.g., 20"
-                              data-testid={`input-deal-discount-${index}`}
+                              value={deal.originalPrice || ""}
+                              onChange={(e) => handleDealChange(index, "originalPrice", e.target.value)}
+                              data-testid={`input-deal-price-${index}`}
                             />
                           </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <Label>Discounted Price (QAR)</Label>
-                            <Input
-                              value={deal.discountedPrice || ""}
-                              onChange={(e) => handleDealChange(index, "discountedPrice", e.target.value)}
-                              placeholder="e.g., 49.99"
-                              data-testid={`input-deal-discounted-price-${index}`}
-                            />
-                          </div>
+                        )}
+                        
+                        {deal.dealType === "discount" && !deal.isMultipleItems && (
+                          <>
+                            <div className="space-y-2">
+                              <Label>Discount Type</Label>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant={(discountTypes[index] || "percentage") === "percentage" ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => {
+                                    setDiscountTypes(prev => ({ ...prev, [index]: "percentage" }));
+                                    handleDealChange(index, "discountedPrice", "");
+                                  }}
+                                  data-testid={`button-discount-type-percentage-${index}`}
+                                >
+                                  Percentage
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant={(discountTypes[index] || "percentage") === "discountedPrice" ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => {
+                                    setDiscountTypes(prev => ({ ...prev, [index]: "discountedPrice" }));
+                                    handleDealChange(index, "discountPercentage", "");
+                                  }}
+                                  data-testid={`button-discount-type-price-${index}`}
+                                >
+                                  Discounted Price
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            {(discountTypes[index] || "percentage") === "percentage" ? (
+                              <div className="space-y-2">
+                                <Label>Discount Percentage</Label>
+                                <Input
+                                  value={deal.discountPercentage || ""}
+                                  onChange={(e) => handleDealChange(index, "discountPercentage", e.target.value)}
+                                  placeholder="e.g., 20"
+                                  data-testid={`input-deal-discount-${index}`}
+                                />
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <Label>Discounted Price (QAR)</Label>
+                                <Input
+                                  value={deal.discountedPrice || ""}
+                                  onChange={(e) => handleDealChange(index, "discountedPrice", e.target.value)}
+                                  placeholder="e.g., 49.99"
+                                  data-testid={`input-deal-discounted-price-${index}`}
+                                />
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                       
@@ -1013,8 +1019,8 @@ export default function MerchantEdit() {
                           data-testid={`input-deal-description-${index}`}
                         />
                       </div>
-                      
-                      <div className="flex flex-wrap gap-4">
+
+                      {deal.dealType === "bogo" && (
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id={`twoTranches-${index}`}
@@ -1023,7 +1029,9 @@ export default function MerchantEdit() {
                           />
                           <Label htmlFor={`twoTranches-${index}`}>Two Tranches</Label>
                         </div>
-                        
+                      )}
+
+                      {(deal.dealType === "discount" || deal.dealType === "bogo") && (
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id={`multipleItems-${index}`}
@@ -1032,18 +1040,18 @@ export default function MerchantEdit() {
                           />
                           <Label htmlFor={`multipleItems-${index}`}>Multiple Items</Label>
                         </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`specificDays-${index}`}
-                            checked={deal.specificDays || false}
-                            onCheckedChange={(checked) => handleDealChange(index, "specificDays", checked)}
-                          />
-                          <Label htmlFor={`specificDays-${index}`}>Specific Days Only</Label>
-                        </div>
+                      )}
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`specificDays-${index}`}
+                          checked={deal.specificDays || false}
+                          onCheckedChange={(checked) => handleDealChange(index, "specificDays", checked)}
+                        />
+                        <Label htmlFor={`specificDays-${index}`}>Specific Days Only</Label>
                       </div>
                       
-                      {deal.isTwoTranches && (
+                      {deal.isTwoTranches && deal.dealType === "bogo" && (
                         <div className="space-y-2">
                           <Label>Tranche Validity (weeks)</Label>
                           <Input
