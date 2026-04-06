@@ -18,6 +18,24 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
 
+interface SubCategory {
+  id: string;
+  categoryId: string;
+  name: string;
+}
+
+interface CategoryWithSubs {
+  id: string;
+  name: string;
+  subCategories: SubCategory[];
+}
+
+interface Term {
+  id: number;
+  type: string;
+  text: string;
+}
+
 interface Deal {
   id?: string;
   category: string;
@@ -104,10 +122,33 @@ export default function MerchantEdit() {
 
   const [deals, setDeals] = useState<Deal[]>([]);
   const [discountTypes, setDiscountTypes] = useState<Record<number, "percentage" | "discountedPrice">>({});
+  const [categories, setCategories] = useState<CategoryWithSubs[]>([]);
+  const [claimTerms, setClaimTerms] = useState<Term[]>([]);
+  const [generalTerms, setGeneralTerms] = useState<Term[]>([]);
 
   useEffect(() => {
     fetchMerchant();
+    fetchCategories();
+    fetchTerms();
   }, [params?.id]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/categories");
+      if (res.ok) setCategories(await res.json());
+    } catch {}
+  };
+
+  const fetchTerms = async () => {
+    try {
+      const [claimRes, generalRes] = await Promise.all([
+        fetch("/api/terms/claim"),
+        fetch("/api/terms/general"),
+      ]);
+      if (claimRes.ok) setClaimTerms(await claimRes.json());
+      if (generalRes.ok) setGeneralTerms(await generalRes.json());
+    } catch {}
+  };
 
   const fetchMerchant = async () => {
     if (!params?.id) return;
@@ -810,20 +851,40 @@ export default function MerchantEdit() {
                         
                         <div className="space-y-2">
                           <Label>Category</Label>
-                          <Input
+                          <Select
                             value={deal.category}
-                            onChange={(e) => handleDealChange(index, "category", e.target.value)}
-                            data-testid={`input-deal-category-${index}`}
-                          />
+                            onValueChange={(value) => {
+                              handleDealChange(index, "category", value);
+                              handleDealChange(index, "subCategory", "");
+                            }}
+                          >
+                            <SelectTrigger data-testid={`select-deal-category-${index}`}>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((cat) => (
+                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         
                         <div className="space-y-2">
                           <Label>Sub-Category</Label>
-                          <Input
+                          <Select
                             value={deal.subCategory}
-                            onChange={(e) => handleDealChange(index, "subCategory", e.target.value)}
-                            data-testid={`input-deal-subcategory-${index}`}
-                          />
+                            onValueChange={(value) => handleDealChange(index, "subCategory", value)}
+                            disabled={!deal.category}
+                          >
+                            <SelectTrigger data-testid={`select-deal-subcategory-${index}`}>
+                              <SelectValue placeholder="Select sub-category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(categories.find(c => c.name === deal.category)?.subCategories || []).map((sub) => (
+                                <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         
                         <div className="space-y-2">
@@ -1037,25 +1098,61 @@ export default function MerchantEdit() {
                       )}
                       
                       <div className="space-y-2">
-                        <Label>Claim Rules (one per line)</Label>
-                        <Textarea
-                          value={(deal.claimRules || []).join("\n")}
-                          onChange={(e) => handleDealChange(index, "claimRules", e.target.value.split("\n").filter(Boolean))}
-                          rows={2}
-                          placeholder="Enter claim rules, one per line"
-                          data-testid={`input-deal-claim-rules-${index}`}
-                        />
+                        <Label>Claim Rules</Label>
+                        <div className="space-y-2 mt-1">
+                          {claimTerms.map((term) => {
+                            const currentRules = deal.claimRules || [];
+                            const isSelected = currentRules.includes(term.text);
+                            return (
+                              <label
+                                key={term.id}
+                                className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const updated = e.target.checked
+                                      ? [...currentRules, term.text]
+                                      : currentRules.filter((v: string) => v !== term.text);
+                                    handleDealChange(index, "claimRules", updated);
+                                  }}
+                                  className="h-4 w-4 accent-[#00426D]"
+                                />
+                                <span className="text-sm" dangerouslySetInnerHTML={{ __html: term.text }} />
+                              </label>
+                            );
+                          })}
+                        </div>
                       </div>
                       
                       <div className="space-y-2">
-                        <Label>General Rules (one per line)</Label>
-                        <Textarea
-                          value={(deal.generalRules || []).join("\n")}
-                          onChange={(e) => handleDealChange(index, "generalRules", e.target.value.split("\n").filter(Boolean))}
-                          rows={2}
-                          placeholder="Enter general rules, one per line"
-                          data-testid={`input-deal-general-rules-${index}`}
-                        />
+                        <Label>General Rules</Label>
+                        <div className="space-y-2 mt-1">
+                          {generalTerms.map((term) => {
+                            const currentRules = deal.generalRules || [];
+                            const isSelected = currentRules.includes(term.text);
+                            return (
+                              <label
+                                key={term.id}
+                                className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const updated = e.target.checked
+                                      ? [...currentRules, term.text]
+                                      : currentRules.filter((v: string) => v !== term.text);
+                                    handleDealChange(index, "generalRules", updated);
+                                  }}
+                                  className="h-4 w-4 accent-[#00426D]"
+                                />
+                                <span className="text-sm" dangerouslySetInnerHTML={{ __html: term.text }} />
+                              </label>
+                            );
+                          })}
+                        </div>
                       </div>
                       
                       <div className="space-y-2">
