@@ -81,6 +81,8 @@ export default function MerchantView() {
   const [notes, setNotes] = useState<MerchantNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+  const [isUploadingSignedContract, setIsUploadingSignedContract] = useState(false);
+  const signedContractFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchMerchant();
@@ -216,6 +218,61 @@ export default function MerchantView() {
     } catch {
       toast({ title: "Error removing sales order", variant: "destructive" });
     }
+  };
+
+  const handleSignedContractUpload = async (file: File) => {
+    if (!merchant) return;
+    setIsUploadingSignedContract(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const res = await fetch(`/api/merchants/${merchant.id}/upload-signed`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ signedContractUpload: reader.result }),
+          });
+          if (!res.ok) throw new Error("Failed to upload signed agreement");
+          const updated = await res.json();
+          setMerchant({ ...merchant, signedContractUpload: updated.signedContractUpload });
+          toast({ title: "Signed agreement uploaded successfully" });
+        } catch (error) {
+          toast({ title: "Error uploading signed agreement", variant: "destructive" });
+        } finally {
+          setIsUploadingSignedContract(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setIsUploadingSignedContract(false);
+      toast({ title: "Error reading file", variant: "destructive" });
+    }
+  };
+
+  const handleRemoveSignedContract = async () => {
+    if (!merchant) return;
+    try {
+      const res = await fetch(`/api/merchants/${merchant.id}/signed-contract`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to remove signed agreement");
+      setMerchant({ ...merchant, signedContractUpload: undefined });
+      toast({ title: "Signed agreement removed" });
+    } catch {
+      toast({ title: "Error removing signed agreement", variant: "destructive" });
+    }
+  };
+
+  const downloadSignedContract = () => {
+    if (!merchant?.signedContractUpload) return;
+    const link = document.createElement("a");
+    link.href = merchant.signedContractUpload;
+    link.download = `Signed_Agreement_${merchant.companyName.replace(/\s+/g, '_')}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const generatePDF = () => {
@@ -538,17 +595,6 @@ export default function MerchantView() {
     toast({ title: "PDF Downloaded", description: "Agreement PDF has been downloaded." });
   };
 
-  const downloadSignedContract = () => {
-    if (!merchant?.signedContractUpload) return;
-    
-    const link = document.createElement("a");
-    link.href = merchant.signedContractUpload;
-    link.download = `Signed_Contract_${merchant.companyName.replace(/\s+/g, '_')}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast({ title: "Downloading signed contract" });
-  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -610,17 +656,6 @@ export default function MerchantView() {
               <FileDown className="h-4 w-4 mr-2" />
               Download Agreement
             </Button>
-            
-            {merchant.signedContractUpload && (
-              <Button
-                variant="outline"
-                onClick={downloadSignedContract}
-                data-testid="button-download-signed"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Signed Contract
-              </Button>
-            )}
             
             <Button
               onClick={() => setLocation(`/admin/merchants/${merchant.id}/edit`)}
@@ -1070,6 +1105,99 @@ export default function MerchantView() {
                     <>
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Sales Order PDF
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-[#00426D]">Signed Agreement</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <input
+              type="file"
+              ref={signedContractFileRef}
+              accept=".pdf,application/pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleSignedContractUpload(file);
+                e.target.value = "";
+              }}
+              data-testid="input-signed-contract-file"
+            />
+            {merchant.signedContractUpload ? (
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-[#00426D]" />
+                  <div>
+                    <p className="font-medium text-sm">Signed Agreement</p>
+                    <a
+                      href={merchant.signedContractUpload}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline"
+                      data-testid="link-signed-contract-view"
+                    >
+                      View Document
+                    </a>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadSignedContract}
+                    data-testid="button-download-signed-contract"
+                  >
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => signedContractFileRef.current?.click()}
+                    disabled={isUploadingSignedContract}
+                    data-testid="button-replace-signed-contract"
+                  >
+                    <Upload className="h-4 w-4 mr-1" />
+                    Replace
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRemoveSignedContract}
+                    className="text-red-600 hover:text-red-700"
+                    data-testid="button-remove-signed-contract"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg">
+                <FileText className="h-8 w-8 text-slate-400 mb-2" />
+                <p className="text-sm text-slate-500 mb-3">No signed agreement attached</p>
+                <Button
+                  variant="outline"
+                  onClick={() => signedContractFileRef.current?.click()}
+                  disabled={isUploadingSignedContract}
+                  data-testid="button-upload-signed-contract"
+                >
+                  {isUploadingSignedContract ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Signed Agreement
                     </>
                   )}
                 </Button>

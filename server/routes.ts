@@ -1064,9 +1064,6 @@ export async function registerRoutes(
       if (status === "moderation") {
         const missingDocs: string[] = [];
         if (!existingMerchant.crDocument) missingDocs.push("CR Document");
-        if (!existingMerchant.establishmentCard) missingDocs.push("Establishment Card");
-        if (!existingMerchant.tradeLicense) missingDocs.push("Trade License");
-        if (!existingMerchant.menuPriceList) missingDocs.push("Menu/Price List");
         
         if (missingDocs.length > 0) {
           return res.status(400).json({ 
@@ -1196,23 +1193,36 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/merchants/:id/upload-signed", async (req, res) => {
+  app.post("/api/merchants/:id/upload-signed", requireAuth, async (req, res) => {
     try {
+      const existing = await storage.getMerchantById(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+
       const { signedContractUpload } = req.body;
       
       if (!signedContractUpload) {
         return res.status(400).json({ error: "Signed contract file is required" });
       }
-      
-      let uploadUrl = signedContractUpload;
-      if (signedContractUpload.startsWith('data:')) {
-        try {
-          const urls = await uploadMultipleImages([signedContractUpload], `merchant-${req.params.id}-signed`);
-          uploadUrl = urls[0];
-        } catch (uploadError) {
-          console.error("[Azure] Signed contract upload failed:", uploadError);
-          return res.status(500).json({ error: "Failed to upload signed contract" });
-        }
+
+      if (!signedContractUpload.startsWith('data:')) {
+        return res.status(400).json({ error: "Invalid file upload format" });
+      }
+
+      const mimeMatch = signedContractUpload.match(/^data:([^;]+);base64,/);
+      const allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+      if (!mimeMatch || !allowedMimes.includes(mimeMatch[1])) {
+        return res.status(400).json({ error: "Only PDF and image files (JPEG, PNG, WebP) are allowed" });
+      }
+
+      let uploadUrl: string;
+      try {
+        const urls = await uploadMultipleImages([signedContractUpload], `merchant-${req.params.id}-signed`);
+        uploadUrl = urls[0];
+      } catch (uploadError) {
+        console.error("[Azure] Signed contract upload failed:", uploadError);
+        return res.status(500).json({ error: "Failed to upload signed contract" });
       }
       
       const merchant = await storage.updateMerchant(req.params.id, { signedContractUpload: uploadUrl });
@@ -1220,11 +1230,24 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Merchant not found" });
       }
       
-      // Send confirmation email to merchant
       sendMerchantSignedContractConfirmation(merchant).catch(err => {
         console.error("[Email] Error sending signed contract confirmation:", err);
       });
       
+      res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/merchants/:id/signed-contract", requireAuth, async (req, res) => {
+    try {
+      const existing = await storage.getMerchantById(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+
+      const merchant = await storage.updateMerchant(req.params.id, { signedContractUpload: null });
       res.json(merchant);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
