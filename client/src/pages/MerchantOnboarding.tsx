@@ -139,9 +139,9 @@ const merchantSchema = z.object({
   subscriptionFee: z.string().default("0"),
   transactionFee: z.string().default("3.00"),
   crDocument: z.string().min(1, "CR Document is required"),
-  establishmentCard: z.string().min(1, "Establishment Card is required"),
-  tradeLicense: z.string().min(1, "Trade License is required"),
-  menuPriceList: z.string().min(1, "Menu / Price List is required"),
+  establishmentCard: z.string().optional(),
+  tradeLicense: z.string().optional(),
+  menuPriceList: z.string().optional(),
   taxCardDocument: z.string().optional(),
   logo: z.string().optional(),
   coverImage: z.string().optional(),
@@ -894,19 +894,19 @@ export default function MerchantOnboarding() {
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Establishment Card *"
+                    label="Establishment Card"
                     field="establishmentCard"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Trade License *"
+                    label="Trade License"
                     field="tradeLicense"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Menu / Price List *"
+                    label="Menu / Price List"
                     field="menuPriceList"
                     form={form}
                     onChange={handleFileUpload}
