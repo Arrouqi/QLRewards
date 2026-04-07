@@ -894,19 +894,19 @@ export default function MerchantOnboarding() {
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Establishment Card"
+                    label="Establishment Card (Optional)"
                     field="establishmentCard"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Trade License"
+                    label="Trade License (Optional)"
                     field="tradeLicense"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Menu / Price List"
+                    label="Menu / Price List (Optional)"
                     field="menuPriceList"
                     form={form}
                     onChange={handleFileUpload}
