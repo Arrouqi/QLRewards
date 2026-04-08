@@ -28,7 +28,9 @@ import {
   Loader2,
   Crop as CropIcon,
   Check,
-  Pencil
+  Pencil,
+  Search,
+  Building2
 } from "lucide-react";
 
 interface SubCategory {
@@ -105,7 +107,16 @@ function centerAspectCrop(
   );
 }
 
-// Schema
+interface ESMerchant {
+  id: string;
+  agencyName: string;
+  agencyEmail: string;
+  agencyId: number;
+  contactMobile?: string;
+  branches?: { id: number; name: string; location?: { name: string } }[];
+  category?: { id: number; name: string };
+}
+
 const formSchema = z.object({
   category: z.string().min(1, "Category is required"),
   subCategory: z.string().min(1, "Sub-category is required"),
@@ -116,6 +127,7 @@ const formSchema = z.object({
   originalPrice: z.string().optional(),
   isMultipleItems: z.boolean().default(false),
   discountPercentage: z.string().optional(),
+  discountedPrice: z.string().optional(),
   isTwoTranches: z.boolean().default(false),
   trancheValidity: z.string().optional(),
   specificDays: z.boolean().default(false),
@@ -125,8 +137,9 @@ const formSchema = z.object({
   claimRules: z.array(z.string()).min(1, "Select at least one claim rule"),
   generalRules: z.array(z.string()).min(1, "Select at least one general rule"),
   otherRules: z.string().optional(),
+  merchantId: z.string().min(1, "Please select a merchant"),
   merchantName: z.string().min(1, "Merchant name is required"),
-  merchantEmail: z.string().email("Please enter a valid email").optional().or(z.literal("")),
+  merchantEmail: z.string().optional(),
   merchantPhone: z.string().optional(),
   branches: z.array(z.string()).min(1, "At least one branch is required"),
   agreement: z.boolean().refine(val => val === true, "You must agree to the terms"),
@@ -159,8 +172,14 @@ export default function CreateOffer() {
   const [isDiscount, setIsDiscount] = useState(false);
   const [isBogo, setIsBogo] = useState(false);
   const [isTwoTranches, setIsTwoTranches] = useState(false);
+  const [discountType, setDiscountType] = useState<"percentage" | "discountedPrice">("percentage");
   const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
-  const [branchInput, setBranchInput] = useState("");
+  const [merchantSearch, setMerchantSearch] = useState("");
+  const [selectedMerchant, setSelectedMerchant] = useState<ESMerchant | null>(null);
+  const [showMerchantDropdown, setShowMerchantDropdown] = useState(false);
+  const [merchantSearchDebounce, setMerchantSearchDebounce] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedMerchantSearch, setDebouncedMerchantSearch] = useState("");
+  const merchantDropdownRef = useRef<HTMLDivElement>(null);
   
   const [showCropper, setShowCropper] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>("");
@@ -204,6 +223,50 @@ export default function CreateOffer() {
       return res.json();
     },
   });
+
+  const { data: esMerchantsData } = useQuery<{ merchants: ESMerchant[]; total: number }>({
+    queryKey: ["es-merchants-search", debouncedMerchantSearch],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (debouncedMerchantSearch) params.set("search", debouncedMerchantSearch);
+      params.set("size", "200");
+      const res = await fetch(`/api/es/merchants?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch merchants");
+      return res.json();
+    },
+  });
+
+  const esMerchants = esMerchantsData?.merchants || [];
+
+  const handleMerchantSearch = (value: string) => {
+    setMerchantSearch(value);
+    setShowMerchantDropdown(true);
+    if (merchantSearchDebounce) clearTimeout(merchantSearchDebounce);
+    const timer = setTimeout(() => setDebouncedMerchantSearch(value), 300);
+    setMerchantSearchDebounce(timer);
+  };
+
+  const handleSelectMerchant = (merchant: ESMerchant) => {
+    setSelectedMerchant(merchant);
+    setMerchantSearch(merchant.agencyName);
+    setShowMerchantDropdown(false);
+    form.setValue("merchantId", merchant.id);
+    form.setValue("merchantName", merchant.agencyName);
+    form.setValue("merchantEmail", merchant.agencyEmail || "");
+    form.setValue("merchantPhone", merchant.contactMobile || "");
+    const branchNames = merchant.branches?.map(b => b.name) || [];
+    form.setValue("branches", branchNames.length === 1 ? branchNames : []);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (merchantDropdownRef.current && !merchantDropdownRef.current.contains(e.target as Node)) {
+        setShowMerchantDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (categoriesError) {
@@ -417,10 +480,12 @@ export default function CreateOffer() {
       limitPerUser: "",
       originalPrice: "",
       discountPercentage: "",
+      discountedPrice: "",
       trancheValidity: "",
       title: "",
       description: "",
       otherRules: "",
+      merchantId: "",
       merchantName: "",
       merchantEmail: "",
       merchantPhone: "",
@@ -500,6 +565,7 @@ export default function CreateOffer() {
         originalPrice: data.originalPrice,
         isMultipleItems: data.isMultipleItems,
         discountPercentage: data.discountPercentage,
+        discountedPrice: data.discountedPrice,
         isTwoTranches: data.isTwoTranches,
         trancheValidity: data.trancheValidity,
         specificDays: data.specificDays,
@@ -509,6 +575,7 @@ export default function CreateOffer() {
         claimRules: data.claimRules,
         generalRules: data.generalRules,
         otherRules: data.otherRules,
+        merchantId: data.merchantId,
         merchantName: data.merchantName,
         merchantEmail: data.merchantEmail,
         merchantPhone: data.merchantPhone,
@@ -687,18 +754,18 @@ export default function CreateOffer() {
                       name="offerDuration"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Deal Duration <span className="text-red-500">*</span></FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-11 bg-slate-50">
-                                <SelectValue placeholder="Select Duration" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="monthly">Monthly Deal</SelectItem>
-                              <SelectItem value="yearly">Yearly Deal</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
+                            Duration <span className="text-red-500">*</span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger type="button"><Info className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
+                                <TooltipContent><p className="max-w-xs text-xs">How long this deal stays active on the platform. E.g., "3 months", "6 weeks", or "1 year".</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </FormLabel>
+                          <FormControl>
+                            <Input className="h-11 bg-slate-50" placeholder="e.g., 3 months, 6 weeks, 1 year" {...field} />
+                          </FormControl>
                         </FormItem>
                       )}
                     />
@@ -709,7 +776,15 @@ export default function CreateOffer() {
                         name="redemption"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">Redemption <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
+                              Redemption <span className="text-red-500">*</span>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger type="button"><Info className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
+                                  <TooltipContent><p className="max-w-xs text-xs">Choose "Unlimited" to let customers use this deal as many times as they want, or "Limited" to set a maximum per customer.</p></TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger className="h-11 bg-slate-50">
@@ -862,25 +937,77 @@ export default function CreateOffer() {
                         />
 
                         {isDiscount && (
-                          <FormField
-                            control={form.control}
-                            name="discountPercentage"
-                            render={({ field }) => (
-                              <FormItem className="flex-1">
-                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount Percentage <span className="text-red-500">*</span></FormLabel>
-                                <div className="relative">
-                                  <FormControl>
-                                    <Input 
-                                      placeholder="0" 
-                                      className="h-11 bg-slate-50 pr-12" 
-                                      {...field} 
-                                    />
-                                  </FormControl>
-                                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">%</div>
-                                </div>
-                              </FormItem>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDiscountType("percentage");
+                                  form.setValue("discountedPrice", "");
+                                }}
+                                className={cn(
+                                  "px-3 py-1.5 text-sm rounded-md border transition-colors",
+                                  discountType === "percentage"
+                                    ? "bg-[#00426D] text-white border-[#00426D]"
+                                    : "bg-white text-slate-600 border-slate-300 hover:border-[#00426D]"
+                                )}
+                                data-testid="button-discount-percentage"
+                              >
+                                Discount %
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDiscountType("discountedPrice");
+                                  form.setValue("discountPercentage", "");
+                                }}
+                                className={cn(
+                                  "px-3 py-1.5 text-sm rounded-md border transition-colors",
+                                  discountType === "discountedPrice"
+                                    ? "bg-[#00426D] text-white border-[#00426D]"
+                                    : "bg-white text-slate-600 border-slate-300 hover:border-[#00426D]"
+                                )}
+                                data-testid="button-discount-price"
+                              >
+                                Discounted Price
+                              </button>
+                            </div>
+                            {discountType === "percentage" ? (
+                              <FormField
+                                control={form.control}
+                                name="discountPercentage"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount Percentage <span className="text-red-500">*</span></FormLabel>
+                                    <div className="relative">
+                                      <FormControl>
+                                        <Input placeholder="0" className="h-11 bg-slate-50 pr-12" {...field} />
+                                      </FormControl>
+                                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">%</div>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            ) : (
+                              <FormField
+                                control={form.control}
+                                name="discountedPrice"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discounted Price <span className="text-red-500">*</span></FormLabel>
+                                    <div className="relative">
+                                      <FormControl>
+                                        <Input placeholder="0.00" className="h-11 bg-slate-50 pr-12" {...field} />
+                                      </FormControl>
+                                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
                             )}
-                          />
+                          </div>
                         )}
                       </div>
                     )}
@@ -1128,139 +1255,202 @@ export default function CreateOffer() {
                   </div>
                 </section>
 
-                {/* Merchant Details */}
+                {/* Select Merchant */}
                 <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Merchant Details</h2>
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Merchant</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-4">
                     <p className="text-sm text-slate-500 italic mb-4">
-                      Optional: Provide your contact details so we can reach you about your deal.
+                      Select an existing merchant from the list. Start typing to search.
                     </p>
 
                     <FormField
                       control={form.control}
-                      name="merchantName"
-                      render={({ field }) => (
+                      name="merchantId"
+                      render={() => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Merchant Name <span className="text-red-500">*</span></FormLabel>
-                          <FormControl>
-                            <Input 
-                              className="h-11 bg-slate-50" 
-                              placeholder="Enter merchant name"
-                              data-testid="input-merchant-name"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="merchantEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Qatar Living Account Email Address</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="email"
-                              className="h-11 bg-slate-50" 
-                              placeholder="Enter Qatar Living account email"
-                              data-testid="input-merchant-email"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="merchantPhone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Contact Number</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="tel"
-                              className="h-11 bg-slate-50" 
-                              placeholder="Enter contact number"
-                              data-testid="input-merchant-phone"
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </section>
-
-                {/* Branches */}
-                <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Branches</h2>
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
-                    <FormField
-                      control={form.control}
-                      name="branches"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Branches <span className="text-red-500">*</span></FormLabel>
-                          <div className="space-y-3">
-                            <div className="flex flex-wrap gap-2 min-h-[44px] p-2 bg-slate-50 border border-slate-200 rounded-md">
-                              {field.value?.map((branch, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-sm text-slate-700"
-                                >
-                                  {branch}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const newBranches = field.value?.filter((_, i) => i !== index) || [];
-                                      field.onChange(newBranches);
-                                    }}
-                                    className="ml-1 text-slate-400 hover:text-red-500"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </span>
-                              ))}
-                              <input
-                                type="text"
-                                value={branchInput}
-                                onChange={(e) => setBranchInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ',') {
-                                    e.preventDefault();
-                                    const trimmedValue = branchInput.trim();
-                                    if (trimmedValue && !field.value?.includes(trimmedValue)) {
-                                      field.onChange([...(field.value || []), trimmedValue]);
-                                      setBranchInput("");
-                                    }
-                                  }
-                                }}
-                                onBlur={() => {
-                                  const trimmedValue = branchInput.trim();
-                                  if (trimmedValue && !field.value?.includes(trimmedValue)) {
-                                    field.onChange([...(field.value || []), trimmedValue]);
-                                    setBranchInput("");
-                                  }
-                                }}
-                                placeholder={field.value?.length ? "" : "Type branch name and press Enter"}
-                                className="flex-1 min-w-[200px] bg-transparent border-none outline-none text-sm placeholder:text-slate-400"
-                                data-testid="input-branch"
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Select Merchant <span className="text-red-500">*</span></FormLabel>
+                          <div className="relative" ref={merchantDropdownRef}>
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                              <Input
+                                className="h-11 bg-slate-50 pl-9"
+                                placeholder="Search merchant by name..."
+                                value={merchantSearch}
+                                onChange={(e) => handleMerchantSearch(e.target.value)}
+                                onFocus={() => setShowMerchantDropdown(true)}
+                                data-testid="input-merchant-search"
                               />
+                              {selectedMerchant && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedMerchant(null);
+                                    setMerchantSearch("");
+                                    form.setValue("merchantId", "");
+                                    form.setValue("merchantName", "");
+                                    form.setValue("merchantEmail", "");
+                                    form.setValue("merchantPhone", "");
+                                    form.setValue("branches", []);
+                                  }}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                                  data-testid="button-clear-merchant"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
-                            <p className="text-xs text-slate-500">Type a branch name and press Enter to add it</p>
+                            {showMerchantDropdown && !selectedMerchant && (
+                              <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                                {esMerchants.length === 0 ? (
+                                  <div className="p-3 text-sm text-slate-500 text-center">No merchants found</div>
+                                ) : (
+                                  esMerchants.map((m) => (
+                                    <button
+                                      key={m.id}
+                                      type="button"
+                                      onClick={() => handleSelectMerchant(m)}
+                                      className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
+                                      data-testid={`option-merchant-${m.id}`}
+                                    >
+                                      <div className="font-medium text-sm text-slate-900">{m.agencyName}</div>
+                                      <div className="text-xs text-slate-500 mt-0.5">
+                                        {m.agencyEmail} {m.category?.name ? `· ${m.category.name}` : ""}
+                                      </div>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            )}
                           </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
+                    {selectedMerchant && (
+                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-5 w-5 text-[#00426D]" />
+                          <span className="font-medium text-[#00426D]">{selectedMerchant.agencyName}</span>
+                        </div>
+                        {selectedMerchant.agencyEmail && (
+                          <p className="text-sm text-slate-600">Email: {selectedMerchant.agencyEmail}</p>
+                        )}
+                        {selectedMerchant.contactMobile && (
+                          <p className="text-sm text-slate-600">Phone: {selectedMerchant.contactMobile}</p>
+                        )}
+                        {selectedMerchant.branches && selectedMerchant.branches.length > 0 && (
+                          <p className="text-sm text-slate-600">
+                            Branches: {selectedMerchant.branches.map(b => b.name).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </section>
+
+                {/* Branches */}
+                {selectedMerchant && (
+                  <section>
+                    <h2 className="text-lg font-bold text-[#00426D] mb-4">Applicable Branches</h2>
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
+                      <FormField
+                        control={form.control}
+                        name="branches"
+                        render={({ field }) => (
+                          <FormItem>
+                            {selectedMerchant.branches && selectedMerchant.branches.length > 1 ? (
+                              <>
+                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Select branches for this deal <span className="text-red-500">*</span></FormLabel>
+                                <p className="text-xs text-slate-500 mb-2">Select at least one branch</p>
+                                <div className="space-y-2">
+                                  {selectedMerchant.branches.map((branch) => {
+                                    const isSelected = field.value?.includes(branch.name);
+                                    return (
+                                      <label
+                                        key={branch.id}
+                                        className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={(e) => {
+                                            if (e.target.checked) {
+                                              field.onChange([...(field.value || []), branch.name]);
+                                            } else {
+                                              field.onChange(field.value?.filter((v) => v !== branch.name) || []);
+                                            }
+                                          }}
+                                          className="h-4 w-4 accent-[#FF7F39]"
+                                        />
+                                        <span className="text-sm">{branch.name}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            ) : selectedMerchant.branches && selectedMerchant.branches.length === 1 ? (
+                              <>
+                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Applicable Branch</FormLabel>
+                                <p className="text-sm text-slate-600 p-2 bg-slate-50 rounded border">
+                                  {selectedMerchant.branches[0].name} (automatically selected)
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Branches <span className="text-red-500">*</span></FormLabel>
+                                <p className="text-xs text-slate-500 mb-2">No branches found for this merchant. Enter branch names manually.</p>
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap gap-2 min-h-[44px] p-2 bg-slate-50 border border-slate-200 rounded-md">
+                                    {field.value?.map((branch, index) => (
+                                      <span
+                                        key={index}
+                                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-sm text-slate-700"
+                                      >
+                                        {branch}
+                                        <button
+                                          type="button"
+                                          onClick={() => field.onChange(field.value?.filter((_, i) => i !== index) || [])}
+                                          className="ml-1 text-slate-400 hover:text-red-500"
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </button>
+                                      </span>
+                                    ))}
+                                    <input
+                                      type="text"
+                                      placeholder={field.value?.length ? "" : "Type branch name and press Enter"}
+                                      className="flex-1 min-w-[200px] bg-transparent border-none outline-none text-sm placeholder:text-slate-400"
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ',') {
+                                          e.preventDefault();
+                                          const val = (e.target as HTMLInputElement).value.trim();
+                                          if (val && !field.value?.includes(val)) {
+                                            field.onChange([...(field.value || []), val]);
+                                            (e.target as HTMLInputElement).value = "";
+                                          }
+                                        }
+                                      }}
+                                      onBlur={(e) => {
+                                        const val = e.target.value.trim();
+                                        if (val && !field.value?.includes(val)) {
+                                          field.onChange([...(field.value || []), val]);
+                                          e.target.value = "";
+                                        }
+                                      }}
+                                      data-testid="input-branch-manual"
+                                    />
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </section>
+                )}
 
                 {/* Agreement */}
                  <FormField

@@ -1240,6 +1240,63 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/es/merchants", requireAuth, async (req, res) => {
+    try {
+      const esUrl = process.env.ELASTIC_URL;
+      const esApiKey = process.env.ELASTIC_API_KEY;
+
+      if (!esUrl || !esApiKey) {
+        return res.status(500).json({ error: "Elasticsearch not configured" });
+      }
+
+      const search = (req.query.search as string) || "";
+      const size = Math.min(parseInt(req.query.size as string) || 200, 1000);
+      const from = parseInt(req.query.from as string) || 0;
+
+      const query: any = search
+        ? {
+            bool: {
+              should: [
+                { match_phrase_prefix: { agencyName: search } },
+                { match_phrase_prefix: { "user.email": search } },
+                { match_phrase_prefix: { "category.name": search } },
+              ],
+              minimum_should_match: 1,
+            },
+          }
+        : { match_all: {} };
+
+      const esResponse = await fetch(`${esUrl}prod_merchants/_search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `ApiKey ${esApiKey}`,
+        },
+        body: JSON.stringify({ query, size, from, sort: [{ "agencyName.keyword": { order: "asc", unmapped_type: "keyword" } }] }),
+      });
+
+      if (!esResponse.ok) {
+        const errorText = await esResponse.text();
+        console.error("[ES] Search error:", errorText);
+        return res.status(502).json({ error: "Failed to query Elasticsearch" });
+      }
+
+      const data = await esResponse.json();
+      const merchants = data.hits.hits.map((hit: any) => ({
+        id: hit._id,
+        ...hit._source,
+      }));
+
+      res.json({
+        merchants,
+        total: data.hits.total?.value || 0,
+      });
+    } catch (error: any) {
+      console.error("[ES] Error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.delete("/api/merchants/:id/signed-contract", requireAuth, async (req, res) => {
     try {
       const existing = await storage.getMerchantById(req.params.id);
