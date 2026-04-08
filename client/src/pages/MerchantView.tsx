@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { format } from "date-fns";
 import { 
@@ -77,6 +78,17 @@ export default function MerchantView() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/admin/merchants/:id");
+  
+  const { data: session } = useQuery({
+    queryKey: ["/api/auth/session"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/session", { credentials: "include" });
+      if (!res.ok) return { role: "user" };
+      return res.json();
+    },
+  });
+  const isAdmin = session?.role === "admin";
+  
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadingSalesOrder, setIsUploadingSalesOrder] = useState(false);
@@ -1278,8 +1290,8 @@ export default function MerchantView() {
                 <Input
                   type="number"
                   min="0"
-                  defaultValue={merchant.offersCreated || 0}
-                  key={merchant.offersCreated}
+                  defaultValue={merchant.offersCreated || merchant.deals?.length || 0}
+                  key={`${merchant.offersCreated}-${merchant.deals?.length}`}
                   className="w-24 text-center"
                   data-testid="input-offers-created"
                   id="offers-count-input"
@@ -1342,14 +1354,16 @@ export default function MerchantView() {
                     >
                       Restore to Pending
                     </Button>
-                    <Button
-                      onClick={() => updateStatus("moderation")}
-                      className="bg-blue-600 hover:bg-blue-700"
-                      data-testid="button-restore-moderation"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Restore to Moderation
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        onClick={() => updateStatus("moderation")}
+                        className="bg-blue-600 hover:bg-blue-700"
+                        data-testid="button-restore-moderation"
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Restore to Moderation
+                      </Button>
+                    )}
                   </>
                 )}
                 {merchant.status === "pending" && (
@@ -1364,14 +1378,16 @@ export default function MerchantView() {
                 )}
                 {merchant.status === "moderation" && (
                   <>
-                    <Button
-                      variant="outline"
-                      onClick={() => updateStatus("pending")}
-                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                      data-testid="button-back-pending"
-                    >
-                      Move to Pending
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="outline"
+                        onClick={() => updateStatus("pending")}
+                        className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                        data-testid="button-back-pending"
+                      >
+                        Move to Pending
+                      </Button>
+                    )}
                     <Button
                       onClick={() => updateStatus("created")}
                       className="bg-green-600 hover:bg-green-700"
@@ -1392,15 +1408,17 @@ export default function MerchantView() {
                 )}
                 {merchant.status === "licensing" && (
                   <>
-                    <Button
-                      variant="outline"
-                      onClick={() => updateStatus("created")}
-                      className="text-green-600 border-green-300 hover:bg-green-50"
-                      data-testid="button-back-created"
-                    >
-                      <Undo2 className="h-4 w-4 mr-2" />
-                      Move back to Created
-                    </Button>
+                    {isAdmin && (
+                      <Button
+                        variant="outline"
+                        onClick={() => updateStatus("created")}
+                        className="text-green-600 border-green-300 hover:bg-green-50"
+                        data-testid="button-back-created"
+                      >
+                        <Undo2 className="h-4 w-4 mr-2" />
+                        Move back to Created
+                      </Button>
+                    )}
                     <Button
                       onClick={() => updateStatus("licensed")}
                       className="bg-emerald-600 hover:bg-emerald-700"
@@ -1410,7 +1428,7 @@ export default function MerchantView() {
                     </Button>
                   </>
                 )}
-                {merchant.status === "licensed" && (
+                {isAdmin && merchant.status === "licensed" && (
                   <Button
                     variant="outline"
                     onClick={() => updateStatus("licensing")}

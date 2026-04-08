@@ -876,7 +876,11 @@ export async function registerRoutes(
   app.get("/api/merchants", requireAuth, async (req, res) => {
     try {
       const merchants = await storage.getAllMerchants();
-      res.json(merchants);
+      const enriched = await Promise.all(merchants.map(async (m) => {
+        const deals = await storage.getMerchantDealsByMerchantId(m.id);
+        return { ...m, dealCount: deals.length };
+      }));
+      res.json(enriched);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1082,6 +1086,23 @@ export async function registerRoutes(
       const existingMerchant = await storage.getMerchantById(req.params.id);
       if (!existingMerchant) {
         return res.status(404).json({ error: "Merchant not found" });
+      }
+      
+      const userRole = req.session.role || "user";
+      
+      const isReverse = (
+        (status === "created" && existingMerchant.status === "licensing") ||
+        (status === "licensing" && existingMerchant.status === "licensed") ||
+        (status === "pending" && existingMerchant.status === "moderation") ||
+        (status === "moderation" && existingMerchant.status === "archived")
+      );
+      
+      if (isReverse && userRole !== "admin") {
+        return res.status(403).json({ error: "Only admins can revert to a previous status" });
+      }
+      
+      if (status === "pending" && existingMerchant.status === "archived" && userRole !== "admin") {
+        // Non-admin users CAN restore archived → pending (allowed)
       }
       
       if (status === "created" && existingMerchant.status !== "moderation" && existingMerchant.status !== "licensing") {

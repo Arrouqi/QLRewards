@@ -51,16 +51,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       href: "/admin/merchants",
     },
     {
-      label: "Merchants",
-      icon: Store,
-      href: "/admin/existing-merchants",
-    },
-    {
       label: "Deal Requests",
       icon: LayoutDashboard,
       href: "/admin/dashboard",
     },
     ...(session?.role === "admin" ? [
+      {
+        label: "Merchants",
+        icon: Store,
+        href: "/admin/existing-merchants",
+      },
       {
         label: "Category Management",
         icon: FolderCog,

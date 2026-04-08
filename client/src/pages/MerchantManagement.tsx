@@ -76,6 +76,7 @@ interface Merchant {
   salesOrder?: string;
   submittedBy?: string;
   offersCreated?: number;
+  dealCount?: number;
   deals?: any[];
 }
 
@@ -136,10 +137,10 @@ export default function MerchantManagement() {
   });
 
   const { data: authData } = useQuery<{ role: string }>({
-    queryKey: ["auth-status"],
+    queryKey: ["/api/auth/session"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/status", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to check auth");
+      const res = await fetch("/api/auth/session", { credentials: "include" });
+      if (!res.ok) return { role: "user" };
       return res.json();
     },
   });
@@ -386,7 +387,7 @@ export default function MerchantManagement() {
                     <TableCell>{getStatusBadge(merchant.status)}</TableCell>
                     <TableCell>
                       <span className="text-sm font-medium text-slate-600" data-testid={`text-offers-${merchant.id}`}>
-                        {merchant.offersCreated || 0}
+                        {merchant.offersCreated || merchant.dealCount || 0}
                       </span>
                     </TableCell>
                     <TableCell className="text-sm text-slate-500">
@@ -467,7 +468,7 @@ export default function MerchantManagement() {
                           <DropdownMenuItem
                             onClick={() => {
                               setOffersDialogMerchant(merchant);
-                              setOffersDialogValue(merchant.offersCreated || 0);
+                              setOffersDialogValue(merchant.offersCreated || merchant.dealCount || 0);
                             }}
                             data-testid={`menu-offers-${merchant.id}`}
                           >
@@ -495,14 +496,16 @@ export default function MerchantManagement() {
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                 Mark as Created
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "pending" })}
-                                className="text-amber-600"
-                                data-testid={`menu-back-pending-${merchant.id}`}
-                              >
-                                <Undo2 className="h-4 w-4 mr-2" />
-                                Move to Pending
-                              </DropdownMenuItem>
+                              {isAdmin && (
+                                <DropdownMenuItem
+                                  onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "pending" })}
+                                  className="text-amber-600"
+                                  data-testid={`menu-back-pending-${merchant.id}`}
+                                >
+                                  <Undo2 className="h-4 w-4 mr-2" />
+                                  Move to Pending
+                                </DropdownMenuItem>
+                              )}
                             </>
                           )}
                           {merchant.status === "created" && (
@@ -525,17 +528,19 @@ export default function MerchantManagement() {
                                 <ShieldCheck className="h-4 w-4 mr-2" />
                                 Mark as Licensed
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "created" })}
-                                className="text-green-600"
-                                data-testid={`menu-back-created-${merchant.id}`}
-                              >
-                                <Undo2 className="h-4 w-4 mr-2" />
-                                Move back to Created
-                              </DropdownMenuItem>
+                              {isAdmin && (
+                                <DropdownMenuItem
+                                  onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "created" })}
+                                  className="text-green-600"
+                                  data-testid={`menu-back-created-${merchant.id}`}
+                                >
+                                  <Undo2 className="h-4 w-4 mr-2" />
+                                  Move back to Created
+                                </DropdownMenuItem>
+                              )}
                             </>
                           )}
-                          {merchant.status === "licensed" && (
+                          {isAdmin && merchant.status === "licensed" && (
                             <DropdownMenuItem
                               onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "licensing" })}
                               className="text-purple-600"
@@ -555,14 +560,16 @@ export default function MerchantManagement() {
                                 <Undo2 className="h-4 w-4 mr-2" />
                                 Restore to Pending
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "moderation" })}
-                                className="text-blue-600"
-                                data-testid={`menu-restore-moderation-${merchant.id}`}
-                              >
-                                <Send className="h-4 w-4 mr-2" />
-                                Restore to Moderation
-                              </DropdownMenuItem>
+                              {isAdmin && (
+                                <DropdownMenuItem
+                                  onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "moderation" })}
+                                  className="text-blue-600"
+                                  data-testid={`menu-restore-moderation-${merchant.id}`}
+                                >
+                                  <Send className="h-4 w-4 mr-2" />
+                                  Restore to Moderation
+                                </DropdownMenuItem>
+                              )}
                               {isAdmin && (
                                 <>
                                   <DropdownMenuSeparator />
