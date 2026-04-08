@@ -368,10 +368,29 @@ export default function MerchantManagement() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(merchant.status)}</TableCell>
-                    <TableCell>
-                      <span className="text-sm font-medium text-slate-600" data-testid={`text-offers-${merchant.id}`}>
-                        {merchant.offersCreated || 0}
-                      </span>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="number"
+                        min="0"
+                        value={merchant.offersCreated || 0}
+                        onChange={async (e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          if (val < 0) return;
+                          try {
+                            const res = await fetch(`/api/merchants/${merchant.id}/offers-created`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              credentials: "include",
+                              body: JSON.stringify({ offersCreated: val }),
+                            });
+                            if (res.ok) {
+                              queryClient.invalidateQueries({ queryKey: ["merchants"] });
+                            }
+                          } catch {}
+                        }}
+                        className="w-16 text-center text-sm font-medium text-slate-600 border border-slate-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#00426D]"
+                        data-testid={`input-offers-${merchant.id}`}
+                      />
                     </TableCell>
                     <TableCell className="text-sm text-slate-500">
                       {merchant.submittedBy || "—"}
@@ -490,13 +509,33 @@ export default function MerchantManagement() {
                             </DropdownMenuItem>
                           )}
                           {merchant.status === "licensing" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "licensed" })}
+                                className="text-emerald-600"
+                                data-testid={`menu-licensed-${merchant.id}`}
+                              >
+                                <ShieldCheck className="h-4 w-4 mr-2" />
+                                Mark as Licensed
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "created" })}
+                                className="text-green-600"
+                                data-testid={`menu-back-created-${merchant.id}`}
+                              >
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                Move back to Created
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {merchant.status === "licensed" && (
                             <DropdownMenuItem
-                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "licensed" })}
-                              className="text-emerald-600"
-                              data-testid={`menu-licensed-${merchant.id}`}
+                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "licensing" })}
+                              className="text-purple-600"
+                              data-testid={`menu-back-licensing-${merchant.id}`}
                             >
-                              <ShieldCheck className="h-4 w-4 mr-2" />
-                              Mark as Licensed
+                              <Undo2 className="h-4 w-4 mr-2" />
+                              Move back to Licensing
                             </DropdownMenuItem>
                           )}
                           {merchant.status === "archived" && (

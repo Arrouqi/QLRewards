@@ -19,7 +19,8 @@ import {
   Tag,
   Upload,
   X,
-  Loader2
+  Loader2,
+  Undo2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1379,12 +1380,34 @@ export default function MerchantView() {
                   </Button>
                 )}
                 {merchant.status === "licensing" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => updateStatus("created")}
+                      className="text-green-600 border-green-300 hover:bg-green-50"
+                      data-testid="button-back-created"
+                    >
+                      <Undo2 className="h-4 w-4 mr-2" />
+                      Move back to Created
+                    </Button>
+                    <Button
+                      onClick={() => updateStatus("licensed")}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                      data-testid="button-licensed"
+                    >
+                      Mark as Licensed
+                    </Button>
+                  </>
+                )}
+                {merchant.status === "licensed" && (
                   <Button
-                    onClick={() => updateStatus("licensed")}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                    data-testid="button-licensed"
+                    variant="outline"
+                    onClick={() => updateStatus("licensing")}
+                    className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                    data-testid="button-back-licensing"
                   >
-                    Mark as Licensed
+                    <Undo2 className="h-4 w-4 mr-2" />
+                    Move back to Licensing
                   </Button>
                 )}
               </div>

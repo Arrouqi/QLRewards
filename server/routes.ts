@@ -1084,12 +1084,12 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Merchant not found" });
       }
       
-      if (status === "created" && existingMerchant.status !== "moderation") {
-        return res.status(400).json({ error: "Can only mark as Created from In Moderation status" });
+      if (status === "created" && existingMerchant.status !== "moderation" && existingMerchant.status !== "licensing") {
+        return res.status(400).json({ error: "Can only mark as Created from In Moderation or Licensing status" });
       }
       
-      if (status === "licensing" && existingMerchant.status !== "created") {
-        return res.status(400).json({ error: "Can only move to Licensing from Created status" });
+      if (status === "licensing" && existingMerchant.status !== "created" && existingMerchant.status !== "licensed") {
+        return res.status(400).json({ error: "Can only move to Licensing from Created or Licensed status" });
       }
       
       if (status === "licensed" && existingMerchant.status !== "licensing") {
