@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Search, ChevronLeft, ChevronRight, Trash2, FileDown, Send, ArrowUpDown, ArrowUp, ArrowDown, Pencil } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Trash2, FileDown, Send, ArrowUpDown, ArrowUp, ArrowDown, Pencil, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -237,8 +237,20 @@ export default function AdminDashboard() {
     <AdminLayout>
       <div className="p-4 md:p-8">
         <div className="mb-6 md:mb-8">
-          <h1 className="text-xl md:text-2xl font-bold text-[#00426D]">Deal Requests</h1>
-          <p className="text-slate-500 text-sm md:text-base mt-1">Manage all deal submissions</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-[#00426D]">Deal Requests</h1>
+              <p className="text-slate-500 text-sm md:text-base mt-1">Manage all deal submissions</p>
+            </div>
+            <Button
+              onClick={() => window.open("/create-deal", "_blank")}
+              className="bg-[#00426D] hover:bg-[#003356]"
+              data-testid="button-deal-form"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Deal Form
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">

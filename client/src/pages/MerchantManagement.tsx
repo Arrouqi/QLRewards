@@ -17,7 +17,9 @@ import {
   ShieldCheck,
   Scale,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink,
+  Hash
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -85,6 +87,8 @@ export default function MerchantManagement() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const salesOrderFileRef = useRef<HTMLInputElement>(null);
   const [uploadingMerchantId, setUploadingMerchantId] = useState<string | null>(null);
+  const [offersDialogMerchant, setOffersDialogMerchant] = useState<Merchant | null>(null);
+  const [offersDialogValue, setOffersDialogValue] = useState<number>(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [merchantToDelete, setMerchantToDelete] = useState<Merchant | null>(null);
 
@@ -256,8 +260,20 @@ export default function MerchantManagement() {
       />
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Merchant Onboarding</h1>
-          <p className="text-slate-500">Manage merchant applications</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Merchant Onboarding</h1>
+              <p className="text-slate-500">Manage merchant applications</p>
+            </div>
+            <Button
+              onClick={() => window.open("/", "_blank")}
+              className="bg-[#00426D] hover:bg-[#003356]"
+              data-testid="button-merchant-form"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Merchant Form
+            </Button>
+          </div>
         </div>
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
@@ -368,29 +384,10 @@ export default function MerchantManagement() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(merchant.status)}</TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="number"
-                        min="0"
-                        value={merchant.offersCreated || 0}
-                        onChange={async (e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          if (val < 0) return;
-                          try {
-                            const res = await fetch(`/api/merchants/${merchant.id}/offers-created`, {
-                              method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
-                              credentials: "include",
-                              body: JSON.stringify({ offersCreated: val }),
-                            });
-                            if (res.ok) {
-                              queryClient.invalidateQueries({ queryKey: ["merchants"] });
-                            }
-                          } catch {}
-                        }}
-                        className="w-16 text-center text-sm font-medium text-slate-600 border border-slate-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-[#00426D]"
-                        data-testid={`input-offers-${merchant.id}`}
-                      />
+                    <TableCell>
+                      <span className="text-sm font-medium text-slate-600" data-testid={`text-offers-${merchant.id}`}>
+                        {merchant.offersCreated || 0}
+                      </span>
                     </TableCell>
                     <TableCell className="text-sm text-slate-500">
                       {merchant.submittedBy || "—"}
@@ -467,6 +464,16 @@ export default function MerchantManagement() {
                               Upload Sales Order
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setOffersDialogMerchant(merchant);
+                              setOffersDialogValue(merchant.offersCreated || 0);
+                            }}
+                            data-testid={`menu-offers-${merchant.id}`}
+                          >
+                            <Hash className="h-4 w-4 mr-2" />
+                            Update Offers Count
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {merchant.status === "pending" && (
                             <DropdownMenuItem
@@ -624,6 +631,54 @@ export default function MerchantManagement() {
               data-testid="button-confirm-delete"
             >
               {deleteMerchantMutation.isPending ? "Deleting..." : "Delete Permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!offersDialogMerchant} onOpenChange={(open) => { if (!open) setOffersDialogMerchant(null); }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Update Offers Count</DialogTitle>
+            <DialogDescription>
+              Set the number of offers created for {offersDialogMerchant?.companyName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              type="number"
+              min="0"
+              value={offersDialogValue}
+              onChange={(e) => setOffersDialogValue(parseInt(e.target.value) || 0)}
+              data-testid="input-offers-dialog"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOffersDialogMerchant(null)} data-testid="button-cancel-offers">
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#00426D] hover:bg-[#003356]"
+              onClick={async () => {
+                if (!offersDialogMerchant) return;
+                try {
+                  const res = await fetch(`/api/merchants/${offersDialogMerchant.id}/offers-created`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ offersCreated: offersDialogValue }),
+                  });
+                  if (res.ok) {
+                    queryClient.invalidateQueries({ queryKey: ["merchants"] });
+                    toast({ title: "Updated", description: "Offers count updated successfully" });
+                    setOffersDialogMerchant(null);
+                  }
+                } catch {
+                  toast({ title: "Error", description: "Failed to update offers count", variant: "destructive" });
+                }
+              }}
+              data-testid="button-save-offers"
+            >
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>

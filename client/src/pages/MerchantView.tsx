@@ -1274,32 +1274,43 @@ export default function MerchantView() {
                 <h4 className="font-medium">Offers Created</h4>
                 <p className="text-sm text-slate-500">Track the number of offers created for this merchant</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    value={merchant.offersCreated || 0}
-                    onChange={async (e) => {
-                      const val = parseInt(e.target.value) || 0;
-                      if (val < 0) return;
-                      try {
-                        const res = await fetch(`/api/merchants/${merchant.id}/offers-created`, {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          credentials: "include",
-                          body: JSON.stringify({ offersCreated: val }),
-                        });
-                        if (res.ok) {
-                          setMerchant({ ...merchant, offersCreated: val });
-                        }
-                      } catch {}
-                    }}
-                    className="w-24 text-center"
-                    data-testid="input-offers-created"
-                  />
-                  <span className="text-sm text-slate-500">offers</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  defaultValue={merchant.offersCreated || 0}
+                  key={merchant.offersCreated}
+                  className="w-24 text-center"
+                  data-testid="input-offers-created"
+                  id="offers-count-input"
+                />
+                <span className="text-sm text-slate-500">offers</span>
+                <Button
+                  size="sm"
+                  className="bg-[#00426D] hover:bg-[#003356]"
+                  onClick={async () => {
+                    const input = document.getElementById("offers-count-input") as HTMLInputElement;
+                    const val = parseInt(input?.value) || 0;
+                    if (val < 0) return;
+                    try {
+                      const res = await fetch(`/api/merchants/${merchant.id}/offers-created`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ offersCreated: val }),
+                      });
+                      if (res.ok) {
+                        setMerchant({ ...merchant, offersCreated: val });
+                        toast({ title: "Updated", description: "Offers count saved" });
+                      }
+                    } catch {
+                      toast({ title: "Error", description: "Failed to update", variant: "destructive" });
+                    }
+                  }}
+                  data-testid="button-save-offers"
+                >
+                  Save
+                </Button>
               </div>
             </div>
             <Separator className="my-4" />
