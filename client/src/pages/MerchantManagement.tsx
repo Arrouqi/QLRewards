@@ -13,7 +13,11 @@ import {
   MoreHorizontal,
   CheckCircle2,
   Undo2,
-  Upload
+  Upload,
+  ShieldCheck,
+  Scale,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -35,6 +39,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface Merchant {
@@ -61,6 +73,7 @@ interface Merchant {
   signedContractUpload?: string;
   salesOrder?: string;
   submittedBy?: string;
+  offersCreated?: number;
   deals?: any[];
 }
 
@@ -72,6 +85,8 @@ export default function MerchantManagement() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const salesOrderFileRef = useRef<HTMLInputElement>(null);
   const [uploadingMerchantId, setUploadingMerchantId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [merchantToDelete, setMerchantToDelete] = useState<Merchant | null>(null);
 
   const handleSalesOrderUpload = async (merchantId: string, file: File) => {
     setUploadingMerchantId(merchantId);
@@ -116,6 +131,17 @@ export default function MerchantManagement() {
     },
   });
 
+  const { data: authData } = useQuery<{ role: string }>({
+    queryKey: ["auth-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/status", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to check auth");
+      return res.json();
+    },
+  });
+
+  const isAdmin = authData?.role === "admin";
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const res = await fetch(`/api/merchants/${id}/status`, {
@@ -137,11 +163,36 @@ export default function MerchantManagement() {
         created: "Marked as Created",
         pending: "Moved back to Pending",
         archived: "Archived",
+        licensing: "Moved to Licensing",
+        licensed: "Marked as Licensed",
       };
       toast({ title: messages[variables.status] || "Status updated" });
     },
     onError: (error: any) => {
       toast({ title: "Cannot proceed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMerchantMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/merchants/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to delete merchant");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["merchants"] });
+      toast({ title: "Merchant permanently deleted" });
+      setDeleteDialogOpen(false);
+      setMerchantToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Cannot delete", description: error.message, variant: "destructive" });
     },
   });
 
@@ -151,7 +202,11 @@ export default function MerchantManagement() {
       merchant.brandName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       merchant.email.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = statusFilter === "all" || merchant.status === statusFilter;
+    if (statusFilter === "all") {
+      return matchesSearch && merchant.status !== "archived";
+    }
+    
+    const matchesStatus = merchant.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -164,6 +219,10 @@ export default function MerchantManagement() {
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">In Moderation</Badge>;
       case "created":
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Created</Badge>;
+      case "licensing":
+        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Licensing</Badge>;
+      case "licensed":
+        return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">Licensed</Badge>;
       case "archived":
         return <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">Archived</Badge>;
       default:
@@ -172,10 +231,12 @@ export default function MerchantManagement() {
   };
 
   const statusCounts = {
-    all: merchants.length,
+    all: merchants.filter((m) => m.status !== "archived").length,
     pending: merchants.filter((m) => m.status === "pending").length,
     moderation: merchants.filter((m) => m.status === "moderation").length,
     created: merchants.filter((m) => m.status === "created").length,
+    licensing: merchants.filter((m) => m.status === "licensing").length,
+    licensed: merchants.filter((m) => m.status === "licensed").length,
     archived: merchants.filter((m) => m.status === "archived").length,
   };
 
@@ -199,18 +260,20 @@ export default function MerchantManagement() {
           <p className="text-slate-500">Manage merchant applications</p>
         </div>
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
           {[
             { label: "All", value: statusCounts.all, filter: "all" },
             { label: "Pending", value: statusCounts.pending, filter: "pending" },
             { label: "In Moderation", value: statusCounts.moderation, filter: "moderation" },
             { label: "Created", value: statusCounts.created, filter: "created" },
-            { label: "Archived", value: statusCounts.archived, filter: "archived" },
+            { label: "Licensing", value: statusCounts.licensing, filter: "licensing" },
+            { label: "Licensed", value: statusCounts.licensed, filter: "licensed" },
           ].map((stat) => (
             <Card
               key={stat.filter}
               className={`cursor-pointer transition-all ${statusFilter === stat.filter ? "ring-2 ring-[#00426D]" : ""}`}
               onClick={() => setStatusFilter(stat.filter)}
+              data-testid={`card-filter-${stat.filter}`}
             >
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-[#00426D]">{stat.value}</p>
@@ -218,6 +281,18 @@ export default function MerchantManagement() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Subtle Archived link */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => setStatusFilter("archived")}
+            className={`text-xs text-slate-400 hover:text-slate-600 transition-colors ${statusFilter === "archived" ? "text-slate-600 underline" : ""}`}
+            data-testid="link-archived"
+          >
+            <Archive className="h-3 w-3 inline mr-1" />
+            Archived ({statusCounts.archived})
+          </button>
         </div>
 
         {/* Search */}
@@ -244,6 +319,7 @@ export default function MerchantManagement() {
                 <TableHead>Contact</TableHead>
                 <TableHead>Products</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Offers</TableHead>
                 <TableHead>Submitted By</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -252,11 +328,11 @@ export default function MerchantManagement() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
+                  <TableCell colSpan={9} className="text-center py-8">Loading...</TableCell>
                 </TableRow>
               ) : filteredMerchants.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-500">
                     No merchants found
                   </TableCell>
                 </TableRow>
@@ -292,6 +368,11 @@ export default function MerchantManagement() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(merchant.status)}</TableCell>
+                    <TableCell>
+                      <span className="text-sm font-medium text-slate-600" data-testid={`text-offers-${merchant.id}`}>
+                        {merchant.offersCreated || 0}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-sm text-slate-500">
                       {merchant.submittedBy || "—"}
                     </TableCell>
@@ -398,6 +479,26 @@ export default function MerchantManagement() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          {merchant.status === "created" && (
+                            <DropdownMenuItem
+                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "licensing" })}
+                              className="text-purple-600"
+                              data-testid={`menu-licensing-${merchant.id}`}
+                            >
+                              <Scale className="h-4 w-4 mr-2" />
+                              Move to Licensing
+                            </DropdownMenuItem>
+                          )}
+                          {merchant.status === "licensing" && (
+                            <DropdownMenuItem
+                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "licensed" })}
+                              className="text-emerald-600"
+                              data-testid={`menu-licensed-${merchant.id}`}
+                            >
+                              <ShieldCheck className="h-4 w-4 mr-2" />
+                              Mark as Licensed
+                            </DropdownMenuItem>
+                          )}
                           {merchant.status === "archived" && (
                             <>
                               <DropdownMenuItem
@@ -416,6 +517,22 @@ export default function MerchantManagement() {
                                 <Send className="h-4 w-4 mr-2" />
                                 Restore to Moderation
                               </DropdownMenuItem>
+                              {isAdmin && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setMerchantToDelete(merchant);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                    className="text-red-600"
+                                    data-testid={`menu-delete-${merchant.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Permanently Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </>
                           )}
                           {merchant.status !== "archived" && (
@@ -438,6 +555,40 @@ export default function MerchantManagement() {
           </Table>
         </Card>
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Permanently Delete Merchant
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete <strong>{merchantToDelete?.companyName}</strong> ({merchantToDelete?.brandName}) and all associated data including deals and notes. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setMerchantToDelete(null);
+              }}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => merchantToDelete && deleteMerchantMutation.mutate(merchantToDelete.id)}
+              disabled={deleteMerchantMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteMerchantMutation.isPending ? "Deleting..." : "Delete Permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

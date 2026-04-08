@@ -67,6 +67,8 @@ export interface IStorage {
   updateMerchantSubmittedBy(id: string, submittedBy: string | null): Promise<Merchant | undefined>;
   getMerchantNotes(merchantId: string): Promise<MerchantNote[]>;
   createMerchantNote(note: InsertMerchantNote): Promise<MerchantNote>;
+  updateMerchantOffersCreated(id: string, offersCreated: number): Promise<Merchant | undefined>;
+  deleteMerchant(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -404,6 +406,19 @@ export class DatabaseStorage implements IStorage {
   async createMerchantNote(note: InsertMerchantNote): Promise<MerchantNote> {
     const [newNote] = await db.insert(merchantNotes).values(note).returning();
     return newNote;
+  }
+
+  async updateMerchantOffersCreated(id: string, offersCreated: number): Promise<Merchant | undefined> {
+    const [updated] = await db.update(merchants).set({ offersCreated }).where(eq(merchants.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMerchant(id: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx.delete(merchantNotes).where(eq(merchantNotes.merchantId, id));
+      await tx.delete(merchantDeals).where(eq(merchantDeals.merchantId, id));
+      await tx.delete(merchants).where(eq(merchants.id, id));
+    });
   }
 }
 

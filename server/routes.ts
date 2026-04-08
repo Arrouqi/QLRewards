@@ -1037,10 +1037,45 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/merchants/:id/offers-created", requireAuth, async (req, res) => {
+    try {
+      const { offersCreated } = req.body;
+      if (typeof offersCreated !== "number" || !Number.isInteger(offersCreated) || offersCreated < 0) {
+        return res.status(400).json({ error: "Invalid offers count" });
+      }
+      const merchant = await storage.updateMerchantOffersCreated(req.params.id, offersCreated);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/merchants/:id", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const merchant = await storage.getMerchantById(req.params.id);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      if (merchant.status !== "archived") {
+        return res.status(400).json({ error: "Can only permanently delete archived merchants" });
+      }
+      await storage.deleteMerchant(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/merchants/:id/status", requireAuth, async (req, res) => {
     try {
       const { status } = req.body;
-      if (!["pending", "moderation", "archived", "created"].includes(status)) {
+      if (!["pending", "moderation", "archived", "created", "licensing", "licensed"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
       
@@ -1051,6 +1086,14 @@ export async function registerRoutes(
       
       if (status === "created" && existingMerchant.status !== "moderation") {
         return res.status(400).json({ error: "Can only mark as Created from In Moderation status" });
+      }
+      
+      if (status === "licensing" && existingMerchant.status !== "created") {
+        return res.status(400).json({ error: "Can only move to Licensing from Created status" });
+      }
+      
+      if (status === "licensed" && existingMerchant.status !== "licensing") {
+        return res.status(400).json({ error: "Can only mark as Licensed from Licensing status" });
       }
       
       if (status === "pending" && existingMerchant.status !== "moderation" && existingMerchant.status !== "archived") {

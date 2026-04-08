@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -59,6 +60,7 @@ interface Merchant {
   coverImage?: string;
   whatsapp?: string;
   submittedBy?: string;
+  offersCreated?: number;
   deals?: any[];
 }
 
@@ -163,6 +165,8 @@ export default function MerchantView() {
         created: "Marked as Created",
         pending: "Moved back to Pending",
         archived: "Archived",
+        licensing: "Moved to Licensing",
+        licensed: "Marked as Licensed",
       };
       toast({ title: messages[status] || "Status updated" });
       if (status === "moderation") {
@@ -604,6 +608,10 @@ export default function MerchantView() {
         return <Badge className="bg-blue-100 text-blue-700 border-blue-200">In Moderation</Badge>;
       case "created":
         return <Badge className="bg-green-100 text-green-700 border-green-200">Created</Badge>;
+      case "licensing":
+        return <Badge className="bg-purple-100 text-purple-700 border-purple-200">Licensing</Badge>;
+      case "licensed":
+        return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Licensed</Badge>;
       case "archived":
         return <Badge className="bg-slate-100 text-slate-700 border-slate-200">Archived</Badge>;
       default:
@@ -1262,18 +1270,53 @@ export default function MerchantView() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
+                <h4 className="font-medium">Offers Created</h4>
+                <p className="text-sm text-slate-500">Track the number of offers created for this merchant</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={merchant.offersCreated || 0}
+                    onChange={async (e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      if (val < 0) return;
+                      try {
+                        const res = await fetch(`/api/merchants/${merchant.id}/offers-created`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "include",
+                          body: JSON.stringify({ offersCreated: val }),
+                        });
+                        if (res.ok) {
+                          setMerchant({ ...merchant, offersCreated: val });
+                        }
+                      } catch {}
+                    }}
+                    className="w-24 text-center"
+                    data-testid="input-offers-created"
+                  />
+                  <span className="text-sm text-slate-500">offers</span>
+                </div>
+              </div>
+            </div>
+            <Separator className="my-4" />
+            <div className="flex justify-between items-center">
+              <div>
                 <h4 className="font-medium">Actions</h4>
                 <p className="text-sm text-slate-500">Review and take action on this application</p>
               </div>
               <div className="flex items-center gap-3">
                 {merchant.status !== "archived" && (
                   <Button
-                    variant="outline"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => updateStatus("archived")}
-                    className="text-slate-600"
+                    className="text-slate-400 hover:text-slate-600 text-xs"
                     data-testid="button-archive"
                   >
-                    <Archive className="h-4 w-4 mr-2" />
+                    <Archive className="h-3 w-3 mr-1" />
                     Archive
                   </Button>
                 )}
@@ -1325,6 +1368,24 @@ export default function MerchantView() {
                       Mark as Created
                     </Button>
                   </>
+                )}
+                {merchant.status === "created" && (
+                  <Button
+                    onClick={() => updateStatus("licensing")}
+                    className="bg-purple-600 hover:bg-purple-700"
+                    data-testid="button-licensing"
+                  >
+                    Move to Licensing
+                  </Button>
+                )}
+                {merchant.status === "licensing" && (
+                  <Button
+                    onClick={() => updateStatus("licensed")}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    data-testid="button-licensed"
+                  >
+                    Mark as Licensed
+                  </Button>
                 )}
               </div>
             </div>

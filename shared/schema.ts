@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -185,6 +185,7 @@ export const merchants = pgTable("merchants", {
   coverImage: text("cover_image"),
   whatsapp: text("whatsapp"),
   submittedBy: text("submitted_by"),
+  offersCreated: integer("offers_created").notNull().default(0),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
