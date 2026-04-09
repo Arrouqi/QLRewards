@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Search, MapPin, Phone, Mail, Loader2, ExternalLink } from "lucide-react";
+import { Building2, Search, MapPin, Phone, Mail, Loader2, ExternalLink, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AdminLayout from "@/components/AdminLayout";
+import { exportToCSV, exportToExcel } from "@/lib/export";
 
 interface ESMerchant {
   id: string;
@@ -66,6 +69,24 @@ export default function ExistingMerchants() {
   const merchants = data?.merchants || [];
   const total = data?.total || 0;
 
+  const handleExport = (format: "csv" | "excel") => {
+    const rows = merchants.map((m) => ({
+      "Merchant Name": m.agencyName || "",
+      "Agency ID": m.agencyId,
+      Category: m.category?.name || "",
+      Email: m.agencyEmail || "",
+      Phone: m.contactMobile || "",
+      WhatsApp: m.contactWhatsapp || "",
+      Website: m.website || "",
+      Branches: m.branches?.map((b) => b.name).join("; ") || "",
+      Deals: dealCounts?.counts?.[m.agencyId] ?? 0,
+      Status: m.status === 1 ? "Active" : m.status === 0 ? "Inactive" : "Unknown",
+      URL: m.url ? `https://www.qatarliving.com/en/deals/merchant/${m.url}` : "",
+    }));
+    if (format === "csv") exportToCSV(rows, "live_merchants");
+    else exportToExcel(rows, "live_merchants");
+  };
+
   const getStatusBadge = (status: number) => {
     switch (status) {
       case 1:
@@ -87,15 +108,33 @@ export default function ExistingMerchants() {
               {total} existing merchants from production
             </p>
           </div>
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search by name, email, or category..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-9"
-              data-testid="input-search-merchants"
-            />
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={merchants.length === 0} data-testid="button-export-merchants">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport("csv")} data-testid="button-export-merchants-csv">
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("excel")} data-testid="button-export-merchants-excel">
+                  Export as Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search by name, email, or category..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-merchants"
+              />
+            </div>
           </div>
         </div>
 

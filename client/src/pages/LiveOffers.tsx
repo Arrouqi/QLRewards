@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Tag, Search, Loader2, Building2, Percent, Gift, Ticket, Package, ExternalLink } from "lucide-react";
+import { Tag, Search, Loader2, Building2, Percent, Gift, Ticket, Package, ExternalLink, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import AdminLayout from "@/components/AdminLayout";
+import { exportToCSV, exportToExcel } from "@/lib/export";
 
 interface ESOffer {
   id: string;
@@ -87,6 +89,7 @@ export default function LiveOffers() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
@@ -117,6 +120,29 @@ export default function LiveOffers() {
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
+  const handleExport = async (format: "csv" | "excel") => {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/es/offers?size=1000`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch");
+      const allData = await res.json();
+      const rows = (allData.offers || []).map((o: ESOffer) => ({
+        Title: o.title || "",
+        Merchant: o.agency?.agencyName || "",
+        Category: o.category?.name || "",
+        "Offer Type": o.offerType?.name || "",
+        Status: "Active",
+        URL: getOfferUrl(o) || "",
+      }));
+      if (format === "csv") exportToCSV(rows, "live_deals");
+      else exportToExcel(rows, "live_deals");
+    } catch (e) {
+      console.error("Export failed:", e);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="p-6 md:p-8">
@@ -127,15 +153,33 @@ export default function LiveOffers() {
               {total} live deals on the platform
             </p>
           </div>
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Search by title, merchant, or category..."
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-9"
-              data-testid="input-search-offers"
-            />
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={exporting || total === 0} data-testid="button-export-deals">
+                  {exporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport("csv")} data-testid="button-export-csv">
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("excel")} data-testid="button-export-excel">
+                  Export as Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search by title, merchant, or category..."
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-offers"
+              />
+            </div>
           </div>
         </div>
 
