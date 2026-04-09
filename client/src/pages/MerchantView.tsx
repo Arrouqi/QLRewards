@@ -1332,7 +1332,7 @@ export default function MerchantView() {
                 <p className="text-sm text-slate-500">Review and take action on this application</p>
               </div>
               <div className="flex items-center gap-3">
-                {merchant.status !== "archived" && (
+                {isAdmin && merchant.status !== "archived" && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1344,7 +1344,7 @@ export default function MerchantView() {
                     Archive
                   </Button>
                 )}
-                {merchant.status === "archived" && (
+                {isAdmin && merchant.status === "archived" && (
                   <>
                     <Button
                       variant="outline"

@@ -66,6 +66,16 @@ export default function Overview() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
+  const { data: authData } = useQuery<{ role: string }>({
+    queryKey: ["/api/auth/session"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/session", { credentials: "include" });
+      if (!res.ok) return { role: "user" };
+      return res.json();
+    },
+  });
+  const isAdmin = authData?.role === "admin";
+
   const queryParams = new URLSearchParams();
   if (dateFrom) queryParams.set("from", dateFrom);
   if (dateTo) queryParams.set("to", dateTo);
@@ -261,10 +271,10 @@ export default function Overview() {
                       { label: "Created", count: stats.merchantStats.created, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
                       { label: "Licensing", count: stats.merchantStats.licensing, icon: Scale, color: "text-purple-600", bg: "bg-purple-50" },
                       { label: "Licensed", count: stats.merchantStats.licensed, icon: ShieldCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
-                      { label: "Archived", count: stats.merchantStats.archived, icon: Archive, color: "text-slate-500", bg: "bg-slate-50" },
+                      ...(isAdmin ? [{ label: "Archived", count: stats.merchantStats.archived, icon: Archive, color: "text-slate-500", bg: "bg-slate-50" }] : []),
                     ].map((item) => {
                       const Icon = item.icon;
-                      const total = stats.merchantStats.total + stats.merchantStats.archived;
+                      const total = isAdmin ? stats.merchantStats.total + stats.merchantStats.archived : stats.merchantStats.total;
                       const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
                       return (
                         <div key={item.label} className="flex items-center gap-3">
@@ -310,10 +320,10 @@ export default function Overview() {
                     {[
                       { label: "Pending", count: stats.dealStats.pending, icon: Clock, color: "text-amber-600", bg: "bg-amber-50", barColor: "#d97706" },
                       { label: "Sent to Moderation", count: stats.dealStats.approved, icon: Send, color: "text-blue-600", bg: "bg-blue-50", barColor: "#2563eb" },
-                      { label: "Archived", count: stats.dealStats.archived, icon: Archive, color: "text-slate-500", bg: "bg-slate-50", barColor: "#64748b" },
+                      ...(isAdmin ? [{ label: "Archived", count: stats.dealStats.archived, icon: Archive, color: "text-slate-500", bg: "bg-slate-50", barColor: "#64748b" }] : []),
                     ].map((item) => {
                       const Icon = item.icon;
-                      const allDeals = stats.dealStats.total + stats.dealStats.archived;
+                      const allDeals = isAdmin ? stats.dealStats.total + stats.dealStats.archived : stats.dealStats.total;
                       const pct = allDeals > 0 ? Math.round((item.count / allDeals) * 100) : 0;
                       return (
                         <div key={item.label} className="flex items-center gap-3">

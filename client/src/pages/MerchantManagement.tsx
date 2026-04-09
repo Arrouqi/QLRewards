@@ -202,6 +202,8 @@ export default function MerchantManagement() {
   });
 
   const filteredMerchants = merchants.filter((merchant) => {
+    if (!isAdmin && merchant.status === "archived") return false;
+
     const matchesSearch =
       merchant.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       merchant.brandName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -300,17 +302,18 @@ export default function MerchantManagement() {
           ))}
         </div>
 
-        {/* Subtle Archived link */}
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={() => setStatusFilter("archived")}
-            className={`text-xs text-slate-400 hover:text-slate-600 transition-colors ${statusFilter === "archived" ? "text-slate-600 underline" : ""}`}
-            data-testid="link-archived"
-          >
-            <Archive className="h-3 w-3 inline mr-1" />
-            Archived ({statusCounts.archived})
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => setStatusFilter("archived")}
+              className={`text-xs text-slate-400 hover:text-slate-600 transition-colors ${statusFilter === "archived" ? "text-slate-600 underline" : ""}`}
+              data-testid="link-archived"
+            >
+              <Archive className="h-3 w-3 inline mr-1" />
+              Archived ({statusCounts.archived})
+            </button>
+          </div>
+        )}
 
         {/* Search */}
         <div className="flex gap-4 mb-6">
@@ -588,7 +591,7 @@ export default function MerchantManagement() {
                               )}
                             </>
                           )}
-                          {merchant.status !== "archived" && (
+                          {isAdmin && merchant.status !== "archived" && (
                             <DropdownMenuItem
                               onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "archived" })}
                               className="text-slate-600"
