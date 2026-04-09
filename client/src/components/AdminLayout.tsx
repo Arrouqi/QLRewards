@@ -98,7 +98,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       )}
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-[#00426D] text-white flex flex-col transform transition-transform duration-300 md:relative md:transform-none",
+        "fixed inset-y-0 left-0 z-50 w-64 bg-[#00426D] text-white flex flex-col transform transition-transform duration-300 md:sticky md:top-0 md:h-screen md:transform-none",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
       )}>
         <div className="p-6 border-b border-white/10 hidden md:block">
