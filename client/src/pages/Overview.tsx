@@ -190,7 +190,7 @@ export default function Overview() {
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-slate-500 uppercase">Offer Requests</p>
+                          <p className="text-xs font-medium text-slate-500 uppercase">Deal Requests</p>
                           <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-total-deals">{stats.dealStats.total}</p>
                           <p className="text-xs text-slate-400 mt-1">Received</p>
                         </div>

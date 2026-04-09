@@ -54,6 +54,15 @@ export default function ExistingMerchants() {
     },
   });
 
+  const { data: dealCounts } = useQuery<{ counts: Record<number, number> }>({
+    queryKey: ["es-offers-counts-by-merchant"],
+    queryFn: async () => {
+      const res = await fetch("/api/es/offers/counts-by-merchant", { credentials: "include" });
+      if (!res.ok) return { counts: {} };
+      return res.json();
+    },
+  });
+
   const merchants = data?.merchants || [];
   const total = data?.total || 0;
 
@@ -109,6 +118,7 @@ export default function ExistingMerchants() {
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Category</th>
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Contact</th>
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Branches</th>
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Deals</th>
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Status</th>
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Action</th>
                   </tr>
@@ -194,6 +204,11 @@ export default function ExistingMerchants() {
                           ) : (
                             <span className="text-xs text-slate-400">—</span>
                           )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-slate-700" data-testid={`text-deals-${merchant.id}`}>
+                            {dealCounts?.counts?.[merchant.agencyId] ?? 0}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           {getStatusBadge(merchant.status)}

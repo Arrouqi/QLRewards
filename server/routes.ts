@@ -1549,6 +1549,47 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/es/offers/counts-by-merchant", requireAuth, async (req, res) => {
+    try {
+      const esUrl = process.env.ELASTIC_URL;
+      const esApiKey = process.env.ELASTIC_API_KEY;
+
+      if (!esUrl || !esApiKey) {
+        return res.json({ counts: {} });
+      }
+
+      const esResponse = await fetch(`${esUrl}prod_offers/_search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `ApiKey ${esApiKey}`,
+        },
+        body: JSON.stringify({
+          size: 0,
+          aggs: {
+            by_merchant: {
+              terms: { field: "agency.agencyId", size: 500 },
+            },
+          },
+        }),
+      });
+
+      if (!esResponse.ok) {
+        return res.json({ counts: {} });
+      }
+
+      const data = await esResponse.json();
+      const buckets = data.aggregations?.by_merchant?.buckets || [];
+      const counts: Record<number, number> = {};
+      for (const b of buckets) {
+        counts[b.key] = b.doc_count;
+      }
+      res.json({ counts });
+    } catch (error: any) {
+      res.json({ counts: {} });
+    }
+  });
+
   app.get("/api/es/offers/count", requireAuth, async (req, res) => {
     try {
       const esUrl = process.env.ELASTIC_URL;
