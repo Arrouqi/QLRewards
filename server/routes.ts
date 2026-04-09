@@ -1447,7 +1447,7 @@ export async function registerRoutes(
       }
 
       const dealStats = {
-        total: filteredDeals.length,
+        total: filteredDeals.filter(d => d.status !== "archived").length,
         pending: filteredDeals.filter(d => d.status === "pending").length,
         approved: filteredDeals.filter(d => d.status === "approved").length,
         archived: filteredDeals.filter(d => d.status === "archived").length,

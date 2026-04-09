@@ -172,7 +172,7 @@ export default function Overview() {
                         <div>
                           <p className="text-xs font-medium text-slate-500 uppercase">Merchant Requests</p>
                           <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-total-merchants">{stats.merchantStats.total}</p>
-                          <p className="text-xs text-slate-400 mt-1">Excl. archived</p>
+                          <p className="text-xs text-slate-400 mt-1">Received</p>
                         </div>
                         <Building2 className="h-8 w-8 text-[#00426D]/20" />
                       </div>
@@ -192,7 +192,7 @@ export default function Overview() {
                         <div>
                           <p className="text-xs font-medium text-slate-500 uppercase">Offer Requests</p>
                           <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-total-deals">{stats.dealStats.total}</p>
-                          <p className="text-xs text-slate-400 mt-1">Submitted</p>
+                          <p className="text-xs text-slate-400 mt-1">Received</p>
                         </div>
                         <Tag className="h-8 w-8 text-emerald-500/20" />
                       </div>
@@ -313,7 +313,8 @@ export default function Overview() {
                       { label: "Archived", count: stats.dealStats.archived, icon: Archive, color: "text-slate-500", bg: "bg-slate-50", barColor: "#64748b" },
                     ].map((item) => {
                       const Icon = item.icon;
-                      const pct = stats.dealStats.total > 0 ? Math.round((item.count / stats.dealStats.total) * 100) : 0;
+                      const allDeals = stats.dealStats.total + stats.dealStats.archived;
+                      const pct = allDeals > 0 ? Math.round((item.count / allDeals) * 100) : 0;
                       return (
                         <div key={item.label} className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg ${item.bg}`}>
