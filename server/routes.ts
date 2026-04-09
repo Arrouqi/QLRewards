@@ -266,6 +266,38 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/deals/:id/revert-pending", requireAuth, async (req, res) => {
+    try {
+      const deal = await storage.getDealById(req.params.id);
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found" });
+      }
+      if (deal.status !== "approved") {
+        return res.status(400).json({ error: "Can only revert deals that are in 'Sent to Moderation' status" });
+      }
+      const updated = await storage.updateDeal(req.params.id, { status: "pending" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/deals/:id/restore-pending", requireAuth, async (req, res) => {
+    try {
+      const deal = await storage.getDealById(req.params.id);
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found" });
+      }
+      if (deal.status !== "archived") {
+        return res.status(400).json({ error: "Can only restore archived deals" });
+      }
+      const updated = await storage.updateDeal(req.params.id, { status: "pending" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.delete("/api/deals/:id", requireAuth, async (req, res) => {
     try {
       if (req.session.role !== "admin") {
@@ -1136,16 +1168,7 @@ export async function registerRoutes(
       
       const userRole = req.session.role || "user";
       
-      const isReverse = (
-        (status === "created" && existingMerchant.status === "licensing") ||
-        (status === "licensing" && existingMerchant.status === "licensed") ||
-        (status === "pending" && existingMerchant.status === "moderation") ||
-        (status === "moderation" && existingMerchant.status === "archived")
-      );
       
-      if (isReverse && userRole !== "admin") {
-        return res.status(403).json({ error: "Only admins can revert to a previous status" });
-      }
       
       if (status === "pending" && existingMerchant.status === "archived" && userRole !== "admin") {
         // Non-admin users CAN restore archived → pending (allowed)
@@ -1471,10 +1494,6 @@ export async function registerRoutes(
 
   app.get("/api/es/offers", requireAuth, async (req, res) => {
     try {
-      if (req.session.role !== "admin") {
-        return res.status(403).json({ error: "Admin access required" });
-      }
-
       const esUrl = process.env.ELASTIC_URL;
       const esApiKey = process.env.ELASTIC_API_KEY;
 

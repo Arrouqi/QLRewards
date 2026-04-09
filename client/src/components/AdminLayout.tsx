@@ -60,17 +60,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: LayoutDashboard,
       href: "/admin/dashboard",
     },
+    {
+      label: "Live Merchants",
+      icon: Store,
+      href: "/admin/existing-merchants",
+    },
+    {
+      label: "Live Offers",
+      icon: Tag,
+      href: "/admin/live-offers",
+    },
     ...(session?.role === "admin" ? [
-      {
-        label: "Live Merchants",
-        icon: Store,
-        href: "/admin/existing-merchants",
-      },
-      {
-        label: "Live Offers",
-        icon: Tag,
-        href: "/admin/live-offers",
-      },
       {
         label: "User Management",
         icon: Users,

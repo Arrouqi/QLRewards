@@ -1354,16 +1354,14 @@ export default function MerchantView() {
                     >
                       Restore to Pending
                     </Button>
-                    {isAdmin && (
-                      <Button
-                        onClick={() => updateStatus("moderation")}
-                        className="bg-blue-600 hover:bg-blue-700"
-                        data-testid="button-restore-moderation"
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Restore to Moderation
-                      </Button>
-                    )}
+                    <Button
+                      onClick={() => updateStatus("moderation")}
+                      className="bg-blue-600 hover:bg-blue-700"
+                      data-testid="button-restore-moderation"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Restore to Moderation
+                    </Button>
                   </>
                 )}
                 {merchant.status === "pending" && (
@@ -1378,16 +1376,14 @@ export default function MerchantView() {
                 )}
                 {merchant.status === "moderation" && (
                   <>
-                    {isAdmin && (
-                      <Button
-                        variant="outline"
-                        onClick={() => updateStatus("pending")}
-                        className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                        data-testid="button-back-pending"
-                      >
-                        Move to Pending
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => updateStatus("pending")}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                      data-testid="button-back-pending"
+                    >
+                      Move to Pending
+                    </Button>
                     <Button
                       onClick={() => updateStatus("created")}
                       className="bg-green-600 hover:bg-green-700"
@@ -1408,17 +1404,15 @@ export default function MerchantView() {
                 )}
                 {merchant.status === "licensing" && (
                   <>
-                    {isAdmin && (
-                      <Button
-                        variant="outline"
-                        onClick={() => updateStatus("created")}
-                        className="text-green-600 border-green-300 hover:bg-green-50"
-                        data-testid="button-back-created"
-                      >
-                        <Undo2 className="h-4 w-4 mr-2" />
-                        Move back to Created
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => updateStatus("created")}
+                      className="text-green-600 border-green-300 hover:bg-green-50"
+                      data-testid="button-back-created"
+                    >
+                      <Undo2 className="h-4 w-4 mr-2" />
+                      Move back to Created
+                    </Button>
                     <Button
                       onClick={() => updateStatus("licensed")}
                       className="bg-emerald-600 hover:bg-emerald-700"
@@ -1428,7 +1422,7 @@ export default function MerchantView() {
                     </Button>
                   </>
                 )}
-                {isAdmin && merchant.status === "licensed" && (
+                {merchant.status === "licensed" && (
                   <Button
                     variant="outline"
                     onClick={() => updateStatus("licensing")}

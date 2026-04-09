@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { ArrowLeft, CheckCircle, Save, MessageSquare, FileDown, X, Gift, Percent, Tag, ShoppingBag, Upload, Pencil, Check, Crop as CropIcon, Camera, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Save, MessageSquare, FileDown, X, Gift, Percent, Tag, ShoppingBag, Upload, Pencil, Check, Crop as CropIcon, Camera, Trash2, Loader2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -336,12 +336,81 @@ export default function DealDetail() {
         description: "Deal forwarded to moderation successfully",
       });
       
-      // Redirect back to dashboard after forwarding
       setLocation("/admin/dashboard");
     } catch (error) {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to forward deal",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onRevertToPending = async () => {
+    if (!params?.id) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/deals/${params.id}/revert-pending`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to revert deal");
+      }
+
+      const updatedDeal = await response.json();
+      setDeal(updatedDeal);
+
+      toast({
+        title: "Success",
+        description: "Deal reverted to pending",
+      });
+      
+      setLocation("/admin/dashboard");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to revert deal",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onRestoreFromArchive = async () => {
+    if (!params?.id) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/deals/${params.id}/restore-pending`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to restore deal");
+      }
+
+      const updatedDeal = await response.json();
+      setDeal(updatedDeal);
+
+      toast({
+        title: "Success",
+        description: "Deal restored to pending",
+      });
+      
+      setLocation("/admin/dashboard");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to restore deal",
         variant: "destructive",
       });
     } finally {
@@ -1339,6 +1408,32 @@ export default function DealDetail() {
                     >
                       <CheckCircle className="h-4 w-4" />
                       Forward To Moderation
+                    </Button>
+                  )}
+                  {deal.status === "approved" && (
+                    <Button
+                      type="button"
+                      onClick={onRevertToPending}
+                      variant="outline"
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50 flex items-center gap-2"
+                      disabled={isSaving}
+                      data-testid="button-revert-pending"
+                    >
+                      <Undo2 className="h-4 w-4" />
+                      Move to Pending
+                    </Button>
+                  )}
+                  {deal.status === "archived" && (
+                    <Button
+                      type="button"
+                      onClick={onRestoreFromArchive}
+                      variant="outline"
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50 flex items-center gap-2"
+                      disabled={isSaving}
+                      data-testid="button-restore-pending"
+                    >
+                      <Undo2 className="h-4 w-4" />
+                      Restore to Pending
                     </Button>
                   )}
                 </div>
