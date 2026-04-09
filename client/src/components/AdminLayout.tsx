@@ -155,24 +155,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <button
               onClick={() => handleNavigation("/admin/settings")}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-left mb-2",
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-left text-sm mb-1",
                 location === "/admin/settings"
                   ? "bg-white/20 text-white"
                   : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
               data-testid="nav-settings"
             >
-              <Settings className="h-5 w-5" />
-              <span className="font-medium">Settings</span>
+              <Settings className="h-4 w-4" />
+              Settings
             </button>
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-left text-white/70 hover:bg-white/10 hover:text-white"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-left text-sm text-white/70 hover:bg-white/10 hover:text-white"
             data-testid="button-logout"
           >
-            <LogOut className="h-5 w-5" />
-            <span className="font-medium">Logout</span>
+            <LogOut className="h-4 w-4" />
+            Logout
           </button>
         </div>
       </aside>
