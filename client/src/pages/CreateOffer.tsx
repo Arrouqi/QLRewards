@@ -626,7 +626,8 @@ export default function CreateOffer() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F6FA] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F5F6FA] flex flex-col font-sans relative">
+      <a href="/admin/login" className="absolute top-3 right-4 text-xs text-slate-400 hover:text-slate-600 transition-colors" data-testid="link-staff-login">Staff Login</a>
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8">
             <h1 className="text-2xl font-bold text-[#00426D]">Create Offer for Existing Merchant</h1>

@@ -346,7 +346,8 @@ export default function MerchantOnboarding() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-gradient-to-br from-[#00426D] via-[#00395D] to-[#002A45] text-white py-10 px-4">
+      <header className="bg-gradient-to-br from-[#00426D] via-[#00395D] to-[#002A45] text-white py-10 px-4 relative">
+        <a href="/admin/login" className="absolute top-3 right-4 text-xs text-white/40 hover:text-white/70 transition-colors" data-testid="link-staff-login">Staff Login</a>
         <div className="container mx-auto max-w-5xl">
           <div className="flex items-center gap-4 mb-6">
             <img src="/ql-logo.png" alt="Qatar Living" className="h-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />

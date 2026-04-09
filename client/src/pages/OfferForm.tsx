@@ -134,7 +134,8 @@ export default function OfferForm() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans relative">
+      <a href="/admin/login" className="absolute top-3 right-4 z-50 text-xs text-slate-400 hover:text-slate-600 transition-colors" data-testid="link-staff-login">Staff Login</a>
       <Header />
       {/* Hero Header */}
       <div className="relative h-64 md:h-80 w-full overflow-hidden bg-slate-900">
