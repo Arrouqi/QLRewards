@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Search, MapPin, Phone, Mail, Loader2 } from "lucide-react";
+import { Building2, Search, MapPin, Phone, Mail, Loader2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import AdminLayout from "@/components/AdminLayout";
@@ -107,6 +107,7 @@ export default function ExistingMerchants() {
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Contact</th>
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Branches</th>
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Status</th>
+                    <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -169,6 +170,22 @@ export default function ExistingMerchants() {
                       </td>
                       <td className="px-4 py-3">
                         {getStatusBadge(merchant.status)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {merchant.url ? (
+                          <a
+                            href={merchant.url.startsWith("http") ? merchant.url : `https://www.qatarliving.com${merchant.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-sm text-[#00426D] hover:text-[#00426D]/80 font-medium transition-colors"
+                            data-testid={`link-merchant-${merchant.id}`}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            View
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

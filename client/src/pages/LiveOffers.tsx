@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Tag, Search, Loader2, Building2, Percent } from "lucide-react";
+import { Tag, Search, Loader2, Building2, Percent, Gift, Ticket, Package, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ interface ESOffer {
   };
   discount?: number;
   discountType?: string;
+  dealType?: string;
   originalPrice?: number;
   discountedPrice?: number;
   status?: number;
@@ -28,10 +29,55 @@ interface ESOffer {
   claimCount?: number;
   viewCount?: number;
   imageUri?: string;
+  url?: string;
+  slug?: string;
   [key: string]: any;
 }
 
 const ITEMS_PER_PAGE = 20;
+
+function getOfferTypeBadge(dealType?: string) {
+  switch (dealType?.toLowerCase()) {
+    case "bogo":
+      return (
+        <Badge className="bg-purple-100 text-purple-700 border-purple-200 gap-1">
+          <Gift className="h-3 w-3" />
+          BOGO
+        </Badge>
+      );
+    case "discount":
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1">
+          <Percent className="h-3 w-3" />
+          Discount
+        </Badge>
+      );
+    case "voucher":
+      return (
+        <Badge className="bg-blue-100 text-blue-700 border-blue-200 gap-1">
+          <Ticket className="h-3 w-3" />
+          Voucher
+        </Badge>
+      );
+    case "bundle":
+      return (
+        <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">
+          <Package className="h-3 w-3" />
+          Bundle
+        </Badge>
+      );
+    default:
+      return <span className="text-xs text-slate-400">—</span>;
+  }
+}
+
+function getOfferUrl(offer: ESOffer): string | null {
+  if (offer.url) return offer.url;
+  if (offer.slug && offer.id) {
+    return `https://www.qatarliving.com/en/deals/${offer.slug}/${offer.id}`;
+  }
+  return null;
+}
 
 export default function LiveOffers() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,60 +155,73 @@ export default function LiveOffers() {
                       <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Offer</th>
                       <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Merchant</th>
                       <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Category</th>
-                      <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Discount</th>
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Offer Type</th>
                       <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Status</th>
+                      <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {offers.map((offer) => (
-                      <tr
-                        key={offer.id}
-                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                        data-testid={`row-offer-${offer.id}`}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                              <Tag className="h-5 w-5 text-white" />
+                    {offers.map((offer) => {
+                      const offerUrl = getOfferUrl(offer);
+                      return (
+                        <tr
+                          key={offer.id}
+                          className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                          data-testid={`row-offer-${offer.id}`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                                <Tag className="h-5 w-5 text-white" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-slate-900 truncate max-w-[250px]" data-testid={`text-offer-title-${offer.id}`}>
+                                  {offer.title || "Untitled Offer"}
+                                </p>
+                                <p className="text-xs text-slate-500 truncate">
+                                  ID: {offer.id}
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-slate-900 truncate max-w-[250px]" data-testid={`text-offer-title-${offer.id}`}>
-                                {offer.title || "Untitled Offer"}
-                              </p>
-                              <p className="text-xs text-slate-500 truncate">
-                                ID: {offer.id}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            <Building2 className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                            <span className="text-sm text-slate-700 truncate max-w-[180px]">
-                              {offer.merchant?.agencyName || "—"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-slate-700">{offer.category?.name || "—"}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {offer.discount ? (
+                          </td>
+                          <td className="px-4 py-3">
                             <div className="flex items-center gap-1.5">
-                              <Percent className="h-3.5 w-3.5 text-emerald-500" />
-                              <span className="text-sm font-medium text-emerald-700">{offer.discount}%</span>
+                              <Building2 className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                              <span className="text-sm text-slate-700 truncate max-w-[180px]">
+                                {offer.merchant?.agencyName || "—"}
+                              </span>
                             </div>
-                          ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge className="bg-green-100 text-green-700 border-green-200">
-                            Active
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-slate-700">{offer.category?.name || "—"}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {getOfferTypeBadge(offer.dealType)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className="bg-green-100 text-green-700 border-green-200">
+                              Active
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            {offerUrl ? (
+                              <a
+                                href={offerUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-[#00426D] hover:text-[#00426D]/80 font-medium transition-colors"
+                                data-testid={`link-offer-${offer.id}`}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                View
+                              </a>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
