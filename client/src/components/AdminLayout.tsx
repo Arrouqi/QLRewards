@@ -84,7 +84,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="md:hidden bg-[#00426D] text-white p-4 flex justify-between items-center">
         <div>
           <h1 className="text-lg font-bold">Qatar Living Deals</h1>
-          <p className="text-xs text-white/60">QL Merchant Onboarding Portal</p>
+          <p className="text-xs text-white/60">Merchant Onboarding Portal</p>
         </div>
         <Button
           variant="ghost"
@@ -110,7 +110,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       )}>
         <div className="p-6 border-b border-white/10 hidden md:block">
           <h1 className="text-xl font-bold">Qatar Living Deals</h1>
-          <p className="text-sm text-white/60 mt-1">QL Merchant Onboarding Portal</p>
+          <p className="text-sm text-white/60 mt-1">Merchant Onboarding Portal</p>
         </div>
 
         <div className="md:hidden p-4 border-b border-white/10 flex justify-between items-center">
