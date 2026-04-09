@@ -22,6 +22,7 @@ import MerchantView from "@/pages/MerchantView";
 import MerchantEdit from "@/pages/MerchantEdit";
 import MerchantSuccess from "@/pages/MerchantSuccess";
 import ExistingMerchants from "@/pages/ExistingMerchants";
+import Overview from "@/pages/Overview";
 
 function Router() {
   return (
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/success" component={Success} />
       <Route path="/offer-request" component={OfferForm} />
       <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin/overview" component={Overview} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/config" component={AdminConfig} />
       <Route path="/admin/terms" component={TermsManagement} />

@@ -75,12 +75,13 @@ Preferred communication style: Simple, everyday language.
 - Container: `deals-clients`
 - Upload pattern: client FileReader → base64 → POST to server → upload to Azure → store URL in DB
 
-### Elasticsearch (Production Merchants)
-- **Elasticsearch**: Used to fetch existing merchant data from production
+### Elasticsearch (Production Merchants & Offers)
+- **Elasticsearch**: Used to fetch existing merchant and offer data from production
 - Endpoint: `ELASTIC_URL` env var, authenticated via `ELASTIC_API_KEY` (ApiKey auth)
 - Index: `prod_merchants` — contains 103 merchants with fields: agencyName, agencyEmail, agencyId, category, contactMobile, branches, website, status, etc.
-- API route: `GET /api/es/merchants?search=&size=&from=` (authenticated, proxied through backend)
-- Used in: Admin "Merchants" list page (`/admin/existing-merchants`), Deal creation form merchant dropdown (`/create-deal`)
+- Index: `prod_offers` — contains live offers on the platform; used for total live offers count on Overview page
+- API routes: `GET /api/es/merchants?search=&size=&from=` (authenticated), `GET /api/es/offers/count` (authenticated)
+- Used in: Admin "Merchants" list page (`/admin/existing-merchants`), Deal creation form merchant dropdown (`/create-deal`), Overview page statistics
 
 ### Required Environment Variables
 - `DATABASE_URL`: PostgreSQL connection string (required)

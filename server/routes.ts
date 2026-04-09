@@ -1361,6 +1361,97 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/stats/overview", requireAuth, async (req, res) => {
+    try {
+      const dateFrom = req.query.from as string | undefined;
+      const dateTo = req.query.to as string | undefined;
+
+      let allMerchants = await storage.getAllMerchants();
+      
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        allMerchants = allMerchants.filter(m => new Date(m.createdAt) >= fromDate);
+      }
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        allMerchants = allMerchants.filter(m => new Date(m.createdAt) <= toDate);
+      }
+
+      const merchantStats = {
+        total: allMerchants.filter(m => m.status !== "archived").length,
+        pending: allMerchants.filter(m => m.status === "pending").length,
+        moderation: allMerchants.filter(m => m.status === "moderation").length,
+        created: allMerchants.filter(m => m.status === "created").length,
+        licensing: allMerchants.filter(m => m.status === "licensing").length,
+        licensed: allMerchants.filter(m => m.status === "licensed").length,
+        archived: allMerchants.filter(m => m.status === "archived").length,
+      };
+
+      const allDeals = await storage.getAllDeals();
+      let filteredDeals = allDeals;
+      if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        filteredDeals = filteredDeals.filter(d => new Date(d.createdAt) >= fromDate);
+      }
+      if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        filteredDeals = filteredDeals.filter(d => new Date(d.createdAt) <= toDate);
+      }
+
+      const dealStats = {
+        total: filteredDeals.length,
+        pending: filteredDeals.filter(d => d.status === "pending").length,
+        approved: filteredDeals.filter(d => d.status === "approved").length,
+        archived: filteredDeals.filter(d => d.status === "archived").length,
+      };
+
+      const recentMerchants = allMerchants
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5)
+        .map(m => ({ id: m.id, companyName: m.companyName, brandName: m.brandName, status: m.status, createdAt: m.createdAt }));
+
+      const recentDeals = filteredDeals
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5)
+        .map(d => ({ id: d.id, title: d.title, merchantName: d.merchantName, status: d.status, createdAt: d.createdAt }));
+
+      res.json({ merchantStats, dealStats, recentMerchants, recentDeals });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/es/offers/count", requireAuth, async (req, res) => {
+    try {
+      const esUrl = process.env.ELASTIC_URL;
+      const esApiKey = process.env.ELASTIC_API_KEY;
+
+      if (!esUrl || !esApiKey) {
+        return res.json({ count: 0 });
+      }
+
+      const esResponse = await fetch(`${esUrl}prod_offers/_count`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `ApiKey ${esApiKey}`,
+        },
+        body: JSON.stringify({ query: { match_all: {} } }),
+      });
+
+      if (!esResponse.ok) {
+        return res.json({ count: 0 });
+      }
+
+      const data = await esResponse.json();
+      res.json({ count: data.count || 0 });
+    } catch (error: any) {
+      res.json({ count: 0 });
+    }
+  });
+
   app.delete("/api/merchants/:id/signed-contract", requireAuth, async (req, res) => {
     try {
       const existing = await storage.getMerchantById(req.params.id);

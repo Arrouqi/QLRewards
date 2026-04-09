@@ -629,8 +629,8 @@ export default function CreateOffer() {
     <div className="min-h-screen bg-[#F5F6FA] flex flex-col font-sans">
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8">
-            <h1 className="text-2xl font-bold text-[#00426D]">Create Deal</h1>
-            <p className="text-slate-500 mt-1">Fill in the details below to create your new deal.</p>
+            <h1 className="text-2xl font-bold text-[#00426D]">Create Offer for Existing Merchant</h1>
+            <p className="text-slate-500 mt-1">Use this form to create a new offer for a merchant already registered on the Qatar Living Deals platform. Select the merchant from the dropdown below to get started.</p>
         </div>
 
         <Form {...form}>
