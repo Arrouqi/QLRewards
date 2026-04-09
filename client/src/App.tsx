@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,7 +9,6 @@ import OfferForm from "@/pages/OfferForm";
 import Success from "@/pages/Success";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDashboard from "@/pages/AdminDashboard";
-import UserManagement from "@/pages/UserManagement";
 import DealDetail from "@/pages/DealDetail";
 import DealView from "@/pages/DealView";
 import PrintDeal from "@/pages/PrintDeal";
@@ -33,7 +32,7 @@ function Router() {
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin/overview" component={Overview} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
-      <Route path="/admin/users" component={UserManagement} />
+      <Route path="/admin/users">{() => <Redirect to="/admin/settings?tab=users" />}</Route>
       <Route path="/admin/deals/:id" component={DealDetail} />
       <Route path="/admin/deals/:id/view" component={DealView} />
       <Route path="/admin/deals/:id/print" component={PrintDeal} />

@@ -43,7 +43,7 @@ Preferred communication style: Simple, everyday language.
 - **merchants**: Stores merchant onboarding applications with company info, documents (CR, trade license, tax card, logo, cover image, etc.), WhatsApp number, sales order PDF (Azure URL), signed contract, `submittedBy` (admin who forwarded to moderation), `offersCreated` (integer counter), and status flow (pending ↔ moderation → created → licensing → licensed; any non-archived → archived; archived → pending/moderation). Admin role can permanently delete archived merchants.
 - **merchantDeals**: Stores deal offers per merchant with category, pricing, discount percentage OR discounted price, rules, images, and availability days
 - **merchantNotes**: Internal notes/comments on merchant applications (author, content, timestamp); thread-style, add-only
-- **adminUsers**: Stores admin credentials for the dashboard
+- **adminUsers**: Stores admin credentials for the dashboard (managed via Settings → Users tab, admin-only)
 - **session**: PostgreSQL session store table (auto-created)
 
 ### Project Structure

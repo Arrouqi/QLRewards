@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Building2, Search, MapPin, Phone, Mail, Loader2, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AdminLayout from "@/components/AdminLayout";
 
 interface ESMerchant {
@@ -29,6 +30,8 @@ export default function ExistingMerchants() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [branchesDialog, setBranchesDialog] = useState<{ merchantName: string; branches: ESMerchant["branches"] } | null>(null);
+  const [contactDialog, setContactDialog] = useState<{ merchantName: string; email?: string; phone?: string; whatsapp?: string; website?: string } | null>(null);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
@@ -111,90 +114,190 @@ export default function ExistingMerchants() {
                   </tr>
                 </thead>
                 <tbody>
-                  {merchants.map((merchant) => (
-                    <tr
-                      key={merchant.id}
-                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                      data-testid={`row-merchant-${merchant.id}`}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-[#00426D] flex items-center justify-center flex-shrink-0">
-                            <Building2 className="h-5 w-5 text-white" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-slate-900 truncate" data-testid={`text-merchant-name-${merchant.id}`}>
-                              {merchant.agencyName}
-                            </p>
-                            <p className="text-xs text-slate-500 truncate">
-                              ID: {merchant.agencyId}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-slate-700">{merchant.category?.name || "—"}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="space-y-1">
-                          {merchant.agencyEmail && (
-                            <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                              <Mail className="h-3 w-3 text-slate-400" />
-                              <span className="truncate max-w-[180px]">{merchant.agencyEmail}</span>
+                  {merchants.map((merchant) => {
+                    const hasLongEmail = merchant.agencyEmail && merchant.agencyEmail.length > 22;
+
+                    return (
+                      <tr
+                        key={merchant.id}
+                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                        data-testid={`row-merchant-${merchant.id}`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-[#00426D] flex items-center justify-center flex-shrink-0">
+                              <Building2 className="h-5 w-5 text-white" />
                             </div>
-                          )}
-                          {merchant.contactMobile && (
-                            <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                              <Phone className="h-3 w-3 text-slate-400" />
-                              <span>{merchant.contactMobile}</span>
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-900 truncate" data-testid={`text-merchant-name-${merchant.id}`}>
+                                {merchant.agencyName}
+                              </p>
+                              <p className="text-xs text-slate-500 truncate">
+                                ID: {merchant.agencyId}
+                              </p>
                             </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {merchant.branches && merchant.branches.length > 0 ? (
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-slate-700">{merchant.category?.name || "—"}</span>
+                        </td>
+                        <td className="px-4 py-3">
                           <div className="space-y-1">
-                            {merchant.branches.slice(0, 2).map((branch, idx) => (
-                              <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-600">
-                                <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                                <span className="truncate max-w-[150px]">{branch.name}</span>
+                            {merchant.agencyEmail && (
+                              <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                                <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                                <span className="truncate max-w-[180px]">{merchant.agencyEmail}</span>
                               </div>
-                            ))}
-                            {merchant.branches.length > 2 && (
-                              <span className="text-xs text-slate-400">+{merchant.branches.length - 2} more</span>
+                            )}
+                            {merchant.contactMobile && (
+                              <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                                <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                                <span>{merchant.contactMobile}</span>
+                              </div>
+                            )}
+                            {(hasLongEmail || merchant.contactWhatsapp || merchant.website) && (
+                              <button
+                                onClick={() => setContactDialog({
+                                  merchantName: merchant.agencyName,
+                                  email: merchant.agencyEmail,
+                                  phone: merchant.contactMobile,
+                                  whatsapp: merchant.contactWhatsapp,
+                                  website: merchant.website,
+                                })}
+                                className="text-xs text-[#00426D] hover:underline font-medium"
+                                data-testid={`button-view-contact-${merchant.id}`}
+                              >
+                                View all
+                              </button>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {getStatusBadge(merchant.status)}
-                      </td>
-                      <td className="px-4 py-3">
-                        {merchant.url ? (
-                          <a
-                            href={`https://www.qatarliving.com/en/deals/merchant/${merchant.url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-sm text-[#00426D] hover:text-[#00426D]/80 font-medium transition-colors"
-                            data-testid={`link-merchant-${merchant.id}`}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            View
-                          </a>
-                        ) : (
-                          <span className="text-xs text-slate-400">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3">
+                          {merchant.branches && merchant.branches.length > 0 ? (
+                            <div className="space-y-1">
+                              {merchant.branches.slice(0, 2).map((branch, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5 text-xs text-slate-600">
+                                  <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                                  <span className="truncate max-w-[150px]">{branch.name}</span>
+                                </div>
+                              ))}
+                              {merchant.branches.length > 2 && (
+                                <button
+                                  onClick={() => setBranchesDialog({ merchantName: merchant.agencyName, branches: merchant.branches })}
+                                  className="text-xs text-[#00426D] hover:underline font-medium"
+                                  data-testid={`button-view-branches-${merchant.id}`}
+                                >
+                                  +{merchant.branches.length - 2} more
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {getStatusBadge(merchant.status)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {merchant.url ? (
+                            <a
+                              href={`https://www.qatarliving.com/en/deals/merchant/${merchant.url}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-sm text-[#00426D] hover:text-[#00426D]/80 font-medium transition-colors"
+                              data-testid={`link-merchant-${merchant.id}`}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              View
+                            </a>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
         )}
       </div>
+
+      <Dialog open={!!branchesDialog} onOpenChange={() => setBranchesDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#00426D]">
+              <MapPin className="h-5 w-5" />
+              {branchesDialog?.merchantName} — Branches
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[400px] overflow-y-auto">
+            {branchesDialog?.branches?.map((branch, idx) => (
+              <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border">
+                <MapPin className="h-4 w-4 text-[#00426D] mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{branch.name}</p>
+                  {branch.location?.name && (
+                    <p className="text-xs text-slate-500 mt-0.5">{branch.location.name}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!contactDialog} onOpenChange={() => setContactDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#00426D]">
+              <Building2 className="h-5 w-5" />
+              {contactDialog?.merchantName} — Contact Details
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {contactDialog?.email && (
+              <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border">
+                <Mail className="h-4 w-4 text-[#00426D] mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-slate-500">Email</p>
+                  <p className="text-sm text-slate-800 break-all">{contactDialog.email}</p>
+                </div>
+              </div>
+            )}
+            {contactDialog?.phone && (
+              <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border">
+                <Phone className="h-4 w-4 text-[#00426D] mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-slate-500">Phone</p>
+                  <p className="text-sm text-slate-800">{contactDialog.phone}</p>
+                </div>
+              </div>
+            )}
+            {contactDialog?.whatsapp && (
+              <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border">
+                <Phone className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-slate-500">WhatsApp</p>
+                  <p className="text-sm text-slate-800">{contactDialog.whatsapp}</p>
+                </div>
+              </div>
+            )}
+            {contactDialog?.website && (
+              <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border">
+                <ExternalLink className="h-4 w-4 text-[#00426D] mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-slate-500">Website</p>
+                  <a href={contactDialog.website.startsWith("http") ? contactDialog.website : `https://${contactDialog.website}`} target="_blank" rel="noopener noreferrer" className="text-sm text-[#00426D] hover:underline break-all">
+                    {contactDialog.website}
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

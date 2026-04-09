@@ -72,13 +72,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     },
     ...(session?.role === "admin" ? [
       {
-        label: "User Management",
-        icon: Users,
-        href: "/admin/users",
-      },
-      {
         label: "Settings",
-        icon: Mail,
+        icon: Settings,
         href: "/admin/settings",
       },
     ] : []),

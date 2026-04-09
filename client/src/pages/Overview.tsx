@@ -180,7 +180,7 @@ export default function Overview() {
                   </Card>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Total merchant onboarding applications submitted through the portal (excluding archived)</p>
+                  <p>Total merchant onboarding requests submitted through the portal (excluding archived)</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -361,7 +361,7 @@ export default function Overview() {
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base font-semibold">Recent Merchant Applications</CardTitle>
+                    <CardTitle className="text-base font-semibold">Recent Merchant Requests</CardTitle>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -375,7 +375,7 @@ export default function Overview() {
                 </CardHeader>
                 <CardContent>
                   {stats.recentMerchants.length === 0 ? (
-                    <p className="text-sm text-slate-400 text-center py-4">No merchant applications yet</p>
+                    <p className="text-sm text-slate-400 text-center py-4">No merchant requests yet</p>
                   ) : (
                     <div className="space-y-3">
                       {stats.recentMerchants.map((m) => (
