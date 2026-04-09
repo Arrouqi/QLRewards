@@ -83,7 +83,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-[#F5F6FA] flex items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-[#00426D]">QL Merchant Onboarding</CardTitle>
+          <CardTitle className="text-2xl font-bold text-[#00426D]">Merchant Onboarding Portal</CardTitle>
           <CardDescription className="space-y-1">
             <span className="block font-medium text-slate-700">Staff Login</span>
             <span className="block">Enter your credentials to manage merchant onboarding</span>

@@ -230,7 +230,7 @@ export default function Overview() {
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-medium text-slate-500 uppercase">Live Offers</p>
+                          <p className="text-xs font-medium text-slate-500 uppercase">Live Deals</p>
                           <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-live-offers">{liveOffers?.count ?? "—"}</p>
                           <p className="text-xs text-slate-400 mt-1">On platform</p>
                         </div>

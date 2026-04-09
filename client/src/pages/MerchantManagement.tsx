@@ -263,8 +263,8 @@ export default function MerchantManagement() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Merchant Onboarding</h1>
-              <p className="text-slate-500">Manage merchant applications</p>
+              <h1 className="text-2xl font-bold text-slate-900">Merchant Requests</h1>
+              <p className="text-slate-500">Manage merchant requests</p>
             </div>
             <Button
               onClick={() => window.open("/", "_blank")}

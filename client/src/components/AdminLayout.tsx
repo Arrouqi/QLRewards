@@ -51,7 +51,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       href: "/admin/overview",
     },
     {
-      label: "Merchant Onboarding",
+      label: "Merchant Requests",
       icon: Building2,
       href: "/admin/merchants",
     },
@@ -66,17 +66,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       href: "/admin/existing-merchants",
     },
     {
-      label: "Live Offers",
+      label: "Live Deals",
       icon: Tag,
       href: "/admin/live-offers",
     },
-    ...(session?.role === "admin" ? [
-      {
-        label: "Settings",
-        icon: Settings,
-        href: "/admin/settings",
-      },
-    ] : []),
   ];
 
   return (
@@ -157,6 +150,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <p className="text-sm text-white/60">Logged in as</p>
               <p className="text-white font-medium" data-testid="text-username">{session.username}</p>
             </div>
+          )}
+          {session?.role === "admin" && (
+            <button
+              onClick={() => handleNavigation("/admin/settings")}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-left mb-2",
+                location === "/admin/settings"
+                  ? "bg-white/20 text-white"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
+              )}
+              data-testid="nav-settings"
+            >
+              <Settings className="h-5 w-5" />
+              <span className="font-medium">Settings</span>
+            </button>
           )}
           <Button
             variant="ghost"

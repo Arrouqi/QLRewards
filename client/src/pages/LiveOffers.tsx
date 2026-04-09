@@ -122,9 +122,9 @@ export default function LiveOffers() {
       <div className="p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#00426D]" data-testid="text-page-title">Live Offers</h1>
+            <h1 className="text-2xl font-bold text-[#00426D]" data-testid="text-page-title">Live Deals</h1>
             <p className="text-slate-500 text-sm mt-1">
-              {total} live offers on the platform
+              {total} live deals on the platform
             </p>
           </div>
           <div className="relative w-full md:w-80">
