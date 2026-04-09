@@ -1510,7 +1510,7 @@ export async function registerRoutes(
             bool: {
               should: [
                 { match_phrase_prefix: { title: search } },
-                { match_phrase_prefix: { "merchant.agencyName": search } },
+                { match_phrase_prefix: { "agency.agencyName": search } },
                 { match_phrase_prefix: { "category.name": search } },
               ],
               minimum_should_match: 1,

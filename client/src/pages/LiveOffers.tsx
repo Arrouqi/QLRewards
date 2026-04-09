@@ -10,71 +10,74 @@ interface ESOffer {
   id: string;
   title?: string;
   description?: string;
-  merchant?: {
+  agency?: {
     agencyName?: string;
     agencyId?: number;
+    url?: string;
   };
   category?: {
     id?: number;
     name?: string;
   };
+  offerType?: {
+    id?: number;
+    name?: string;
+  };
   discount?: number;
-  discountType?: string;
-  dealType?: string;
-  originalPrice?: number;
-  discountedPrice?: number;
+  discountPercentage?: number;
   status?: number;
-  startDate?: string;
-  endDate?: string;
-  claimCount?: number;
-  viewCount?: number;
-  imageUri?: string;
-  url?: string;
-  slug?: string;
+  urls?: { urlAlias?: string }[];
   [key: string]: any;
 }
 
 const ITEMS_PER_PAGE = 20;
 
-function getOfferTypeBadge(dealType?: string) {
-  switch (dealType?.toLowerCase()) {
-    case "bogo":
-      return (
-        <Badge className="bg-purple-100 text-purple-700 border-purple-200 gap-1">
-          <Gift className="h-3 w-3" />
-          BOGO
-        </Badge>
-      );
-    case "discount":
-      return (
-        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1">
-          <Percent className="h-3 w-3" />
-          Discount
-        </Badge>
-      );
-    case "voucher":
-      return (
-        <Badge className="bg-blue-100 text-blue-700 border-blue-200 gap-1">
-          <Ticket className="h-3 w-3" />
-          Voucher
-        </Badge>
-      );
-    case "bundle":
-      return (
-        <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">
-          <Package className="h-3 w-3" />
-          Bundle
-        </Badge>
-      );
-    default:
-      return <span className="text-xs text-slate-400">—</span>;
+function getOfferTypeBadge(offerTypeName?: string) {
+  if (!offerTypeName) return <span className="text-xs text-slate-400">—</span>;
+
+  const lower = offerTypeName.toLowerCase();
+  if (lower.includes("buy 1") || lower.includes("bogo") || lower.includes("b1g1")) {
+    return (
+      <Badge className="bg-purple-100 text-purple-700 border-purple-200 gap-1">
+        <Gift className="h-3 w-3" />
+        BOGO
+      </Badge>
+    );
   }
+  if (lower.includes("discount")) {
+    return (
+      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 gap-1">
+        <Percent className="h-3 w-3" />
+        Discount
+      </Badge>
+    );
+  }
+  if (lower.includes("voucher")) {
+    return (
+      <Badge className="bg-blue-100 text-blue-700 border-blue-200 gap-1">
+        <Ticket className="h-3 w-3" />
+        Voucher
+      </Badge>
+    );
+  }
+  if (lower.includes("bundle")) {
+    return (
+      <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1">
+        <Package className="h-3 w-3" />
+        Bundle
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="bg-slate-100 text-slate-600 border-slate-200">
+      {offerTypeName}
+    </Badge>
+  );
 }
 
 function getOfferUrl(offer: ESOffer): string | null {
-  if (offer.url) return offer.url;
-  if (offer.slug && offer.id) {
-    return `https://www.qatarliving.com/en/deals/${offer.slug}/${offer.id}`;
+  if (offer.urls && offer.urls.length > 0 && offer.urls[0].urlAlias) {
+    return `https://www.qatarliving.com${offer.urls[0].urlAlias}`;
   }
   return null;
 }
@@ -188,7 +191,7 @@ export default function LiveOffers() {
                             <div className="flex items-center gap-1.5">
                               <Building2 className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                               <span className="text-sm text-slate-700 truncate max-w-[180px]">
-                                {offer.merchant?.agencyName || "—"}
+                                {offer.agency?.agencyName || "—"}
                               </span>
                             </div>
                           </td>
@@ -196,7 +199,7 @@ export default function LiveOffers() {
                             <span className="text-sm text-slate-700">{offer.category?.name || "—"}</span>
                           </td>
                           <td className="px-4 py-3">
-                            {getOfferTypeBadge(offer.dealType)}
+                            {getOfferTypeBadge(offer.offerType?.name)}
                           </td>
                           <td className="px-4 py-3">
                             <Badge className="bg-green-100 text-green-700 border-green-200">

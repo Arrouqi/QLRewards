@@ -174,7 +174,7 @@ export default function ExistingMerchants() {
                       <td className="px-4 py-3">
                         {merchant.url ? (
                           <a
-                            href={merchant.url.startsWith("http") ? merchant.url : `https://www.qatarliving.com${merchant.url}`}
+                            href={`https://www.qatarliving.com/en/deals/merchant/${merchant.url}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-sm text-[#00426D] hover:text-[#00426D]/80 font-medium transition-colors"
