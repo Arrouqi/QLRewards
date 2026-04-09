@@ -591,7 +591,7 @@ export default function MerchantManagement() {
                               )}
                             </>
                           )}
-                          {isAdmin && merchant.status !== "archived" && (
+                          {merchant.status !== "archived" && (
                             <DropdownMenuItem
                               onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "archived" })}
                               className="text-slate-600"
