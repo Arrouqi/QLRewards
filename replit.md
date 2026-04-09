@@ -8,6 +8,12 @@ This is a merchant portal for the Qatar Living Deals platform where businesses c
 
 Preferred communication style: Simple, everyday language.
 
+### Deployment & Production
+- **"Production"** refers to the user's own separate environment — a different server and database, deployed via GitHub (NOT the Replit published version)
+- Schema changes require manual SQL migrations on the production database
+- Always list any new columns/tables added so the user can run the corresponding `ALTER TABLE` statements on their production DB
+- The Replit environment is for development/testing only
+
 ## System Architecture
 
 ### Frontend Architecture
