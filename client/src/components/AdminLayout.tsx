@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Settings, LogOut, Users, Menu, X, Mail, Building2, Store, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Settings, LogOut, Users, Menu, X, Mail, Building2, Store, BarChart3, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -62,9 +62,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     },
     ...(session?.role === "admin" ? [
       {
-        label: "Merchants",
+        label: "Live Merchants",
         icon: Store,
         href: "/admin/existing-merchants",
+      },
+      {
+        label: "Live Offers",
+        icon: Tag,
+        href: "/admin/live-offers",
       },
       {
         label: "User Management",
@@ -84,7 +89,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="md:hidden bg-[#00426D] text-white p-4 flex justify-between items-center">
         <div>
           <h1 className="text-lg font-bold">Qatar Living Deals</h1>
-          <p className="text-xs text-white/60">Admin Portal</p>
+          <p className="text-xs text-white/60">QL Merchant Onboarding Portal</p>
         </div>
         <Button
           variant="ghost"
@@ -110,7 +115,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       )}>
         <div className="p-6 border-b border-white/10 hidden md:block">
           <h1 className="text-xl font-bold">Qatar Living Deals</h1>
-          <p className="text-sm text-white/60 mt-1">Admin Portal</p>
+          <p className="text-sm text-white/60 mt-1">QL Merchant Onboarding Portal</p>
         </div>
 
         <div className="md:hidden p-4 border-b border-white/10 flex justify-between items-center">

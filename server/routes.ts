@@ -1469,6 +1469,67 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/es/offers", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const esUrl = process.env.ELASTIC_URL;
+      const esApiKey = process.env.ELASTIC_API_KEY;
+
+      if (!esUrl || !esApiKey) {
+        return res.status(500).json({ error: "Elasticsearch not configured" });
+      }
+
+      const search = (req.query.search as string) || "";
+      const size = Math.min(parseInt(req.query.size as string) || 200, 1000);
+      const from = parseInt(req.query.from as string) || 0;
+
+      const query: any = search
+        ? {
+            bool: {
+              should: [
+                { match_phrase_prefix: { title: search } },
+                { match_phrase_prefix: { "merchant.agencyName": search } },
+                { match_phrase_prefix: { "category.name": search } },
+              ],
+              minimum_should_match: 1,
+            },
+          }
+        : { match_all: {} };
+
+      const esResponse = await fetch(`${esUrl}prod_offers/_search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `ApiKey ${esApiKey}`,
+        },
+        body: JSON.stringify({ query, size, from, sort: [{ _score: { order: "desc" } }] }),
+      });
+
+      if (!esResponse.ok) {
+        const errorText = await esResponse.text();
+        console.error("[ES] Offers search error:", errorText);
+        return res.status(502).json({ error: "Failed to query Elasticsearch" });
+      }
+
+      const data = await esResponse.json();
+      const offers = data.hits.hits.map((hit: any) => ({
+        id: hit._id,
+        ...hit._source,
+      }));
+
+      res.json({
+        offers,
+        total: data.hits.total?.value || 0,
+      });
+    } catch (error: any) {
+      console.error("[ES] Offers error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/es/offers/count", requireAuth, async (req, res) => {
     try {
       const esUrl = process.env.ELASTIC_URL;

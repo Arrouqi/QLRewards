@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Search, ExternalLink, MapPin, Phone, Mail, Loader2 } from "lucide-react";
+import { Building2, Search, MapPin, Phone, Mail, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import AdminLayout from "@/components/AdminLayout";
 
 interface ESMerchant {
@@ -71,7 +70,7 @@ export default function ExistingMerchants() {
       <div className="p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#00426D]" data-testid="text-page-title">Merchants</h1>
+            <h1 className="text-2xl font-bold text-[#00426D]" data-testid="text-page-title">Live Merchants</h1>
             <p className="text-slate-500 text-sm mt-1">
               {total} existing merchants from production
             </p>
@@ -108,7 +107,6 @@ export default function ExistingMerchants() {
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Contact</th>
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Branches</th>
                     <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Status</th>
-                    <th className="text-left text-xs font-semibold text-slate-500 uppercase px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -171,24 +169,6 @@ export default function ExistingMerchants() {
                       </td>
                       <td className="px-4 py-3">
                         {getStatusBadge(merchant.status)}
-                      </td>
-                      <td className="px-4 py-3">
-                        {merchant.website && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                          >
-                            <a
-                              href={merchant.website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              data-testid={`link-website-${merchant.id}`}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
                       </td>
                     </tr>
                   ))}

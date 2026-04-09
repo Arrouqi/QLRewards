@@ -23,6 +23,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface OverviewStats {
   merchantStats: {
@@ -159,57 +164,85 @@ export default function Overview() {
         ) : stats ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <Card className="border-l-4 border-l-[#00426D]">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase">Total Merchants</p>
-                      <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-total-merchants">{stats.merchantStats.total}</p>
-                      <p className="text-xs text-slate-400 mt-1">Excl. archived</p>
-                    </div>
-                    <Building2 className="h-8 w-8 text-[#00426D]/20" />
-                  </div>
-                </CardContent>
-              </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="border-l-4 border-l-[#00426D] cursor-help">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase">Merchant Requests</p>
+                          <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-total-merchants">{stats.merchantStats.total}</p>
+                          <p className="text-xs text-slate-400 mt-1">Excl. archived</p>
+                        </div>
+                        <Building2 className="h-8 w-8 text-[#00426D]/20" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Total merchant onboarding applications submitted through the portal (excluding archived)</p>
+                </TooltipContent>
+              </Tooltip>
 
-              <Card className="border-l-4 border-l-emerald-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase">Live Offers</p>
-                      <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-live-offers">{liveOffers?.count ?? "—"}</p>
-                      <p className="text-xs text-slate-400 mt-1">On platform</p>
-                    </div>
-                    <Globe className="h-8 w-8 text-emerald-500/20" />
-                  </div>
-                </CardContent>
-              </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="border-l-4 border-l-emerald-500 cursor-help">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase">Offer Requests</p>
+                          <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-total-deals">{stats.dealStats.total}</p>
+                          <p className="text-xs text-slate-400 mt-1">Submitted</p>
+                        </div>
+                        <Tag className="h-8 w-8 text-emerald-500/20" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Total deal/offer requests submitted by the sales team through the portal</p>
+                </TooltipContent>
+              </Tooltip>
 
-              <Card className="border-l-4 border-l-blue-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase">Live Merchants</p>
-                      <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-live-merchants">{liveMerchants?.total ?? "—"}</p>
-                      <p className="text-xs text-slate-400 mt-1">On platform</p>
-                    </div>
-                    <TrendingUp className="h-8 w-8 text-blue-500/20" />
-                  </div>
-                </CardContent>
-              </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="border-l-4 border-l-blue-500 cursor-help">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase">Live Merchants</p>
+                          <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-live-merchants">{liveMerchants?.total ?? "—"}</p>
+                          <p className="text-xs text-slate-400 mt-1">On platform</p>
+                        </div>
+                        <TrendingUp className="h-8 w-8 text-blue-500/20" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Active merchants currently live on the Qatar Living platform</p>
+                </TooltipContent>
+              </Tooltip>
 
-              <Card className="border-l-4 border-l-purple-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase">Deal Requests</p>
-                      <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-total-deals">{stats.dealStats.total}</p>
-                      <p className="text-xs text-slate-400 mt-1">Submitted</p>
-                    </div>
-                    <Tag className="h-8 w-8 text-purple-500/20" />
-                  </div>
-                </CardContent>
-              </Card>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Card className="border-l-4 border-l-purple-500 cursor-help">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-slate-500 uppercase">Live Offers</p>
+                          <p className="text-2xl font-bold text-slate-900 mt-1" data-testid="text-live-offers">{liveOffers?.count ?? "—"}</p>
+                          <p className="text-xs text-slate-400 mt-1">On platform</p>
+                        </div>
+                        <Globe className="h-8 w-8 text-purple-500/20" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Total offers currently live and visible on the Qatar Living platform</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

@@ -20,6 +20,7 @@ import MerchantView from "@/pages/MerchantView";
 import MerchantEdit from "@/pages/MerchantEdit";
 import MerchantSuccess from "@/pages/MerchantSuccess";
 import ExistingMerchants from "@/pages/ExistingMerchants";
+import LiveOffers from "@/pages/LiveOffers";
 import Overview from "@/pages/Overview";
 
 function Router() {
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/admin/deals/:id/print" component={PrintDeal} />
       <Route path="/admin/settings" component={Settings} />
       <Route path="/admin/existing-merchants" component={ExistingMerchants} />
+      <Route path="/admin/live-offers" component={LiveOffers} />
       <Route path="/admin/merchants" component={MerchantManagement} />
       <Route path="/admin/merchants/:id" component={MerchantView} />
       <Route path="/admin/merchants/:id/edit" component={MerchantEdit} />
