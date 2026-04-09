@@ -48,6 +48,9 @@ export default function AdminDashboard() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [dealToRemove, setDealToRemove] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dealToDelete, setDealToDelete] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
     checkAuthAndFetchDeals();
@@ -60,6 +63,8 @@ export default function AdminDashboard() {
         setLocation("/admin/login");
         return;
       }
+      const session = await authResponse.json();
+      setUserRole(session.role || "");
 
       const dealsResponse = await fetch("/api/deals/summary", { credentials: "include" });
 
@@ -167,6 +172,30 @@ export default function AdminDashboard() {
     } finally {
       setRemoveDialogOpen(false);
       setDealToRemove(null);
+    }
+  };
+
+  const handleDeleteClick = (dealId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDealToDelete(dealId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!dealToDelete) return;
+    try {
+      const response = await fetch(`/api/deals/${dealToDelete}`, { method: "DELETE", credentials: "include" });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete deal");
+      }
+      toast({ title: "Success", description: "Deal permanently deleted" });
+      await checkAuthAndFetchDeals();
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to delete deal", variant: "destructive" });
+    } finally {
+      setDeleteDialogOpen(false);
+      setDealToDelete(null);
     }
   };
 
@@ -467,6 +496,18 @@ export default function AdminDashboard() {
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
+                        {deal.status === "archived" && userRole === "admin" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => handleDeleteClick(deal.id, e)}
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                            data-testid={`button-delete-${deal.id}`}
+                            title="Permanently Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -546,6 +587,23 @@ export default function AdminDashboard() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleRemoveConfirm} className="bg-red-600 hover:bg-red-700">
               Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently Delete This Deal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this deal from the database. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700">
+              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

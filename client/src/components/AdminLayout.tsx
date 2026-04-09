@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Settings, LogOut, FileText, Users, Menu, X, FolderCog, Mail, Building2, Store, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Settings, LogOut, Users, Menu, X, Mail, Building2, Store, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -65,16 +65,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         label: "Merchants",
         icon: Store,
         href: "/admin/existing-merchants",
-      },
-      {
-        label: "Category Management",
-        icon: FolderCog,
-        href: "/admin/config",
-      },
-      {
-        label: "Terms Management",
-        icon: FileText,
-        href: "/admin/terms",
       },
       {
         label: "User Management",

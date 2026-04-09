@@ -266,6 +266,25 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/deals/:id", requireAuth, async (req, res) => {
+    try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const deal = await storage.getDealById(req.params.id);
+      if (!deal) {
+        return res.status(404).json({ error: "Deal not found" });
+      }
+      if (deal.status !== "archived") {
+        return res.status(400).json({ error: "Only archived deals can be permanently deleted" });
+      }
+      await storage.deleteDeal(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Check Azure Storage configuration
   app.get("/api/admin/azure-status", requireAuth, async (req, res) => {
     try {
@@ -516,6 +535,9 @@ export async function registerRoutes(
 
   app.post("/api/categories", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const validatedData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(validatedData);
       res.status(201).json(category);
@@ -526,6 +548,9 @@ export async function registerRoutes(
 
   app.patch("/api/categories/:id", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const { name, oldName } = req.body;
       if (!name) {
         return res.status(400).json({ error: "Name is required" });
@@ -545,6 +570,9 @@ export async function registerRoutes(
 
   app.delete("/api/categories/:id", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       await storage.deleteCategory(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
@@ -554,6 +582,9 @@ export async function registerRoutes(
 
   app.post("/api/subcategories", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const validatedData = insertSubCategorySchema.parse(req.body);
       const subCategory = await storage.createSubCategory(validatedData);
       res.status(201).json(subCategory);
@@ -564,6 +595,9 @@ export async function registerRoutes(
 
   app.patch("/api/subcategories/:id", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const { name } = req.body;
       if (!name) {
         return res.status(400).json({ error: "Name is required" });
@@ -580,6 +614,9 @@ export async function registerRoutes(
 
   app.delete("/api/subcategories/:id", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       await storage.deleteSubCategory(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
@@ -608,6 +645,9 @@ export async function registerRoutes(
 
   app.post("/api/terms", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const validatedData = insertTermSchema.parse(req.body);
       const term = await storage.createTerm(validatedData);
       res.status(201).json(term);
@@ -618,6 +658,9 @@ export async function registerRoutes(
 
   app.patch("/api/terms/:id", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const { text } = req.body;
       if (!text) {
         return res.status(400).json({ error: "Text is required" });
@@ -634,6 +677,9 @@ export async function registerRoutes(
 
   app.delete("/api/terms/:id", requireAuth, async (req, res) => {
     try {
+      if (req.session.role !== "admin") {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       await storage.deleteTerm(req.params.id);
       res.json({ success: true });
     } catch (error: any) {

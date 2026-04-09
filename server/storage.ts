@@ -23,6 +23,7 @@ export interface IStorage {
   approveDeal(id: string): Promise<Deal | undefined>;
   bulkApproveDeals(ids: string[]): Promise<Deal[]>;
   archiveDeal(id: string): Promise<Deal | undefined>;
+  deleteDeal(id: string): Promise<void>;
   updateDealCategories(oldName: string, newName: string): Promise<void>;
   getAdminUser(username: string): Promise<AdminUser | undefined>;
   createAdminUser(user: InsertAdminUser): Promise<AdminUser>;
@@ -139,6 +140,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(deals.id, id))
       .returning();
     return archived;
+  }
+
+  async deleteDeal(id: string): Promise<void> {
+    await db.delete(deals).where(eq(deals.id, id));
   }
 
   async getAdminUser(username: string): Promise<AdminUser | undefined> {
