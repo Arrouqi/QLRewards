@@ -166,15 +166,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <span className="font-medium">Settings</span>
             </button>
           )}
-          <Button
-            variant="ghost"
+          <button
             onClick={handleLogout}
-            className="w-full justify-start text-white/70 hover:text-white hover:bg-white/10"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-left text-white/70 hover:bg-white/10 hover:text-white"
             data-testid="button-logout"
           >
-            <LogOut className="h-5 w-5 mr-3" />
-            Logout
-          </Button>
+            <LogOut className="h-5 w-5" />
+            <span className="font-medium">Logout</span>
+          </button>
         </div>
       </aside>
 
