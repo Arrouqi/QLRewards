@@ -99,7 +99,19 @@ export async function registerRoutes(
       
       res.status(201).json(deal);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      console.error("Deal creation error:", error);
+      if (error.name === "ZodError" && error.issues) {
+        const fieldErrors = error.issues.map((issue: any) => {
+          const path = issue.path.join(".");
+          return `${path}: ${issue.message}`;
+        });
+        return res.status(400).json({
+          error: `Validation failed: ${fieldErrors.join("; ")}`,
+          details: error.issues
+        });
+      }
+      const statusCode = error.name === "ZodError" ? 400 : 500;
+      res.status(statusCode).json({ error: error.message || "Failed to create deal. Please try again." });
     }
   });
 
@@ -947,7 +959,18 @@ export async function registerRoutes(
       res.status(201).json(merchant);
     } catch (error: any) {
       console.error("Merchant creation error:", error);
-      res.status(400).json({ error: error.message });
+      if (error.name === "ZodError" && error.issues) {
+        const fieldErrors = error.issues.map((issue: any) => {
+          const path = issue.path.join(".");
+          return `${path}: ${issue.message}`;
+        });
+        return res.status(400).json({ 
+          error: `Validation failed: ${fieldErrors.join("; ")}`,
+          details: error.issues
+        });
+      }
+      const statusCode = error.name === "ZodError" ? 400 : 500;
+      res.status(statusCode).json({ error: error.message || "Failed to create merchant. Please try again." });
     }
   });
 

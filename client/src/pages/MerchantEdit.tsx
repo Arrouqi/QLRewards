@@ -343,6 +343,25 @@ export default function MerchantEdit() {
 
   const handleSave = async () => {
     if (!merchant) return;
+
+    const validationErrors: string[] = [];
+    if (!formData.companyName.trim()) validationErrors.push("Company name is required");
+    if (!formData.crNumber.trim()) validationErrors.push("CR number is required");
+    if (formData.crNumber && !/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber)) validationErrors.push("CR number must be 4-14 alphanumeric characters");
+    if (!formData.brandName.trim()) validationErrors.push("Brand name is required");
+    if (!formData.contactPerson.trim()) validationErrors.push("Contact person is required");
+    if (!formData.email.trim()) validationErrors.push("Email is required");
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) validationErrors.push("Invalid email format");
+    if (!formData.phone.trim()) validationErrors.push("Phone is required");
+
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Please fix the following errors",
+        description: validationErrors.join(". "),
+        variant: "destructive",
+      });
+      return;
+    }
     
     const dealsWithLowImages = deals.filter(d => (d.images || []).length < 4);
     if (dealsWithLowImages.length > 0) {
@@ -469,8 +488,13 @@ export default function MerchantEdit() {
                   name="crNumber"
                   value={formData.crNumber}
                   onChange={handleChange}
+                  placeholder="e.g. 123456 or ABC1234"
+                  maxLength={14}
                   data-testid="input-cr-number"
                 />
+                {formData.crNumber && !/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber) && (
+                  <p className="text-sm text-red-500">CR number must be 4-14 alphanumeric characters</p>
+                )}
               </div>
               
               <div className="space-y-2">

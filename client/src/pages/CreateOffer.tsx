@@ -502,14 +502,44 @@ export default function CreateOffer() {
   });
 
   const onFormError = (errors: any) => {
+    const fieldLabels: Record<string, string> = {
+      title: "Title",
+      description: "Description",
+      category: "Category",
+      subCategory: "Sub-Category",
+      offerType: "Deal Type",
+      duration: "Duration",
+      offerDuration: "Duration",
+      originalPrice: "Original Price",
+      discountPercentage: "Discount Percentage",
+      discountedPrice: "Discounted Price",
+      redemption: "Redemption",
+      limitPerUser: "Limit Per User",
+      branches: "Branches",
+      claimRules: "Claim Rules",
+      generalRules: "General Rules",
+      images: "Images",
+      merchantId: "Merchant",
+      merchantName: "Merchant Name",
+      merchantEmail: "Merchant Email",
+      merchantPhone: "Merchant Phone",
+      agreement: "Terms & Conditions",
+    };
     const errorMessages = Object.entries(errors)
-      .map(([field, error]: [string, any]) => `${field}: ${error?.message}`)
-      .join(", ");
+      .map(([field, error]: [string, any]) => {
+        const label = fieldLabels[field] || field;
+        return `${label}: ${error?.message || 'Required'}`;
+      })
+      .join(". ");
     toast({
       title: "Please fix the following errors",
       description: errorMessages,
       variant: "destructive",
     });
+    const firstErrorField = document.querySelector('.text-destructive');
+    if (firstErrorField) {
+      firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   };
 
   // Watchers for dynamic behavior
@@ -593,8 +623,18 @@ export default function CreateOffer() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to submit deal");
+        let errorMessage = "Failed to submit deal.";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          if (response.status === 413) {
+            errorMessage = "Images are too large. Please reduce the file sizes and try again.";
+          } else if (response.status >= 500) {
+            errorMessage = "Server error. Please try again in a few minutes.";
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       toast({
@@ -603,10 +643,13 @@ export default function CreateOffer() {
       });
 
       setLocation("/success");
-    } catch (error) {
+    } catch (error: any) {
+      const isNetworkError = error.message === "Failed to fetch" || error.name === "TypeError";
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit deal",
+        title: "Submission Failed",
+        description: isNetworkError
+          ? "Could not connect to the server. Please check your internet connection and try again."
+          : (error.message || "Failed to submit deal"),
         variant: "destructive",
       });
     } finally {

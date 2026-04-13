@@ -190,7 +190,9 @@ export const merchants = pgTable("merchants", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertMerchantSchema = createInsertSchema(merchants).omit({
+export const insertMerchantSchema = createInsertSchema(merchants, {
+  crNumber: z.string().regex(/^[a-zA-Z0-9]{4,14}$/, "CR number must be 4-14 alphanumeric characters"),
+}).omit({
   id: true,
   status: true,
   submittedBy: true,

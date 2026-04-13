@@ -127,7 +127,7 @@ const dealSchema = z.object({
 
 const merchantSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
-  crNumber: z.string().regex(/^\d{6,8}$/, "CR number must be 6-8 digits"),
+  crNumber: z.string().regex(/^[a-zA-Z0-9]{4,14}$/, "CR number must be 4-14 alphanumeric characters"),
   brandName: z.string().min(1, "Brand name is required"),
   address: z.string().min(1, "Address is required"),
   contactPerson: z.string().min(1, "Contact person is required"),
@@ -323,22 +323,36 @@ export default function MerchantOnboarding() {
         body: JSON.stringify({
           ...data,
           branches: formattedBranches,
-                  }),
+        }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to submit");
+        let errorMessage = "Failed to submit the application.";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          if (response.status === 413) {
+            errorMessage = "File attachments are too large. Please reduce the file sizes and try again.";
+          } else if (response.status >= 500) {
+            errorMessage = "Server error. Please try again in a few minutes.";
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const merchant = await response.json();
       setLocation(`/merchant-success/${merchant.id}`);
     } catch (error: any) {
+      const isNetworkError = error.message === "Failed to fetch" || error.name === "TypeError";
       toast({
         title: "Submission Failed",
-        description: error.message,
+        description: isNetworkError 
+          ? "Could not connect to the server. Please check your internet connection and try again."
+          : error.message,
         variant: "destructive",
       });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
@@ -381,17 +395,50 @@ export default function MerchantOnboarding() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
             console.log("Form validation errors:", errors);
+            const fieldLabels: Record<string, string> = {
+              companyName: "Company Name",
+              crNumber: "CR Number",
+              brandName: "Brand Name",
+              address: "Address",
+              contactPerson: "Contact Person",
+              email: "Email",
+              phone: "Phone",
+              products: "Products",
+              businessCategories: "Business Categories",
+              crDocument: "CR Document",
+              merchantSignatoryName: "Authorized Signatory Name",
+              commencementDate: "Commencement Date",
+              termsAccepted: "Terms & Conditions",
+              deals: "Deal Offers",
+              whatsapp: "WhatsApp",
+              logo: "Logo",
+              coverImage: "Cover Image",
+            };
+            const messages = Object.keys(errors).map(key => {
+              const label = fieldLabels[key] || key;
+              const error = errors[key as keyof typeof errors];
+              if (key === "deals" && Array.isArray(error)) {
+                const dealErrors = error.map((dealErr: any, i: number) => {
+                  if (!dealErr) return null;
+                  const fields = Object.keys(dealErr).map(f => {
+                    const msg = dealErr[f]?.message;
+                    return msg || f;
+                  });
+                  return `Deal ${i + 1}: ${fields.join(", ")}`;
+                }).filter(Boolean);
+                return dealErrors.length > 0 ? dealErrors.join("; ") : "Check all deal fields";
+              }
+              return `${label}: ${(error as any)?.message || 'Required'}`;
+            });
             toast({
               title: "Please fix the errors below",
-              description: Object.keys(errors).map(key => {
-                const error = errors[key as keyof typeof errors];
-                if (Array.isArray(error)) {
-                  return `${key}: Check all required fields`;
-                }
-                return `${key}: ${(error as any)?.message || 'Invalid'}`;
-              }).join(', '),
+              description: messages.join(". "),
               variant: "destructive",
             });
+            const firstErrorField = document.querySelector('[data-error="true"], .text-destructive');
+            if (firstErrorField) {
+              firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
           })} className="space-y-8">
             
             {/* Agreement Header */}
@@ -457,12 +504,12 @@ export default function MerchantOnboarding() {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                              <TooltipContent><p className="max-w-xs text-xs">Your Commercial Registration number issued by the Ministry of Commerce. Usually 6-8 digits.</p></TooltipContent>
+                              <TooltipContent><p className="max-w-xs text-xs">Your Commercial Registration number issued by the Ministry of Commerce. 4-14 alphanumeric characters.</p></TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="6-8 digit number" maxLength={8} data-testid="input-cr-number" />
+                          <Input {...field} placeholder="e.g. 123456 or ABC1234" maxLength={14} data-testid="input-cr-number" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
