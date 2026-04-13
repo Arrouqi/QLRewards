@@ -83,6 +83,7 @@ const dealSchema = z.object({
   originalPrice: z.string().optional(),
   isMultipleItems: z.boolean().default(false),
   discountPercentage: z.string().optional(),
+  discountedPrice: z.string().optional(),
   isTwoTranches: z.boolean().default(false),
   trancheValidity: z.string().optional(),
   specificDays: z.boolean().default(false),
@@ -142,6 +143,7 @@ export default function DealDetail() {
   
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [discountType, setDiscountType] = useState<"percentage" | "price">("percentage");
   
   const MIN_PHOTOS = 4;
   const MAX_PHOTOS = 10;
@@ -185,6 +187,7 @@ export default function DealDetail() {
       originalPrice: "",
       isMultipleItems: false,
       discountPercentage: "",
+      discountedPrice: "",
       isTwoTranches: false,
       trancheValidity: "",
       specificDays: false,
@@ -247,6 +250,7 @@ export default function DealDetail() {
         originalPrice: data.originalPrice || "",
         isMultipleItems: data.isMultipleItems || false,
         discountPercentage: data.discountPercentage || "",
+        discountedPrice: data.discountedPrice || "",
         isTwoTranches: data.isTwoTranches || false,
         trancheValidity: data.trancheValidity || "",
         specificDays: data.specificDays || false,
@@ -261,6 +265,10 @@ export default function DealDetail() {
         merchantPhone: data.merchantPhone || "",
         branches: data.branches || [],
       });
+
+      if (data.discountedPrice) {
+        setDiscountType("price");
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -967,19 +975,74 @@ export default function DealDetail() {
                         />
 
                         {watchedDealType === "discount" && (
-                          <FormField
-                            control={form.control}
-                            name="discountPercentage"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount %</FormLabel>
-                                <FormControl>
-                                  <Input className="h-11 bg-slate-50" placeholder="e.g., 25" {...field} data-testid="input-discount" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
+                          <div className="space-y-3">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDiscountType("percentage");
+                                  form.setValue("discountedPrice", "");
+                                }}
+                                className={cn(
+                                  "px-3 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                                  discountType === "percentage"
+                                    ? "bg-[#00426D] text-white border-[#00426D]"
+                                    : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
+                                )}
+                                data-testid="button-discount-percentage"
+                              >
+                                Discount %
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDiscountType("price");
+                                  form.setValue("discountPercentage", "");
+                                }}
+                                className={cn(
+                                  "px-3 py-1.5 text-xs font-medium rounded-md border transition-colors",
+                                  discountType === "price"
+                                    ? "bg-[#00426D] text-white border-[#00426D]"
+                                    : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
+                                )}
+                                data-testid="button-discount-price"
+                              >
+                                Discounted Price
+                              </button>
+                            </div>
+                            {discountType === "percentage" ? (
+                              <FormField
+                                control={form.control}
+                                name="discountPercentage"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount %</FormLabel>
+                                    <FormControl>
+                                      <Input className="h-11 bg-slate-50" placeholder="e.g., 25" {...field} data-testid="input-discount" />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            ) : (
+                              <FormField
+                                control={form.control}
+                                name="discountedPrice"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discounted Price <span className="text-red-500">*</span></FormLabel>
+                                    <div className="flex items-center gap-2">
+                                      <FormControl>
+                                        <Input className="h-11 bg-slate-50" placeholder="0.00" {...field} data-testid="input-discounted-price" />
+                                      </FormControl>
+                                      <span className="text-sm text-slate-500 font-medium">QAR</span>
+                                    </div>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
                             )}
-                          />
+                          </div>
                         )}
                       </div>
                     )}

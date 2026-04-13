@@ -110,7 +110,7 @@ export default function Overview() {
     },
   });
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, type: "merchant" | "deal" = "merchant") => {
     const styles: Record<string, string> = {
       pending: "bg-amber-100 text-amber-700",
       moderation: "bg-blue-100 text-blue-700",
@@ -120,9 +120,13 @@ export default function Overview() {
       archived: "bg-slate-100 text-slate-700",
       approved: "bg-blue-100 text-blue-700",
     };
+    const label = status === "approved" ? "Sent to Moderation"
+      : status === "pending" && type === "merchant" ? "With Sales"
+      : status === "pending" ? "Pending"
+      : status.charAt(0).toUpperCase() + status.slice(1);
     return (
       <Badge className={styles[status] || "bg-slate-100 text-slate-600"} data-testid={`badge-status-${status}`}>
-        {status === "approved" ? "Sent to Moderation" : status.charAt(0).toUpperCase() + status.slice(1)}
+        {label}
       </Badge>
     );
   };
@@ -266,7 +270,7 @@ export default function Overview() {
                 <CardContent>
                   <div className="space-y-3">
                     {[
-                      { label: "Pending Review", count: stats.merchantStats.pending, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+                      { label: "With Sales", count: stats.merchantStats.pending, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
                       { label: "In Moderation", count: stats.merchantStats.moderation, icon: Send, color: "text-blue-600", bg: "bg-blue-50" },
                       { label: "Created", count: stats.merchantStats.created, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
                       { label: "Licensing", count: stats.merchantStats.licensing, icon: Scale, color: "text-purple-600", bg: "bg-purple-50" },
@@ -438,7 +442,7 @@ export default function Overview() {
                             <p className="text-sm font-medium text-slate-900">{d.title}</p>
                             <p className="text-xs text-slate-500">{d.merchantName || "—"} · {format(new Date(d.createdAt), "dd MMM yyyy")}</p>
                           </div>
-                          {getStatusBadge(d.status)}
+                          {getStatusBadge(d.status, "deal")}
                         </div>
                       ))}
                     </div>

@@ -1391,6 +1391,7 @@ export async function registerRoutes(
             bool: {
               should: [
                 { match_phrase_prefix: { agencyName: search } },
+                { wildcard: { agencyName: { value: `*${search.toLowerCase()}*`, case_insensitive: true } } },
                 { match_phrase_prefix: { "user.email": search } },
                 { match_phrase_prefix: { "category.name": search } },
               ],

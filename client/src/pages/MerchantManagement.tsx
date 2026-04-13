@@ -166,7 +166,7 @@ export default function MerchantManagement() {
       const messages: Record<string, string> = {
         moderation: "Forwarded to moderation",
         created: "Marked as Created",
-        pending: "Moved back to Pending",
+        pending: "Moved back to With Sales",
         archived: "Archived",
         licensing: "Moved to Licensing",
         licensed: "Marked as Licensed",
@@ -221,7 +221,7 @@ export default function MerchantManagement() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
+        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">With Sales</Badge>;
       case "moderation":
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">In Moderation</Badge>;
       case "created":
@@ -282,7 +282,7 @@ export default function MerchantManagement() {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
           {[
             { label: "All", value: statusCounts.all, filter: "all" },
-            { label: "Pending", value: statusCounts.pending, filter: "pending" },
+            { label: "With Sales", value: statusCounts.pending, filter: "pending" },
             { label: "In Moderation", value: statusCounts.moderation, filter: "moderation" },
             { label: "Created", value: statusCounts.created, filter: "created" },
             { label: "Licensing", value: statusCounts.licensing, filter: "licensing" },
@@ -506,7 +506,7 @@ export default function MerchantManagement() {
                                   data-testid={`menu-back-pending-${merchant.id}`}
                                 >
                                   <Undo2 className="h-4 w-4 mr-2" />
-                                  Move to Pending
+                                  Move to With Sales
                                 </DropdownMenuItem>
                               )}
                             </>
@@ -561,7 +561,7 @@ export default function MerchantManagement() {
                                 data-testid={`menu-restore-pending-${merchant.id}`}
                               >
                                 <Undo2 className="h-4 w-4 mr-2" />
-                                Restore to Pending
+                                Restore to With Sales
                               </DropdownMenuItem>
                               {isAdmin && (
                                 <DropdownMenuItem

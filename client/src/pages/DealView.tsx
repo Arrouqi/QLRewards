@@ -196,18 +196,58 @@ export default function DealView() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-slate-50 rounded-lg p-4">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Redemption</p>
+                <p className="font-medium text-slate-800 capitalize">{deal.redemption || "—"}</p>
+              </div>
+              {deal.limitPerUser && (
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-1">Limit Per User</p>
+                  <p className="font-medium text-slate-800">{deal.limitPerUser}</p>
+                </div>
+              )}
+              {deal.isTwoTranches && (
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <p className="text-xs font-bold text-slate-500 uppercase mb-1">Two Tranches</p>
+                  <p className="font-medium text-slate-800">Yes{deal.trancheValidity ? ` — ${deal.trancheValidity}` : ""}</p>
+                </div>
+              )}
+            </div>
+
+            {deal.specificDays && deal.days && deal.days.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Available Days
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {deal.days.map((day, index) => (
+                    <Badge key={index} variant="secondary" className="text-sm capitalize">
+                      {day}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {!deal.isMultipleItems && deal.originalPrice && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-slate-50 rounded-lg p-4">
                   <p className="text-xs font-bold text-slate-500 uppercase mb-1">Original Price</p>
                   <p className="font-medium text-slate-800">{deal.originalPrice} QAR</p>
                 </div>
-                {deal.discountPercentage && (
+                {deal.discountedPrice ? (
+                  <div className="bg-slate-50 rounded-lg p-4">
+                    <p className="text-xs font-bold text-slate-500 uppercase mb-1">Discounted Price</p>
+                    <p className="font-medium text-slate-800">{deal.discountedPrice} QAR</p>
+                  </div>
+                ) : deal.discountPercentage ? (
                   <div className="bg-slate-50 rounded-lg p-4">
                     <p className="text-xs font-bold text-slate-500 uppercase mb-1">Discount</p>
                     <p className="font-medium text-slate-800">{deal.discountPercentage}%</p>
                   </div>
-                )}
+                ) : null}
               </div>
             )}
 

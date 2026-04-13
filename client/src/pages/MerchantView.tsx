@@ -176,7 +176,7 @@ export default function MerchantView() {
       const messages: Record<string, string> = {
         moderation: "Forwarded to moderation",
         created: "Marked as Created",
-        pending: "Moved back to Pending",
+        pending: "Moved back to With Sales",
         archived: "Archived",
         licensing: "Moved to Licensing",
         licensed: "Marked as Licensed",
@@ -616,7 +616,7 @@ export default function MerchantView() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Pending</Badge>;
+        return <Badge className="bg-amber-100 text-amber-700 border-amber-200">With Sales</Badge>;
       case "moderation":
         return <Badge className="bg-blue-100 text-blue-700 border-blue-200">In Moderation</Badge>;
       case "created":
@@ -1352,7 +1352,7 @@ export default function MerchantView() {
                       className="text-amber-600 border-amber-300 hover:bg-amber-50"
                       data-testid="button-restore-pending"
                     >
-                      Restore to Pending
+                      Restore to With Sales
                     </Button>
                     <Button
                       onClick={() => updateStatus("moderation")}
@@ -1382,7 +1382,7 @@ export default function MerchantView() {
                       className="text-amber-600 border-amber-300 hover:bg-amber-50"
                       data-testid="button-back-pending"
                     >
-                      Move to Pending
+                      Move to With Sales
                     </Button>
                     <Button
                       onClick={() => updateStatus("created")}

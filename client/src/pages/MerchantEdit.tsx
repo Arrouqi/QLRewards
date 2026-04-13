@@ -118,6 +118,8 @@ export default function MerchantEdit() {
     transactionFee: "",
     products: "",
     businessCategories: "",
+    commencementDate: "",
+    merchantSignatoryName: "",
   });
 
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -177,6 +179,8 @@ export default function MerchantEdit() {
         transactionFee: data.transactionFee || "",
         products: data.products?.join(", ") || "",
         businessCategories: data.businessCategories?.join(", ") || "",
+        commencementDate: data.commencementDate || "",
+        merchantSignatoryName: data.merchantSignatoryName || "",
       });
       
       // Load deals
@@ -590,6 +594,31 @@ export default function MerchantEdit() {
                 placeholder="e.g. Restaurant, Cafe, Retail Store"
                 data-testid="input-categories"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="commencementDate">Commencement Date</Label>
+                <Input
+                  id="commencementDate"
+                  name="commencementDate"
+                  type="date"
+                  value={formData.commencementDate}
+                  onChange={handleChange}
+                  data-testid="input-commencement-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="merchantSignatoryName">Authorized Signatory Name</Label>
+                <Input
+                  id="merchantSignatoryName"
+                  name="merchantSignatoryName"
+                  value={formData.merchantSignatoryName}
+                  onChange={handleChange}
+                  placeholder="Name of authorized signatory"
+                  data-testid="input-signatory-name"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

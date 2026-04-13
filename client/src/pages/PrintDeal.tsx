@@ -238,12 +238,17 @@ export default function PrintDeal() {
                 <p className="text-sm text-gray-500 uppercase font-semibold">Original Price</p>
                 <p className="text-lg font-medium" data-testid="print-price">QAR {deal.originalPrice}</p>
               </div>
-              {deal.discountPercentage && (
+              {deal.discountedPrice ? (
+                <div>
+                  <p className="text-sm text-gray-500 uppercase font-semibold">Discounted Price</p>
+                  <p className="text-lg font-medium text-green-600" data-testid="print-discount">QAR {deal.discountedPrice}</p>
+                </div>
+              ) : deal.discountPercentage ? (
                 <div>
                   <p className="text-sm text-gray-500 uppercase font-semibold">Discount</p>
                   <p className="text-lg font-medium text-green-600" data-testid="print-discount">{deal.discountPercentage}% OFF</p>
                 </div>
-              )}
+              ) : null}
               <div>
                 <p className="text-sm text-gray-500 uppercase font-semibold">Redemption</p>
                 <p className="text-lg font-medium capitalize" data-testid="print-redemption">{deal.redemption}</p>
