@@ -177,8 +177,6 @@ export default function CreateOffer() {
   const [merchantSearch, setMerchantSearch] = useState("");
   const [selectedMerchant, setSelectedMerchant] = useState<ESMerchant | null>(null);
   const [showMerchantDropdown, setShowMerchantDropdown] = useState(false);
-  const [merchantSearchDebounce, setMerchantSearchDebounce] = useState<ReturnType<typeof setTimeout> | null>(null);
-  const [debouncedMerchantSearch, setDebouncedMerchantSearch] = useState("");
   const merchantDropdownRef = useRef<HTMLDivElement>(null);
   
   const [showCropper, setShowCropper] = useState(false);
@@ -224,26 +222,29 @@ export default function CreateOffer() {
     },
   });
 
-  const { data: esMerchantsData } = useQuery<{ merchants: ESMerchant[]; total: number }>({
-    queryKey: ["es-merchants-search", debouncedMerchantSearch],
+  const { data: esMerchantsData, isLoading: isMerchantsLoading } = useQuery<{ merchants: ESMerchant[]; total: number }>({
+    queryKey: ["es-merchants-all"],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (debouncedMerchantSearch) params.set("search", debouncedMerchantSearch);
-      params.set("size", "200");
+      params.set("size", "500");
       const res = await fetch(`/api/es/merchants?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch merchants");
       return res.json();
     },
+    staleTime: 5 * 60 * 1000,
   });
 
-  const esMerchants = esMerchantsData?.merchants || [];
+  const allEsMerchants = esMerchantsData?.merchants || [];
+
+  const esMerchants = merchantSearch.trim()
+    ? allEsMerchants.filter((m) =>
+        m.agencyName?.toLowerCase().includes(merchantSearch.toLowerCase())
+      )
+    : allEsMerchants;
 
   const handleMerchantSearch = (value: string) => {
     setMerchantSearch(value);
     setShowMerchantDropdown(true);
-    if (merchantSearchDebounce) clearTimeout(merchantSearchDebounce);
-    const timer = setTimeout(() => setDebouncedMerchantSearch(value), 300);
-    setMerchantSearchDebounce(timer);
   };
 
   const handleSelectMerchant = (merchant: ESMerchant) => {
@@ -1302,7 +1303,9 @@ export default function CreateOffer() {
                             </div>
                             {showMerchantDropdown && !selectedMerchant && (
                               <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                                {esMerchants.length === 0 ? (
+                                {isMerchantsLoading ? (
+                                  <div className="p-3 text-sm text-slate-500 text-center">Loading merchants...</div>
+                                ) : esMerchants.length === 0 ? (
                                   <div className="p-3 text-sm text-slate-500 text-center">No merchants found</div>
                                 ) : (
                                   esMerchants.map((m) => (
@@ -1314,9 +1317,11 @@ export default function CreateOffer() {
                                       data-testid={`option-merchant-${m.id}`}
                                     >
                                       <div className="font-medium text-sm text-slate-900">{m.agencyName}</div>
-                                      <div className="text-xs text-slate-500 mt-0.5">
-                                        {m.agencyEmail} {m.category?.name ? `· ${m.category.name}` : ""}
-                                      </div>
+                                      {m.category?.name && (
+                                        <div className="text-xs text-slate-500 mt-0.5">
+                                          {m.category.name}
+                                        </div>
+                                      )}
                                     </button>
                                   ))
                                 )}
