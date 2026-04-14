@@ -44,6 +44,8 @@ Preferred communication style: Simple, everyday language.
 - **merchantDeals**: Stores deal offers per merchant with category, pricing, discount percentage OR discounted price, rules, images, and availability days
 - **merchantNotes**: Internal notes/comments on merchant applications (author, content, timestamp); thread-style, add-only
 - **adminUsers**: Stores admin credentials for the dashboard (managed via Settings → Users tab, admin-only)
+- **submissionLogs**: Records form submissions (merchant onboarding & deal creation) with status, request body (base64 files sanitized), fields received, file info, errors, IP, user agent, processing time. Toggled on/off via system settings. Admin-only viewing & clearing via Settings → Submission Logs tab.
+- **systemSettings**: Key-value store for system configuration (e.g., `submission_logging_enabled`). Admin-only write access.
 - **session**: PostgreSQL session store table (auto-created)
 
 ### Project Structure

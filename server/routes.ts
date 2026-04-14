@@ -27,6 +27,14 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.session.role === "admin") {
+    next();
+  } else {
+    res.status(403).json({ error: "Forbidden: admin access required" });
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -63,14 +71,97 @@ export async function registerRoutes(
 
   createDefaultAdminUser().catch(err => console.log("Admin user setup:", err.message));
 
+  async function logFormSubmission(
+    formType: string,
+    status: "success" | "failed" | "validation_error",
+    req: Request,
+    startTime: number,
+    options?: { errorMessage?: string; errorDetails?: string; merchantId?: string }
+  ) {
+    try {
+      const isEnabled = await storage.getSystemSetting("submission_logging_enabled");
+      if (isEnabled !== "true") return;
+
+      const body = req.body || {};
+      const fieldsMap: Record<string, string> = {};
+      const fileFieldsList: string[] = [];
+
+      for (const [key, value] of Object.entries(body)) {
+        if (key === "images" || key === "deals") {
+          if (key === "images" && Array.isArray(value)) {
+            fileFieldsList.push(`images: ${value.length} file(s), sizes: [${value.map((v: any) => typeof v === "string" ? `${Math.round(v.length / 1024)}KB` : "?").join(", ")}]`);
+            fieldsMap[key] = `[${value.length} images]`;
+          } else if (key === "deals" && Array.isArray(value)) {
+            fieldsMap[key] = `[${value.length} deal(s)]`;
+            value.forEach((deal: any, i: number) => {
+              if (deal.images && Array.isArray(deal.images)) {
+                fileFieldsList.push(`deal[${i}].images: ${deal.images.length} file(s), sizes: [${deal.images.map((v: any) => typeof v === "string" ? `${Math.round(v.length / 1024)}KB` : "?").join(", ")}]`);
+              }
+              for (const [dk, dv] of Object.entries(deal)) {
+                if (dk !== "images") {
+                  fieldsMap[`deals[${i}].${dk}`] = typeof dv === "string" && dv.startsWith("data:") ? `[file: ${Math.round(dv.length / 1024)}KB]` : String(dv ?? "");
+                }
+              }
+            });
+          }
+        } else if (typeof value === "string" && value.startsWith("data:")) {
+          fileFieldsList.push(`${key}: ${Math.round(value.length / 1024)}KB`);
+          fieldsMap[key] = `[file uploaded: ${Math.round(value.length / 1024)}KB]`;
+        } else if (Array.isArray(value)) {
+          fieldsMap[key] = JSON.stringify(value);
+        } else {
+          fieldsMap[key] = String(value ?? "");
+        }
+      }
+
+      const sanitizedBody: Record<string, any> = {};
+      for (const [key, value] of Object.entries(body)) {
+        if (typeof value === "string" && value.startsWith("data:")) {
+          sanitizedBody[key] = `[BASE64_FILE: ${Math.round(value.length / 1024)}KB]`;
+        } else if (key === "images" && Array.isArray(value)) {
+          sanitizedBody[key] = value.map((v: any) => typeof v === "string" && v.startsWith("data:") ? `[BASE64_IMAGE: ${Math.round(v.length / 1024)}KB]` : v);
+        } else if (key === "deals" && Array.isArray(value)) {
+          sanitizedBody[key] = value.map((deal: any) => {
+            const d = { ...deal };
+            if (d.images && Array.isArray(d.images)) {
+              d.images = d.images.map((img: any) => typeof img === "string" && img.startsWith("data:") ? `[BASE64_IMAGE: ${Math.round(img.length / 1024)}KB]` : img);
+            }
+            for (const [dk, dv] of Object.entries(d)) {
+              if (typeof dv === "string" && (dv as string).startsWith("data:")) {
+                d[dk] = `[BASE64_FILE: ${Math.round((dv as string).length / 1024)}KB]`;
+              }
+            }
+            return d;
+          });
+        } else {
+          sanitizedBody[key] = value;
+        }
+      }
+
+      await storage.createSubmissionLog({
+        formType,
+        status,
+        requestBody: JSON.stringify(sanitizedBody, null, 2),
+        fieldsReceived: JSON.stringify(fieldsMap, null, 2),
+        fileFields: fileFieldsList.length > 0 ? JSON.stringify(fileFieldsList) : null,
+        errorMessage: options?.errorMessage || null,
+        errorDetails: options?.errorDetails || null,
+        ipAddress: (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || null,
+        userAgent: req.headers["user-agent"] || null,
+        processingTimeMs: Date.now() - startTime,
+      });
+    } catch (logError) {
+      console.error("[SubmissionLog] Failed to write log:", logError);
+    }
+  }
+
   app.post("/api/deals", async (req, res) => {
+    const startTime = Date.now();
     try {
       const validatedData = insertDealSchema.parse(req.body);
       
-      // First create the deal to get an ID
       const tempDeal = await storage.createDeal({ ...validatedData, images: [] });
       
-      // Upload images to Azure Storage if present
       if (validatedData.images && validatedData.images.length > 0) {
         try {
           const imageUrls = await uploadMultipleImages(validatedData.images, tempDeal.id);
@@ -83,12 +174,10 @@ export async function registerRoutes(
       
       const deal = await storage.getDealById(tempDeal.id);
       
-      // Send confirmation email to merchant
       sendMerchantConfirmation(deal!).catch(err => {
         console.error("[Email] Error sending merchant confirmation:", err);
       });
       
-      // Send notification to sales team
       const activeRecipients = await storage.getActiveEmailRecipientsByType("sales");
       if (activeRecipients.length > 0) {
         const emails = activeRecipients.map(r => r.email);
@@ -97,21 +186,25 @@ export async function registerRoutes(
         });
       }
       
+      await logFormSubmission("deal_creation", "success", req, startTime);
       res.status(201).json(deal);
     } catch (error: any) {
       console.error("Deal creation error:", error);
-      if (error.name === "ZodError" && error.issues) {
-        const fieldErrors = error.issues.map((issue: any) => {
-          const path = issue.path.join(".");
-          return `${path}: ${issue.message}`;
+      const isValidation = error.name === "ZodError";
+      if (isValidation && error.issues) {
+        const fieldErrors = error.issues.map((issue: any) => `${issue.path.join(".")}: ${issue.message}`);
+        const errorMsg = `Validation failed: ${fieldErrors.join("; ")}`;
+        await logFormSubmission("deal_creation", "validation_error", req, startTime, {
+          errorMessage: errorMsg,
+          errorDetails: JSON.stringify(error.issues, null, 2),
         });
-        return res.status(400).json({
-          error: `Validation failed: ${fieldErrors.join("; ")}`,
-          details: error.issues
-        });
+        return res.status(400).json({ error: errorMsg, details: error.issues });
       }
-      const statusCode = error.name === "ZodError" ? 400 : 500;
-      res.status(statusCode).json({ error: error.message || "Failed to create deal. Please try again." });
+      await logFormSubmission("deal_creation", "failed", req, startTime, {
+        errorMessage: error.message,
+        errorDetails: error.stack,
+      });
+      res.status(500).json({ error: error.message || "Failed to create deal. Please try again." });
     }
   });
 
@@ -858,10 +951,10 @@ export async function registerRoutes(
 
   // Merchant Onboarding Routes
   app.post("/api/merchants", async (req, res) => {
+    const startTime = Date.now();
     try {
       const { deals, ...merchantData } = req.body;
       
-      // Upload document files if provided
       const documentFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'companyStamp', 'signedContractUpload', 'taxCardDocument', 'logo', 'coverImage'];
       for (const field of documentFields) {
         if (merchantData[field] && merchantData[field].startsWith('data:')) {
@@ -870,11 +963,15 @@ export async function registerRoutes(
             merchantData[field] = urls[0];
           } catch (uploadError) {
             console.error(`[Azure] ${field} upload failed:`, uploadError);
+            await logFormSubmission("merchant_onboarding", "failed", req, startTime, {
+              errorMessage: `File upload failed for ${field}: ${(uploadError as Error).message}`,
+              errorDetails: (uploadError as Error).stack,
+            });
+            return res.status(500).json({ error: `Failed to upload ${field}. Please try again.` });
           }
         }
       }
       
-      // Parse branches to get branch names for validation and auto-assignment
       const parsedBranches = (merchantData.branches || []).map((b: string, idx: number) => {
         try {
           const parsed = typeof b === 'string' ? JSON.parse(b) : b;
@@ -884,21 +981,19 @@ export async function registerRoutes(
         }
       });
       
-      // Validate all deals BEFORE creating merchant (atomic validation)
       if (deals && Array.isArray(deals)) {
         for (const deal of deals) {
           const dealBranches = deal.branches || [];
-          // Require branches when multiple branches exist
           if (parsedBranches.length > 1 && (!dealBranches || dealBranches.length === 0)) {
-            return res.status(400).json({ 
-              error: `Deal "${deal.title}" requires at least one branch when multiple branches exist` 
-            });
+            const errorMsg = `Deal "${deal.title}" requires at least one branch when multiple branches exist`;
+            await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
+            return res.status(400).json({ error: errorMsg });
           }
           const imgCount = (deal.images || []).length;
           if (imgCount < 4) {
-            return res.status(400).json({
-              error: `Each deal requires at least 4 images. "${deal.title || 'Untitled Deal'}" has ${imgCount}.`
-            });
+            const errorMsg = `Each deal requires at least 4 images. "${deal.title || 'Untitled Deal'}" has ${imgCount}.`;
+            await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
+            return res.status(400).json({ error: errorMsg });
           }
         }
       }
@@ -906,11 +1001,9 @@ export async function registerRoutes(
       const validatedMerchant = insertMerchantSchema.parse(merchantData);
       const merchant = await storage.createMerchant(validatedMerchant);
       
-      // Create associated deals (already validated above)
       if (deals && Array.isArray(deals)) {
         for (const deal of deals) {
           try {
-            // Upload deal images
             let imageUrls: string[] = [];
             if (deal.images && deal.images.length > 0) {
               try {
@@ -920,7 +1013,6 @@ export async function registerRoutes(
               }
             }
             
-            // Auto-assign branch if only 1 branch exists and deal has no branches
             let dealBranches = deal.branches || [];
             if (parsedBranches.length === 1 && (!dealBranches || dealBranches.length === 0)) {
               dealBranches = [parsedBranches[0]];
@@ -942,12 +1034,10 @@ export async function registerRoutes(
         }
       }
       
-      // Send confirmation email to merchant
       sendMerchantOnboardingConfirmation(merchant).catch(err => {
         console.error("[Email] Error sending merchant onboarding confirmation:", err);
       });
       
-      // Send notification to sales team
       const salesRecipients = await storage.getActiveEmailRecipientsByType("sales");
       if (salesRecipients.length > 0) {
         const emails = salesRecipients.map(r => r.email);
@@ -956,21 +1046,25 @@ export async function registerRoutes(
         });
       }
       
+      await logFormSubmission("merchant_onboarding", "success", req, startTime);
       res.status(201).json(merchant);
     } catch (error: any) {
       console.error("Merchant creation error:", error);
-      if (error.name === "ZodError" && error.issues) {
-        const fieldErrors = error.issues.map((issue: any) => {
-          const path = issue.path.join(".");
-          return `${path}: ${issue.message}`;
+      const isValidation = error.name === "ZodError";
+      if (isValidation && error.issues) {
+        const fieldErrors = error.issues.map((issue: any) => `${issue.path.join(".")}: ${issue.message}`);
+        const errorMsg = `Validation failed: ${fieldErrors.join("; ")}`;
+        await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, {
+          errorMessage: errorMsg,
+          errorDetails: JSON.stringify(error.issues, null, 2),
         });
-        return res.status(400).json({ 
-          error: `Validation failed: ${fieldErrors.join("; ")}`,
-          details: error.issues
-        });
+        return res.status(400).json({ error: errorMsg, details: error.issues });
       }
-      const statusCode = error.name === "ZodError" ? 400 : 500;
-      res.status(statusCode).json({ error: error.message || "Failed to create merchant. Please try again." });
+      await logFormSubmission("merchant_onboarding", "failed", req, startTime, {
+        errorMessage: error.message,
+        errorDetails: error.stack,
+      });
+      res.status(500).json({ error: error.message || "Failed to create merchant. Please try again." });
     }
   });
 
@@ -1652,6 +1746,48 @@ export async function registerRoutes(
 
       const merchant = await storage.updateMerchant(req.params.id, { signedContractUpload: null });
       res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/submission-logs", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const logs = await storage.getSubmissionLogs(limit, offset);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/submission-logs", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      await storage.clearSubmissionLogs();
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/system-settings/:key", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const value = await storage.getSystemSetting(req.params.key);
+      res.json({ key: req.params.key, value: value || null });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/system-settings/:key", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { value } = req.body;
+      if (typeof value !== "string") {
+        return res.status(400).json({ error: "Value must be a string" });
+      }
+      await storage.setSystemSetting(req.params.key, value);
+      res.json({ key: req.params.key, value });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

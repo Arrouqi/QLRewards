@@ -254,3 +254,35 @@ export const insertMerchantNoteSchema = createInsertSchema(merchantNotes).omit({
 
 export type InsertMerchantNote = z.infer<typeof insertMerchantNoteSchema>;
 export type MerchantNote = typeof merchantNotes.$inferSelect;
+
+export const submissionLogs = pgTable("submission_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  formType: text("form_type").notNull(),
+  status: text("status").notNull(),
+  requestBody: text("request_body"),
+  fieldsReceived: text("fields_received"),
+  fileFields: text("file_fields"),
+  errorMessage: text("error_message"),
+  errorDetails: text("error_details"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  processingTimeMs: integer("processing_time_ms"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertSubmissionLogSchema = createInsertSchema(submissionLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSubmissionLog = z.infer<typeof insertSubmissionLogSchema>;
+export type SubmissionLog = typeof submissionLogs.$inferSelect;
+
+export const systemSettings = pgTable("system_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type SystemSetting = typeof systemSettings.$inferSelect;

@@ -9,10 +9,13 @@ import {
   type Merchant, type InsertMerchant,
   type MerchantDeal, type InsertMerchantDeal,
   type MerchantNote, type InsertMerchantNote,
-  deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantDeals, merchantNotes 
+  type SubmissionLog, type InsertSubmissionLog,
+  type SystemSetting,
+  deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantDeals, merchantNotes,
+  submissionLogs, systemSettings
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   createDeal(deal: InsertDeal): Promise<Deal>;
@@ -70,6 +73,12 @@ export interface IStorage {
   createMerchantNote(note: InsertMerchantNote): Promise<MerchantNote>;
   updateMerchantOffersCreated(id: string, offersCreated: number): Promise<Merchant | undefined>;
   deleteMerchant(id: string): Promise<void>;
+  createSubmissionLog(log: InsertSubmissionLog): Promise<SubmissionLog>;
+  getSubmissionLogs(limit?: number, offset?: number): Promise<SubmissionLog[]>;
+  getSubmissionLogCount(): Promise<number>;
+  clearSubmissionLogs(): Promise<void>;
+  getSystemSetting(key: string): Promise<string | null>;
+  setSystemSetting(key: string, value: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -424,6 +433,38 @@ export class DatabaseStorage implements IStorage {
       await tx.delete(merchantDeals).where(eq(merchantDeals.merchantId, id));
       await tx.delete(merchants).where(eq(merchants.id, id));
     });
+  }
+
+  async createSubmissionLog(log: InsertSubmissionLog): Promise<SubmissionLog> {
+    const [newLog] = await db.insert(submissionLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getSubmissionLogs(limit = 100, offset = 0): Promise<SubmissionLog[]> {
+    return await db.select().from(submissionLogs).orderBy(desc(submissionLogs.createdAt)).limit(limit).offset(offset);
+  }
+
+  async getSubmissionLogCount(): Promise<number> {
+    const result = await db.select().from(submissionLogs);
+    return result.length;
+  }
+
+  async clearSubmissionLogs(): Promise<void> {
+    await db.delete(submissionLogs);
+  }
+
+  async getSystemSetting(key: string): Promise<string | null> {
+    const [setting] = await db.select().from(systemSettings).where(eq(systemSettings.key, key));
+    return setting?.value || null;
+  }
+
+  async setSystemSetting(key: string, value: string): Promise<void> {
+    const existing = await db.select().from(systemSettings).where(eq(systemSettings.key, key));
+    if (existing.length > 0) {
+      await db.update(systemSettings).set({ value, updatedAt: new Date() }).where(eq(systemSettings.key, key));
+    } else {
+      await db.insert(systemSettings).values({ key, value });
+    }
   }
 }
 

@@ -85,6 +85,265 @@ interface AdminUser {
   role: string;
 }
 
+interface SubmissionLogEntry {
+  id: string;
+  formType: string;
+  status: string;
+  requestBody: string | null;
+  fieldsReceived: string | null;
+  fileFields: string | null;
+  errorMessage: string | null;
+  errorDetails: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  processingTimeMs: number | null;
+  createdAt: string;
+}
+
+function SubmissionLogsTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+
+  const { data: loggingSetting } = useQuery({
+    queryKey: ["/api/admin/system-settings/submission_logging_enabled"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/system-settings/submission_logging_enabled", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch setting");
+      return res.json();
+    },
+  });
+
+  const { data: logs = [], isLoading } = useQuery<SubmissionLogEntry[]>({
+    queryKey: ["/api/admin/submission-logs"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/submission-logs?limit=200", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch logs");
+      return res.json();
+    },
+  });
+
+  const toggleLogging = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await fetch("/api/admin/system-settings/submission_logging_enabled", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ value: enabled ? "true" : "false" }),
+      });
+      if (!res.ok) throw new Error("Failed to update setting");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/system-settings/submission_logging_enabled"] });
+      toast({ title: "Logging setting updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const clearLogs = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/submission-logs", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to clear logs");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/submission-logs"] });
+      setIsClearDialogOpen(false);
+      toast({ title: "All logs cleared" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const isEnabled = loggingSetting?.value === "true";
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "success": return "bg-green-100 text-green-800";
+      case "failed": return "bg-red-100 text-red-800";
+      case "validation_error": return "bg-yellow-100 text-yellow-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getFormTypeLabel = (type: string) => {
+    switch (type) {
+      case "merchant_onboarding": return "Merchant Onboarding";
+      case "deal_creation": return "Deal Creation";
+      default: return type;
+    }
+  };
+
+  return (
+    <>
+      <Card className="shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-[#00426D]">
+                <FileText className="h-5 w-5" />
+                Submission Logs
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Track form submissions for merchant onboarding and deal creation
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="logging-toggle" className="text-sm">Logging</Label>
+                <Switch
+                  id="logging-toggle"
+                  checked={isEnabled}
+                  onCheckedChange={(checked) => toggleLogging.mutate(checked)}
+                  data-testid="switch-logging-toggle"
+                />
+                <Badge variant={isEnabled ? "default" : "secondary"} className={isEnabled ? "bg-green-600" : ""}>
+                  {isEnabled ? "ON" : "OFF"}
+                </Badge>
+              </div>
+              {logs.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700"
+                  onClick={() => setIsClearDialogOpen(true)}
+                  data-testid="button-clear-logs"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Clear All
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!isEnabled && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-amber-800">
+                Submission logging is currently disabled. Enable it above to start recording form submissions.
+              </p>
+            </div>
+          )}
+          {isLoading ? (
+            <div className="text-center py-8 text-slate-500">Loading logs...</div>
+          ) : logs.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="font-medium">No submission logs yet</p>
+              <p className="text-sm mt-1">Logs will appear here when forms are submitted{!isEnabled ? " (logging is currently off)" : ""}.</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              {logs.map((log) => (
+                <div
+                  key={log.id}
+                  className="border rounded-lg overflow-hidden"
+                  data-testid={`log-entry-${log.id}`}
+                >
+                  <div
+                    className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50"
+                    onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge className={getStatusColor(log.status)} variant="secondary">
+                        {log.status === "success" ? "Success" : log.status === "failed" ? "Failed" : "Validation Error"}
+                      </Badge>
+                      <span className="font-medium text-sm">{getFormTypeLabel(log.formType)}</span>
+                      {log.processingTimeMs && (
+                        <span className="text-xs text-slate-400">{log.processingTimeMs}ms</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500">
+                      {format(new Date(log.createdAt), "MMM d, yyyy HH:mm:ss")}
+                    </span>
+                  </div>
+                  {expandedLogId === log.id && (
+                    <div className="border-t p-4 bg-slate-50 space-y-3">
+                      {log.errorMessage && (
+                        <div>
+                          <Label className="text-xs text-red-600 font-semibold">Error</Label>
+                          <pre className="text-xs bg-red-50 border border-red-200 rounded p-2 mt-1 whitespace-pre-wrap break-all">
+                            {log.errorMessage}
+                          </pre>
+                        </div>
+                      )}
+                      {log.errorDetails && (
+                        <div>
+                          <Label className="text-xs text-red-600 font-semibold">Error Details</Label>
+                          <pre className="text-xs bg-red-50 border border-red-200 rounded p-2 mt-1 whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
+                            {log.errorDetails}
+                          </pre>
+                        </div>
+                      )}
+                      {log.fileFields && (
+                        <div>
+                          <Label className="text-xs text-slate-600 font-semibold">File Uploads</Label>
+                          <pre className="text-xs bg-white border rounded p-2 mt-1 whitespace-pre-wrap">
+                            {(() => { try { return JSON.parse(log.fileFields).join("\n"); } catch { return log.fileFields; } })()}
+                          </pre>
+                        </div>
+                      )}
+                      {log.fieldsReceived && (
+                        <div>
+                          <Label className="text-xs text-slate-600 font-semibold">Fields Received</Label>
+                          <pre className="text-xs bg-white border rounded p-2 mt-1 whitespace-pre-wrap break-all max-h-60 overflow-y-auto">
+                            {log.fieldsReceived}
+                          </pre>
+                        </div>
+                      )}
+                      {log.requestBody && (
+                        <div>
+                          <Label className="text-xs text-slate-600 font-semibold">Full Request Body</Label>
+                          <pre className="text-xs bg-white border rounded p-2 mt-1 whitespace-pre-wrap break-all max-h-60 overflow-y-auto">
+                            {log.requestBody}
+                          </pre>
+                        </div>
+                      )}
+                      <div className="flex gap-6 text-xs text-slate-400">
+                        {log.ipAddress && <span>IP: {log.ipAddress}</span>}
+                        {log.userAgent && <span className="truncate max-w-xs" title={log.userAgent}>UA: {log.userAgent}</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Submission Logs?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all recorded submission logs. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => clearLogs.mutate()}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-clear-logs"
+            >
+              {clearLogs.isPending ? "Clearing..." : "Clear All Logs"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 function UsersTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1105,6 +1364,10 @@ export default function Settings() {
               <Cloud className="h-4 w-4" />
               <span className="hidden sm:inline">Storage</span>
             </TabsTrigger>
+            <TabsTrigger value="logs" className="flex items-center gap-2" data-testid="tab-logs">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Submission Logs</span>
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2" data-testid="tab-users">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
@@ -1651,6 +1914,10 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="logs">
+            <SubmissionLogsTab />
           </TabsContent>
 
           <TabsContent value="users">
