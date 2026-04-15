@@ -1307,8 +1307,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Can only move to Pending from In Moderation or Archived status" });
       }
       
-      if (status === "moderation" && existingMerchant.status !== "pending" && existingMerchant.status !== "archived") {
-        return res.status(400).json({ error: "Can only forward to Moderation from Pending or Archived status" });
+      if (status === "moderation" && existingMerchant.status !== "pending" && existingMerchant.status !== "archived" && existingMerchant.status !== "created") {
+        return res.status(400).json({ error: "Can only forward to Moderation from With Sales, Created, or Archived status" });
       }
       
       if (status === "moderation") {

@@ -92,6 +92,12 @@ export default function MerchantManagement() {
   const [offersDialogValue, setOffersDialogValue] = useState<number>(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [merchantToDelete, setMerchantToDelete] = useState<Merchant | null>(null);
+  const [statusConfirmDialog, setStatusConfirmDialog] = useState<{
+    merchant: Merchant;
+    targetStatus: string;
+    title: string;
+    description: string;
+  } | null>(null);
 
   const handleSalesOrderUpload = async (merchantId: string, file: File) => {
     setUploadingMerchantId(merchantId);
@@ -163,6 +169,7 @@ export default function MerchantManagement() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["merchants"] });
+      setStatusConfirmDialog(null);
       const messages: Record<string, string> = {
         moderation: "Forwarded to moderation",
         created: "Marked as Created",
@@ -174,9 +181,32 @@ export default function MerchantManagement() {
       toast({ title: messages[variables.status] || "Status updated" });
     },
     onError: (error: any) => {
+      setStatusConfirmDialog(null);
       toast({ title: "Cannot proceed", description: error.message, variant: "destructive" });
     },
   });
+
+  const confirmStatusChange = (merchant: Merchant, targetStatus: string) => {
+    const statusLabels: Record<string, string> = {
+      pending: "With Sales",
+      moderation: "In Moderation",
+      created: "Created",
+      licensing: "Licensing",
+      licensed: "Licensed",
+      archived: "Archived",
+    };
+    const currentLabel = statusLabels[merchant.status] || merchant.status;
+    const targetLabel = statusLabels[targetStatus] || targetStatus;
+    const isArchive = targetStatus === "archived";
+    setStatusConfirmDialog({
+      merchant,
+      targetStatus,
+      title: isArchive ? "Archive Merchant?" : `Change Status: ${currentLabel} → ${targetLabel}?`,
+      description: isArchive
+        ? `Are you sure you want to archive "${merchant.companyName}" (${merchant.brandName})? You can restore it later from the Archived tab.`
+        : `Are you sure you want to move "${merchant.companyName}" (${merchant.brandName}) from "${currentLabel}" to "${targetLabel}"?`,
+    });
+  };
 
   const deleteMerchantMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -481,7 +511,7 @@ export default function MerchantManagement() {
                           <DropdownMenuSeparator />
                           {merchant.status === "pending" && (
                             <DropdownMenuItem
-                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "moderation" })}
+                              onClick={() => confirmStatusChange(merchant, "moderation")}
                               className="text-blue-600"
                               data-testid={`menu-forward-${merchant.id}`}
                             >
@@ -492,61 +522,67 @@ export default function MerchantManagement() {
                           {merchant.status === "moderation" && (
                             <>
                               <DropdownMenuItem
-                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "created" })}
+                                onClick={() => confirmStatusChange(merchant, "created")}
                                 className="text-green-600"
                                 data-testid={`menu-created-${merchant.id}`}
                               >
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                 Mark as Created
                               </DropdownMenuItem>
-                              {isAdmin && (
-                                <DropdownMenuItem
-                                  onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "pending" })}
-                                  className="text-amber-600"
-                                  data-testid={`menu-back-pending-${merchant.id}`}
-                                >
-                                  <Undo2 className="h-4 w-4 mr-2" />
-                                  Move to With Sales
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem
+                                onClick={() => confirmStatusChange(merchant, "pending")}
+                                className="text-amber-600"
+                                data-testid={`menu-back-pending-${merchant.id}`}
+                              >
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                Move to With Sales
+                              </DropdownMenuItem>
                             </>
                           )}
                           {merchant.status === "created" && (
-                            <DropdownMenuItem
-                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "licensing" })}
-                              className="text-purple-600"
-                              data-testid={`menu-licensing-${merchant.id}`}
-                            >
-                              <Scale className="h-4 w-4 mr-2" />
-                              Move to Licensing
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => confirmStatusChange(merchant, "licensing")}
+                                className="text-purple-600"
+                                data-testid={`menu-licensing-${merchant.id}`}
+                              >
+                                <Scale className="h-4 w-4 mr-2" />
+                                Move to Licensing
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => confirmStatusChange(merchant, "moderation")}
+                                className="text-amber-600"
+                                data-testid={`menu-back-moderation-${merchant.id}`}
+                              >
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                Move back to Moderation
+                              </DropdownMenuItem>
+                            </>
                           )}
                           {merchant.status === "licensing" && (
                             <>
                               <DropdownMenuItem
-                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "licensed" })}
+                                onClick={() => confirmStatusChange(merchant, "licensed")}
                                 className="text-emerald-600"
                                 data-testid={`menu-licensed-${merchant.id}`}
                               >
                                 <ShieldCheck className="h-4 w-4 mr-2" />
                                 Mark as Licensed
                               </DropdownMenuItem>
-                              {isAdmin && (
-                                <DropdownMenuItem
-                                  onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "created" })}
-                                  className="text-green-600"
-                                  data-testid={`menu-back-created-${merchant.id}`}
-                                >
-                                  <Undo2 className="h-4 w-4 mr-2" />
-                                  Move back to Created
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem
+                                onClick={() => confirmStatusChange(merchant, "created")}
+                                className="text-amber-600"
+                                data-testid={`menu-back-created-${merchant.id}`}
+                              >
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                Move back to Created
+                              </DropdownMenuItem>
                             </>
                           )}
-                          {isAdmin && merchant.status === "licensed" && (
+                          {merchant.status === "licensed" && (
                             <DropdownMenuItem
-                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "licensing" })}
-                              className="text-purple-600"
+                              onClick={() => confirmStatusChange(merchant, "licensing")}
+                              className="text-amber-600"
                               data-testid={`menu-back-licensing-${merchant.id}`}
                             >
                               <Undo2 className="h-4 w-4 mr-2" />
@@ -556,23 +592,21 @@ export default function MerchantManagement() {
                           {merchant.status === "archived" && (
                             <>
                               <DropdownMenuItem
-                                onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "pending" })}
+                                onClick={() => confirmStatusChange(merchant, "pending")}
                                 className="text-amber-600"
                                 data-testid={`menu-restore-pending-${merchant.id}`}
                               >
                                 <Undo2 className="h-4 w-4 mr-2" />
                                 Restore to With Sales
                               </DropdownMenuItem>
-                              {isAdmin && (
-                                <DropdownMenuItem
-                                  onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "moderation" })}
-                                  className="text-blue-600"
-                                  data-testid={`menu-restore-moderation-${merchant.id}`}
-                                >
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Restore to Moderation
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem
+                                onClick={() => confirmStatusChange(merchant, "moderation")}
+                                className="text-blue-600"
+                                data-testid={`menu-restore-moderation-${merchant.id}`}
+                              >
+                                <Send className="h-4 w-4 mr-2" />
+                                Restore to Moderation
+                              </DropdownMenuItem>
                               {isAdmin && (
                                 <>
                                   <DropdownMenuSeparator />
@@ -593,7 +627,7 @@ export default function MerchantManagement() {
                           )}
                           {merchant.status !== "archived" && (
                             <DropdownMenuItem
-                              onClick={() => updateStatusMutation.mutate({ id: merchant.id, status: "archived" })}
+                              onClick={() => confirmStatusChange(merchant, "archived")}
                               className="text-slate-600"
                               data-testid={`menu-archive-${merchant.id}`}
                             >
@@ -611,6 +645,37 @@ export default function MerchantManagement() {
           </Table>
         </Card>
       </div>
+
+      <Dialog open={!!statusConfirmDialog} onOpenChange={(open) => { if (!open) setStatusConfirmDialog(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className={`flex items-center gap-2 ${statusConfirmDialog?.targetStatus === "archived" ? "text-slate-700" : "text-[#00426D]"}`}>
+              <AlertTriangle className="h-5 w-5" />
+              {statusConfirmDialog?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {statusConfirmDialog?.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setStatusConfirmDialog(null)}
+              data-testid="button-cancel-status-change"
+            >
+              Cancel
+            </Button>
+            <Button
+              className={statusConfirmDialog?.targetStatus === "archived" ? "bg-slate-600 hover:bg-slate-700" : "bg-[#00426D] hover:bg-[#003356]"}
+              onClick={() => statusConfirmDialog && updateStatusMutation.mutate({ id: statusConfirmDialog.merchant.id, status: statusConfirmDialog.targetStatus })}
+              disabled={updateStatusMutation.isPending}
+              data-testid="button-confirm-status-change"
+            >
+              {updateStatusMutation.isPending ? "Updating..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>

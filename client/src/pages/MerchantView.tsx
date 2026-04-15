@@ -21,7 +21,8 @@ import {
   Upload,
   X,
   Loader2,
-  Undo2
+  Undo2,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
 import jsPDF from "jspdf";
@@ -98,6 +107,12 @@ export default function MerchantView() {
   const [isSubmittingNote, setIsSubmittingNote] = useState(false);
   const [isUploadingSignedContract, setIsUploadingSignedContract] = useState(false);
   const signedContractFileRef = useRef<HTMLInputElement>(null);
+  const [statusConfirmDialog, setStatusConfirmDialog] = useState<{
+    targetStatus: string;
+    title: string;
+    description: string;
+  } | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     fetchMerchant();
@@ -159,8 +174,31 @@ export default function MerchantView() {
     }
   };
 
-  const updateStatus = async (status: string) => {
+  const confirmStatusChange = (targetStatus: string) => {
     if (!merchant) return;
+    const statusLabels: Record<string, string> = {
+      pending: "With Sales",
+      moderation: "In Moderation",
+      created: "Created",
+      licensing: "Licensing",
+      licensed: "Licensed",
+      archived: "Archived",
+    };
+    const currentLabel = statusLabels[merchant.status] || merchant.status;
+    const targetLabel = statusLabels[targetStatus] || targetStatus;
+    const isArchive = targetStatus === "archived";
+    setStatusConfirmDialog({
+      targetStatus,
+      title: isArchive ? "Archive Merchant?" : `Change Status: ${currentLabel} → ${targetLabel}?`,
+      description: isArchive
+        ? `Are you sure you want to archive "${merchant.companyName}" (${merchant.brandName})? You can restore it later from the Archived tab.`
+        : `Are you sure you want to move "${merchant.companyName}" (${merchant.brandName}) from "${currentLabel}" to "${targetLabel}"?`,
+    });
+  };
+
+  const executeStatusChange = async (status: string) => {
+    if (!merchant) return;
+    setIsUpdatingStatus(true);
     try {
       const res = await fetch(`/api/merchants/${merchant.id}/status`, {
         method: "PATCH",
@@ -182,6 +220,7 @@ export default function MerchantView() {
         licensed: "Marked as Licensed",
       };
       toast({ title: messages[status] || "Status updated" });
+      setStatusConfirmDialog(null);
       if (status === "moderation") {
         setLocation("/admin/merchants");
         return;
@@ -189,6 +228,8 @@ export default function MerchantView() {
       await fetchMerchant();
     } catch (error) {
       toast({ title: "Error updating status", variant: "destructive" });
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -1336,7 +1377,7 @@ export default function MerchantView() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => updateStatus("archived")}
+                    onClick={() => confirmStatusChange("archived")}
                     className="text-slate-400 hover:text-slate-600 text-xs"
                     data-testid="button-archive"
                   >
@@ -1344,18 +1385,18 @@ export default function MerchantView() {
                     Archive
                   </Button>
                 )}
-                {isAdmin && merchant.status === "archived" && (
+                {merchant.status === "archived" && (
                   <>
                     <Button
                       variant="outline"
-                      onClick={() => updateStatus("pending")}
+                      onClick={() => confirmStatusChange("pending")}
                       className="text-amber-600 border-amber-300 hover:bg-amber-50"
                       data-testid="button-restore-pending"
                     >
                       Restore to With Sales
                     </Button>
                     <Button
-                      onClick={() => updateStatus("moderation")}
+                      onClick={() => confirmStatusChange("moderation")}
                       className="bg-blue-600 hover:bg-blue-700"
                       data-testid="button-restore-moderation"
                     >
@@ -1366,7 +1407,7 @@ export default function MerchantView() {
                 )}
                 {merchant.status === "pending" && (
                   <Button
-                    onClick={() => updateStatus("moderation")}
+                    onClick={() => confirmStatusChange("moderation")}
                     className="bg-blue-600 hover:bg-blue-700"
                     data-testid="button-forward"
                   >
@@ -1378,14 +1419,14 @@ export default function MerchantView() {
                   <>
                     <Button
                       variant="outline"
-                      onClick={() => updateStatus("pending")}
+                      onClick={() => confirmStatusChange("pending")}
                       className="text-amber-600 border-amber-300 hover:bg-amber-50"
                       data-testid="button-back-pending"
                     >
                       Move to With Sales
                     </Button>
                     <Button
-                      onClick={() => updateStatus("created")}
+                      onClick={() => confirmStatusChange("created")}
                       className="bg-green-600 hover:bg-green-700"
                       data-testid="button-created"
                     >
@@ -1394,19 +1435,30 @@ export default function MerchantView() {
                   </>
                 )}
                 {merchant.status === "created" && (
-                  <Button
-                    onClick={() => updateStatus("licensing")}
-                    className="bg-purple-600 hover:bg-purple-700"
-                    data-testid="button-licensing"
-                  >
-                    Move to Licensing
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => confirmStatusChange("licensing")}
+                      className="bg-purple-600 hover:bg-purple-700"
+                      data-testid="button-licensing"
+                    >
+                      Move to Licensing
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => confirmStatusChange("moderation")}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                      data-testid="button-back-moderation"
+                    >
+                      <Undo2 className="h-4 w-4 mr-2" />
+                      Move back to Moderation
+                    </Button>
+                  </>
                 )}
                 {merchant.status === "licensing" && (
                   <>
                     <Button
                       variant="outline"
-                      onClick={() => updateStatus("created")}
+                      onClick={() => confirmStatusChange("created")}
                       className="text-green-600 border-green-300 hover:bg-green-50"
                       data-testid="button-back-created"
                     >
@@ -1414,7 +1466,7 @@ export default function MerchantView() {
                       Move back to Created
                     </Button>
                     <Button
-                      onClick={() => updateStatus("licensed")}
+                      onClick={() => confirmStatusChange("licensed")}
                       className="bg-emerald-600 hover:bg-emerald-700"
                       data-testid="button-licensed"
                     >
@@ -1425,7 +1477,7 @@ export default function MerchantView() {
                 {merchant.status === "licensed" && (
                   <Button
                     variant="outline"
-                    onClick={() => updateStatus("licensing")}
+                    onClick={() => confirmStatusChange("licensing")}
                     className="text-purple-600 border-purple-300 hover:bg-purple-50"
                     data-testid="button-back-licensing"
                   >
@@ -1438,6 +1490,37 @@ export default function MerchantView() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!statusConfirmDialog} onOpenChange={(open) => { if (!open) setStatusConfirmDialog(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className={`flex items-center gap-2 ${statusConfirmDialog?.targetStatus === "archived" ? "text-slate-700" : "text-[#00426D]"}`}>
+              <AlertTriangle className="h-5 w-5" />
+              {statusConfirmDialog?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {statusConfirmDialog?.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setStatusConfirmDialog(null)}
+              data-testid="button-cancel-status-change"
+            >
+              Cancel
+            </Button>
+            <Button
+              className={statusConfirmDialog?.targetStatus === "archived" ? "bg-slate-600 hover:bg-slate-700" : "bg-[#00426D] hover:bg-[#003356]"}
+              onClick={() => statusConfirmDialog && executeStatusChange(statusConfirmDialog.targetStatus)}
+              disabled={isUpdatingStatus}
+              data-testid="button-confirm-status-change"
+            >
+              {isUpdatingStatus ? "Updating..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
