@@ -820,8 +820,17 @@ export default function MerchantOnboarding() {
             {/* Deals Section */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-[#00426D]">Deals</CardTitle>
-                <Button type="button" variant="outline" size="sm" onClick={addDeal} data-testid="button-add-deal">
+                <CardTitle className="text-[#00426D]">
+                  Deals {dealFields.length > 0 && <span className="text-slate-400 font-normal text-sm">({dealFields.length}/20)</span>}
+                </CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDeal}
+                  disabled={dealFields.length >= 20}
+                  data-testid="button-add-deal"
+                >
                   <Plus className="h-4 w-4 mr-1" />
                   Add Deal
                 </Button>
@@ -829,6 +838,9 @@ export default function MerchantOnboarding() {
               <CardContent className="space-y-4">
                 {dealFields.length === 0 && (
                   <p className="text-slate-500 text-sm text-center py-4">No deals added. Click "Add Deal" to add one.</p>
+                )}
+                {dealFields.length >= 20 && (
+                  <p className="text-amber-600 text-sm text-center py-2 bg-amber-50 rounded-md">Maximum of 20 deals reached.</p>
                 )}
                 {dealFields.map((deal, index) => (
                   <DealFormSection

@@ -849,11 +849,12 @@ export default function MerchantEdit() {
         <Card>
           <CardHeader>
             <CardTitle className="text-[#00426D] flex items-center justify-between">
-              <span>Deals ({deals.length})</span>
+              <span>Deals ({deals.length}/50)</span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={addNewDeal}
+                disabled={deals.length >= 50}
                 data-testid="button-add-deal"
               >
                 <Plus className="h-4 w-4 mr-1" />
@@ -862,6 +863,9 @@ export default function MerchantEdit() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {deals.length >= 50 && (
+              <p className="text-amber-600 text-sm text-center py-2 bg-amber-50 rounded-md">Maximum of 50 deals reached.</p>
+            )}
             {deals.length === 0 ? (
               <p className="text-slate-500 text-center py-4">No deals submitted with this application.</p>
             ) : (
