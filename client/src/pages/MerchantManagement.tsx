@@ -445,13 +445,15 @@ export default function MerchantManagement() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => setLocation(`/admin/merchants/${merchant.id}/edit`)}
-                            data-testid={`menu-edit-${merchant.id}`}
-                          >
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
+                          {!(isSales && merchant.status !== "pending") && (
+                            <DropdownMenuItem
+                              onClick={() => setLocation(`/admin/merchants/${merchant.id}/edit`)}
+                              data-testid={`menu-edit-${merchant.id}`}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             onClick={() => window.open(`/merchant-success/${merchant.id}`, '_blank')}
                             data-testid={`menu-pdf-${merchant.id}`}
@@ -491,27 +493,31 @@ export default function MerchantManagement() {
                               Download Sales Order
                             </DropdownMenuItem>
                           ) : (
+                            !(isSales && merchant.status !== "pending") && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setUploadingMerchantId(merchant.id);
+                                  salesOrderFileRef.current?.click();
+                                }}
+                                data-testid={`menu-upload-sales-order-${merchant.id}`}
+                              >
+                                <Upload className="h-4 w-4 mr-2 text-purple-600" />
+                                Upload Sales Order
+                              </DropdownMenuItem>
+                            )
+                          )}
+                          {!(isSales && merchant.status !== "pending") && (
                             <DropdownMenuItem
                               onClick={() => {
-                                setUploadingMerchantId(merchant.id);
-                                salesOrderFileRef.current?.click();
+                                setOffersDialogMerchant(merchant);
+                                setOffersDialogValue(merchant.offersCreated || merchant.dealCount || 0);
                               }}
-                              data-testid={`menu-upload-sales-order-${merchant.id}`}
+                              data-testid={`menu-offers-${merchant.id}`}
                             >
-                              <Upload className="h-4 w-4 mr-2 text-purple-600" />
-                              Upload Sales Order
+                              <Hash className="h-4 w-4 mr-2" />
+                              Update Offers Count
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setOffersDialogMerchant(merchant);
-                              setOffersDialogValue(merchant.offersCreated || merchant.dealCount || 0);
-                            }}
-                            data-testid={`menu-offers-${merchant.id}`}
-                          >
-                            <Hash className="h-4 w-4 mr-2" />
-                            Update Offers Count
-                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           {merchant.status === "pending" && !isModeration && (
                             <DropdownMenuItem

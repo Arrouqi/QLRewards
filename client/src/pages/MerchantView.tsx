@@ -102,6 +102,7 @@ export default function MerchantView() {
   const isModeration = userRole === "moderation";
   
   const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const canEditMerchant = merchant ? !(isSales && merchant.status !== "pending") && !(isModeration && merchant.status === "pending") : false;
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadingSalesOrder, setIsUploadingSalesOrder] = useState(false);
   const salesOrderFileRef = useRef<HTMLInputElement>(null);
@@ -722,7 +723,7 @@ export default function MerchantView() {
               Download Agreement
             </Button>
             
-            {!(isSales && merchant.status !== "pending") && !(isModeration && merchant.status === "pending") && (
+            {canEditMerchant && (
               <Button
                 onClick={() => setLocation(`/admin/merchants/${merchant.id}/edit`)}
                 className="bg-[#00426D] hover:bg-[#003152]"
@@ -1131,50 +1132,56 @@ export default function MerchantView() {
                     <Download className="h-4 w-4 mr-1" />
                     Download
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => salesOrderFileRef.current?.click()}
-                    disabled={isUploadingSalesOrder}
-                    data-testid="button-replace-sales-order-view"
-                  >
-                    <Upload className="h-4 w-4 mr-1" />
-                    Replace
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRemoveSalesOrder}
-                    className="text-red-600 hover:text-red-700"
-                    data-testid="button-remove-sales-order-view"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Remove
-                  </Button>
+                  {canEditMerchant && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => salesOrderFileRef.current?.click()}
+                        disabled={isUploadingSalesOrder}
+                        data-testid="button-replace-sales-order-view"
+                      >
+                        <Upload className="h-4 w-4 mr-1" />
+                        Replace
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRemoveSalesOrder}
+                        className="text-red-600 hover:text-red-700"
+                        data-testid="button-remove-sales-order-view"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg">
                 <FileText className="h-8 w-8 text-slate-400 mb-2" />
                 <p className="text-sm text-slate-500 mb-3">No sales order attached</p>
-                <Button
-                  variant="outline"
-                  onClick={() => salesOrderFileRef.current?.click()}
-                  disabled={isUploadingSalesOrder}
-                  data-testid="button-upload-sales-order-view"
-                >
-                  {isUploadingSalesOrder ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Sales Order PDF
-                    </>
-                  )}
-                </Button>
+                {canEditMerchant && (
+                  <Button
+                    variant="outline"
+                    onClick={() => salesOrderFileRef.current?.click()}
+                    disabled={isUploadingSalesOrder}
+                    data-testid="button-upload-sales-order-view"
+                  >
+                    {isUploadingSalesOrder ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Sales Order PDF
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
@@ -1224,50 +1231,56 @@ export default function MerchantView() {
                     <Download className="h-4 w-4 mr-1" />
                     Download
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => signedContractFileRef.current?.click()}
-                    disabled={isUploadingSignedContract}
-                    data-testid="button-replace-signed-contract"
-                  >
-                    <Upload className="h-4 w-4 mr-1" />
-                    Replace
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRemoveSignedContract}
-                    className="text-red-600 hover:text-red-700"
-                    data-testid="button-remove-signed-contract"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Remove
-                  </Button>
+                  {canEditMerchant && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => signedContractFileRef.current?.click()}
+                        disabled={isUploadingSignedContract}
+                        data-testid="button-replace-signed-contract"
+                      >
+                        <Upload className="h-4 w-4 mr-1" />
+                        Replace
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRemoveSignedContract}
+                        className="text-red-600 hover:text-red-700"
+                        data-testid="button-remove-signed-contract"
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg">
                 <FileText className="h-8 w-8 text-slate-400 mb-2" />
                 <p className="text-sm text-slate-500 mb-3">No signed agreement attached</p>
-                <Button
-                  variant="outline"
-                  onClick={() => signedContractFileRef.current?.click()}
-                  disabled={isUploadingSignedContract}
-                  data-testid="button-upload-signed-contract"
-                >
-                  {isUploadingSignedContract ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Signed Agreement
-                    </>
-                  )}
-                </Button>
+                {canEditMerchant && (
+                  <Button
+                    variant="outline"
+                    onClick={() => signedContractFileRef.current?.click()}
+                    disabled={isUploadingSignedContract}
+                    data-testid="button-upload-signed-contract"
+                  >
+                    {isUploadingSignedContract ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Signed Agreement
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>

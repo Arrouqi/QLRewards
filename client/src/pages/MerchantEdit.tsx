@@ -161,10 +161,19 @@ export default function MerchantEdit() {
         setLocation("/admin/login");
         return;
       }
+      const sessionData = await authResponse.json();
+      const userRole = sessionData.role || "user";
 
       const res = await fetch(`/api/merchants/${params.id}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch merchant");
       const data = await res.json();
+
+      if ((userRole === "sales" && data.status !== "pending") || (userRole === "moderation" && data.status === "pending")) {
+        toast({ title: "Access Denied", description: "You don't have permission to edit this merchant", variant: "destructive" });
+        setLocation(`/admin/merchants/${params.id}`);
+        return;
+      }
+
       setMerchant(data);
       setFormData({
         companyName: data.companyName || "",
