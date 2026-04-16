@@ -11,8 +11,9 @@ import {
   type MerchantNote, type InsertMerchantNote,
   type SubmissionLog, type InsertSubmissionLog,
   type SystemSetting,
+  type ActivityLog, type InsertActivityLog,
   deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantDeals, merchantNotes,
-  submissionLogs, systemSettings
+  submissionLogs, systemSettings, activityLogs
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, inArray, and, desc } from "drizzle-orm";
@@ -79,6 +80,9 @@ export interface IStorage {
   clearSubmissionLogs(): Promise<void>;
   getSystemSetting(key: string): Promise<string | null>;
   setSystemSetting(key: string, value: string): Promise<void>;
+  createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
+  getActivityLogs(limit?: number, offset?: number): Promise<ActivityLog[]>;
+  clearActivityLogs(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -465,6 +469,19 @@ export class DatabaseStorage implements IStorage {
     } else {
       await db.insert(systemSettings).values({ key, value });
     }
+  }
+
+  async createActivityLog(log: InsertActivityLog): Promise<ActivityLog> {
+    const [newLog] = await db.insert(activityLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getActivityLogs(limit = 200, offset = 0): Promise<ActivityLog[]> {
+    return await db.select().from(activityLogs).orderBy(desc(activityLogs.createdAt)).limit(limit).offset(offset);
+  }
+
+  async clearActivityLogs(): Promise<void> {
+    await db.delete(activityLogs);
   }
 }
 

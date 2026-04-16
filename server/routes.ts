@@ -35,6 +35,22 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+async function checkMerchantRoleAccess(req: Request, res: Response, merchantId: string): Promise<boolean> {
+  const userRole = req.session.role || "user";
+  if (userRole === "admin") return true;
+  const merchant = await storage.getMerchantById(merchantId);
+  if (!merchant) { res.status(404).json({ error: "Merchant not found" }); return false; }
+  if (userRole === "sales" && merchant.status !== "pending") {
+    res.status(403).json({ error: "Sales team can only modify merchants in With Sales status" });
+    return false;
+  }
+  if (userRole === "moderation" && merchant.status === "pending") {
+    res.status(403).json({ error: "Moderation team cannot modify merchants in With Sales status" });
+    return false;
+  }
+  return true;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -1111,9 +1127,24 @@ export async function registerRoutes(
 
   app.patch("/api/merchants/:id", requireAuth, async (req, res) => {
     try {
+      const userRole = req.session.role || "user";
+      const username = req.session.username || "Unknown";
+      
+      const existingMerchantForEdit = await storage.getMerchantById(req.params.id);
+      if (!existingMerchantForEdit) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      
+      if (userRole === "sales" && existingMerchantForEdit.status !== "pending") {
+        return res.status(403).json({ error: "Sales team can only edit merchants in With Sales status" });
+      }
+      
+      if (userRole === "moderation" && existingMerchantForEdit.status === "pending") {
+        return res.status(403).json({ error: "Moderation team cannot edit merchants in With Sales status" });
+      }
+      
       const { deals: dealUpdates, ...merchantData } = req.body;
       
-      // Upload document files if provided as base64
       const docFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'taxCardDocument', 'logo', 'coverImage'];
       for (const field of docFields) {
         if (merchantData[field] && merchantData[field].startsWith('data:')) {
@@ -1228,7 +1259,13 @@ export async function registerRoutes(
         }
       }
       
-      // Fetch updated deals to return
+      storage.createActivityLog({
+        username,
+        action: "Edited merchant details",
+        merchantId: req.params.id,
+        merchantName: existingMerchantForEdit.companyName,
+      }).catch(err => console.error("[ActivityLog] Error:", err));
+      
       const updatedDeals = await storage.getMerchantDealsByMerchantId(merchant.id);
       res.json({ ...merchant, deals: updatedDeals });
     } catch (error: any) {
@@ -1238,6 +1275,7 @@ export async function registerRoutes(
 
   app.patch("/api/merchants/:id/offers-created", requireAuth, async (req, res) => {
     try {
+      if (!(await checkMerchantRoleAccess(req, res, req.params.id))) return;
       const { offersCreated } = req.body;
       if (typeof offersCreated !== "number" || !Number.isInteger(offersCreated) || offersCreated < 0) {
         return res.status(400).json({ error: "Invalid offers count" });
@@ -1284,11 +1322,27 @@ export async function registerRoutes(
       }
       
       const userRole = req.session.role || "user";
+      const username = req.session.username || "Unknown";
       
+      const statusLabels: Record<string, string> = {
+        pending: "With Sales", moderation: "In Moderation", created: "Created",
+        licensing: "Licensing", licensed: "Licensed", archived: "Archived"
+      };
+
+      if (userRole === "sales") {
+        if (!(existingMerchant.status === "pending" && status === "moderation")) {
+          return res.status(403).json({ error: "Sales team can only forward merchants from With Sales to Moderation" });
+        }
+      }
       
-      
-      if (status === "pending" && existingMerchant.status === "archived" && userRole !== "admin") {
-        // Non-admin users CAN restore archived → pending (allowed)
+      if (userRole === "moderation") {
+        const allowedFromStatuses = ["moderation", "created", "licensing", "licensed"];
+        if (!allowedFromStatuses.includes(existingMerchant.status)) {
+          return res.status(403).json({ error: "Moderation team can only manage merchants from In Moderation onwards" });
+        }
+        if (status === "pending") {
+          return res.status(403).json({ error: "Moderation team cannot move merchants back to With Sales" });
+        }
       }
       
       if (status === "created" && existingMerchant.status !== "moderation" && existingMerchant.status !== "licensing") {
@@ -1304,7 +1358,7 @@ export async function registerRoutes(
       }
       
       if (status === "pending" && existingMerchant.status !== "moderation" && existingMerchant.status !== "archived") {
-        return res.status(400).json({ error: "Can only move to Pending from In Moderation or Archived status" });
+        return res.status(400).json({ error: "Can only move to With Sales from In Moderation or Archived status" });
       }
       
       if (status === "moderation" && existingMerchant.status !== "pending" && existingMerchant.status !== "archived" && existingMerchant.status !== "created") {
@@ -1340,13 +1394,12 @@ export async function registerRoutes(
       }
       
       if (status === "moderation" && wasNotModeration) {
-        const submitter = req.session.username || "Unknown";
-        await storage.updateMerchantSubmittedBy(req.params.id, submitter);
+        await storage.updateMerchantSubmittedBy(req.params.id, username);
         
         const moderationRecipients = await storage.getActiveEmailRecipientsByType("moderation");
         if (moderationRecipients.length > 0) {
           const emails = moderationRecipients.map(r => r.email);
-          sendMerchantModerationNotification(merchant, emails, submitter).catch(err => {
+          sendMerchantModerationNotification(merchant, emails, username).catch(err => {
             console.error("[Email] Error sending merchant moderation notification:", err);
           });
         }
@@ -1355,6 +1408,13 @@ export async function registerRoutes(
       if (status === "pending") {
         await storage.updateMerchantSubmittedBy(req.params.id, null);
       }
+      
+      storage.createActivityLog({
+        username,
+        action: `Status: ${statusLabels[existingMerchant.status]} → ${statusLabels[status]}`,
+        merchantId: req.params.id,
+        merchantName: existingMerchant.companyName,
+      }).catch(err => console.error("[ActivityLog] Error:", err));
       
       const updatedMerchant = await storage.getMerchantById(req.params.id);
       res.json(updatedMerchant);
@@ -1365,6 +1425,7 @@ export async function registerRoutes(
 
   app.post("/api/merchants/:id/sales-order", requireAuth, async (req, res) => {
     try {
+      if (!(await checkMerchantRoleAccess(req, res, req.params.id))) return;
       const { salesOrder } = req.body;
 
       if (!salesOrder) {
@@ -1400,6 +1461,7 @@ export async function registerRoutes(
 
   app.delete("/api/merchants/:id/sales-order", requireAuth, async (req, res) => {
     try {
+      if (!(await checkMerchantRoleAccess(req, res, req.params.id))) return;
       const existing = await storage.getMerchantById(req.params.id);
       if (!existing) {
         return res.status(404).json({ error: "Merchant not found" });
@@ -1445,6 +1507,7 @@ export async function registerRoutes(
 
   app.post("/api/merchants/:id/upload-signed", requireAuth, async (req, res) => {
     try {
+      if (!(await checkMerchantRoleAccess(req, res, req.params.id))) return;
       const existing = await storage.getMerchantById(req.params.id);
       if (!existing) {
         return res.status(404).json({ error: "Merchant not found" });
@@ -1739,6 +1802,7 @@ export async function registerRoutes(
 
   app.delete("/api/merchants/:id/signed-contract", requireAuth, async (req, res) => {
     try {
+      if (!(await checkMerchantRoleAccess(req, res, req.params.id))) return;
       const existing = await storage.getMerchantById(req.params.id);
       if (!existing) {
         return res.status(404).json({ error: "Merchant not found" });
@@ -1788,6 +1852,26 @@ export async function registerRoutes(
       }
       await storage.setSystemSetting(req.params.key, value);
       res.json({ key: req.params.key, value });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/activity-logs", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 200;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const logs = await storage.getActivityLogs(limit, offset);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/admin/activity-logs", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      await storage.clearActivityLogs();
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

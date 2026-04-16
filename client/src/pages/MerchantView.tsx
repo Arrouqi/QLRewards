@@ -96,7 +96,10 @@ export default function MerchantView() {
       return res.json();
     },
   });
-  const isAdmin = session?.role === "admin";
+  const userRole = session?.role || "user";
+  const isAdmin = userRole === "admin";
+  const isSales = userRole === "sales";
+  const isModeration = userRole === "moderation";
   
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -719,14 +722,16 @@ export default function MerchantView() {
               Download Agreement
             </Button>
             
-            <Button
-              onClick={() => setLocation(`/admin/merchants/${merchant.id}/edit`)}
-              className="bg-[#00426D] hover:bg-[#003152]"
-              data-testid="button-edit"
-            >
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+            {!(isSales && merchant.status !== "pending") && !(isModeration && merchant.status === "pending") && (
+              <Button
+                onClick={() => setLocation(`/admin/merchants/${merchant.id}/edit`)}
+                className="bg-[#00426D] hover:bg-[#003152]"
+                data-testid="button-edit"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1373,7 +1378,7 @@ export default function MerchantView() {
                 <p className="text-sm text-slate-500">Review and take action on this application</p>
               </div>
               <div className="flex items-center gap-3">
-                {merchant.status !== "archived" && (
+                {merchant.status !== "archived" && !isSales && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1387,14 +1392,16 @@ export default function MerchantView() {
                 )}
                 {merchant.status === "archived" && (
                   <>
-                    <Button
-                      variant="outline"
-                      onClick={() => confirmStatusChange("pending")}
-                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                      data-testid="button-restore-pending"
-                    >
-                      Restore to With Sales
-                    </Button>
+                    {!isModeration && (
+                      <Button
+                        variant="outline"
+                        onClick={() => confirmStatusChange("pending")}
+                        className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                        data-testid="button-restore-pending"
+                      >
+                        Restore to With Sales
+                      </Button>
+                    )}
                     <Button
                       onClick={() => confirmStatusChange("moderation")}
                       className="bg-blue-600 hover:bg-blue-700"
@@ -1405,7 +1412,7 @@ export default function MerchantView() {
                     </Button>
                   </>
                 )}
-                {merchant.status === "pending" && (
+                {merchant.status === "pending" && !isModeration && (
                   <Button
                     onClick={() => confirmStatusChange("moderation")}
                     className="bg-blue-600 hover:bg-blue-700"
@@ -1415,16 +1422,18 @@ export default function MerchantView() {
                     Forward to Moderation
                   </Button>
                 )}
-                {merchant.status === "moderation" && (
+                {merchant.status === "moderation" && !isSales && (
                   <>
-                    <Button
-                      variant="outline"
-                      onClick={() => confirmStatusChange("pending")}
-                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                      data-testid="button-back-pending"
-                    >
-                      Move to With Sales
-                    </Button>
+                    {!isModeration && (
+                      <Button
+                        variant="outline"
+                        onClick={() => confirmStatusChange("pending")}
+                        className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                        data-testid="button-back-pending"
+                      >
+                        Move to With Sales
+                      </Button>
+                    )}
                     <Button
                       onClick={() => confirmStatusChange("created")}
                       className="bg-green-600 hover:bg-green-700"
@@ -1434,7 +1443,7 @@ export default function MerchantView() {
                     </Button>
                   </>
                 )}
-                {merchant.status === "created" && (
+                {merchant.status === "created" && !isSales && (
                   <>
                     <Button
                       onClick={() => confirmStatusChange("licensing")}
@@ -1454,7 +1463,7 @@ export default function MerchantView() {
                     </Button>
                   </>
                 )}
-                {merchant.status === "licensing" && (
+                {merchant.status === "licensing" && !isSales && (
                   <>
                     <Button
                       variant="outline"
@@ -1474,7 +1483,7 @@ export default function MerchantView() {
                     </Button>
                   </>
                 )}
-                {merchant.status === "licensed" && (
+                {merchant.status === "licensed" && !isSales && (
                   <Button
                     variant="outline"
                     onClick={() => confirmStatusChange("licensing")}

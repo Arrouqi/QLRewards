@@ -151,7 +151,10 @@ export default function MerchantManagement() {
     },
   });
 
-  const isAdmin = authData?.role === "admin";
+  const userRole = authData?.role || "user";
+  const isAdmin = userRole === "admin";
+  const isSales = userRole === "sales";
+  const isModeration = userRole === "moderation";
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
@@ -233,6 +236,7 @@ export default function MerchantManagement() {
 
   const filteredMerchants = merchants.filter((merchant) => {
     if (!isAdmin && merchant.status === "archived") return false;
+    if (isModeration && merchant.status === "pending") return false;
 
     const matchesSearch =
       merchant.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -312,7 +316,7 @@ export default function MerchantManagement() {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
           {[
             { label: "All", value: statusCounts.all, filter: "all" },
-            { label: "With Sales", value: statusCounts.pending, filter: "pending" },
+            ...(!isModeration ? [{ label: "With Sales", value: statusCounts.pending, filter: "pending" }] : []),
             { label: "In Moderation", value: statusCounts.moderation, filter: "moderation" },
             { label: "Created", value: statusCounts.created, filter: "created" },
             { label: "Licensing", value: statusCounts.licensing, filter: "licensing" },
@@ -509,7 +513,7 @@ export default function MerchantManagement() {
                             Update Offers Count
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {merchant.status === "pending" && (
+                          {merchant.status === "pending" && !isModeration && (
                             <DropdownMenuItem
                               onClick={() => confirmStatusChange(merchant, "moderation")}
                               className="text-blue-600"
@@ -519,7 +523,7 @@ export default function MerchantManagement() {
                               Forward to Moderation
                             </DropdownMenuItem>
                           )}
-                          {merchant.status === "moderation" && (
+                          {merchant.status === "moderation" && !isSales && (
                             <>
                               <DropdownMenuItem
                                 onClick={() => confirmStatusChange(merchant, "created")}
@@ -529,17 +533,19 @@ export default function MerchantManagement() {
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                 Mark as Created
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => confirmStatusChange(merchant, "pending")}
-                                className="text-amber-600"
-                                data-testid={`menu-back-pending-${merchant.id}`}
-                              >
-                                <Undo2 className="h-4 w-4 mr-2" />
-                                Move to With Sales
-                              </DropdownMenuItem>
+                              {!isModeration && (
+                                <DropdownMenuItem
+                                  onClick={() => confirmStatusChange(merchant, "pending")}
+                                  className="text-amber-600"
+                                  data-testid={`menu-back-pending-${merchant.id}`}
+                                >
+                                  <Undo2 className="h-4 w-4 mr-2" />
+                                  Move to With Sales
+                                </DropdownMenuItem>
+                              )}
                             </>
                           )}
-                          {merchant.status === "created" && (
+                          {merchant.status === "created" && !isSales && (
                             <>
                               <DropdownMenuItem
                                 onClick={() => confirmStatusChange(merchant, "licensing")}
@@ -559,7 +565,7 @@ export default function MerchantManagement() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {merchant.status === "licensing" && (
+                          {merchant.status === "licensing" && !isSales && (
                             <>
                               <DropdownMenuItem
                                 onClick={() => confirmStatusChange(merchant, "licensed")}
@@ -579,7 +585,7 @@ export default function MerchantManagement() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {merchant.status === "licensed" && (
+                          {merchant.status === "licensed" && !isSales && (
                             <DropdownMenuItem
                               onClick={() => confirmStatusChange(merchant, "licensing")}
                               className="text-amber-600"
@@ -591,14 +597,16 @@ export default function MerchantManagement() {
                           )}
                           {merchant.status === "archived" && (
                             <>
-                              <DropdownMenuItem
-                                onClick={() => confirmStatusChange(merchant, "pending")}
-                                className="text-amber-600"
-                                data-testid={`menu-restore-pending-${merchant.id}`}
-                              >
-                                <Undo2 className="h-4 w-4 mr-2" />
-                                Restore to With Sales
-                              </DropdownMenuItem>
+                              {!isModeration && (
+                                <DropdownMenuItem
+                                  onClick={() => confirmStatusChange(merchant, "pending")}
+                                  className="text-amber-600"
+                                  data-testid={`menu-restore-pending-${merchant.id}`}
+                                >
+                                  <Undo2 className="h-4 w-4 mr-2" />
+                                  Restore to With Sales
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 onClick={() => confirmStatusChange(merchant, "moderation")}
                                 className="text-blue-600"
@@ -625,7 +633,7 @@ export default function MerchantManagement() {
                               )}
                             </>
                           )}
-                          {merchant.status !== "archived" && (
+                          {merchant.status !== "archived" && !isSales && (
                             <DropdownMenuItem
                               onClick={() => confirmStatusChange(merchant, "archived")}
                               className="text-slate-600"

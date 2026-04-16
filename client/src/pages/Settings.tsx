@@ -355,7 +355,7 @@ function UsersTab() {
 
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState("user");
+  const [newRole, setNewRole] = useState("sales");
   const [editPassword, setEditPassword] = useState("");
   const [editRole, setEditRole] = useState("");
 
@@ -386,7 +386,7 @@ function UsersTab() {
       setIsAddDialogOpen(false);
       setNewUsername("");
       setNewPassword("");
-      setNewRole("user");
+      setNewRole("sales");
       toast({ title: "User created successfully" });
     },
     onError: (error: Error) => {
@@ -510,10 +510,10 @@ function UsersTab() {
                       <p className="font-medium text-slate-800" data-testid={`text-username-${user.id}`}>{user.username}</p>
                       <Badge
                         variant={user.role === "admin" ? "default" : "secondary"}
-                        className={user.role === "admin" ? "bg-[#00426D]" : ""}
+                        className={user.role === "admin" ? "bg-[#00426D]" : user.role === "moderation" ? "bg-blue-100 text-blue-700" : ""}
                         data-testid={`badge-role-${user.id}`}
                       >
-                        {user.role === "admin" ? "Admin" : "User"}
+                        {user.role === "admin" ? "Admin" : user.role === "moderation" ? "Moderation" : user.role === "sales" ? "Sales" : user.role}
                       </Badge>
                     </div>
                   </div>
@@ -554,7 +554,8 @@ function UsersTab() {
               <Select value={newRole} onValueChange={setNewRole}>
                 <SelectTrigger data-testid="select-new-role"><SelectValue placeholder="Select role" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="sales">Sales</SelectItem>
+                  <SelectItem value="moderation">Moderation</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -585,7 +586,8 @@ function UsersTab() {
               <Select value={editRole} onValueChange={setEditRole}>
                 <SelectTrigger data-testid="select-edit-role"><SelectValue placeholder="Select role" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="sales">Sales</SelectItem>
+                  <SelectItem value="moderation">Moderation</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -612,6 +614,121 @@ function UsersTab() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700" data-testid="button-confirm-delete-user">
               {deleteUserMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+function ActivityLogsTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+
+  const { data: activityLogs = [], isLoading } = useQuery<Array<{
+    id: string;
+    username: string;
+    action: string;
+    merchantId: string | null;
+    merchantName: string | null;
+    details: string | null;
+    createdAt: string;
+  }>>({
+    queryKey: ["/api/admin/activity-logs"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/activity-logs?limit=200", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch activity logs");
+      return res.json();
+    },
+  });
+
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/activity-logs", { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Failed to clear activity logs");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/activity-logs"] });
+      toast({ title: "Activity logs cleared" });
+      setIsClearDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Activity Log</CardTitle>
+            <CardDescription className="mt-1">Track user actions across the portal</CardDescription>
+          </div>
+          {activityLogs.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 hover:text-red-700"
+              onClick={() => setIsClearDialogOpen(true)}
+              data-testid="button-clear-activity-logs"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear All
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+            </div>
+          ) : activityLogs.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <Shield className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No activity recorded yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              {activityLogs.map((log) => (
+                <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border" data-testid={`activity-log-${log.id}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm text-[#00426D]">{log.username}</span>
+                      <span className="text-sm text-slate-600">{log.action}</span>
+                    </div>
+                    {log.merchantName && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Merchant: {log.merchantName}
+                      </p>
+                    )}
+                    {log.details && (
+                      <p className="text-xs text-slate-400 mt-0.5">{log.details}</p>
+                    )}
+                  </div>
+                  <span className="text-xs text-slate-400 whitespace-nowrap">
+                    {format(new Date(log.createdAt), "MMM d, HH:mm")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear All Activity Logs?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently delete all activity log entries. This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => clearMutation.mutate()} className="bg-red-600 hover:bg-red-700" data-testid="button-confirm-clear-activity-logs">
+              {clearMutation.isPending ? "Clearing..." : "Clear All"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1347,7 +1464,7 @@ export default function Settings() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsList className="grid w-full grid-cols-7 mb-6">
             <TabsTrigger value="email" className="flex items-center gap-2" data-testid="tab-email">
               <Mail className="h-4 w-4" />
               <span className="hidden sm:inline">Email</span>
@@ -1366,7 +1483,11 @@ export default function Settings() {
             </TabsTrigger>
             <TabsTrigger value="logs" className="flex items-center gap-2" data-testid="tab-logs">
               <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Submission Logs</span>
+              <span className="hidden sm:inline">Sub. Logs</span>
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="flex items-center gap-2" data-testid="tab-activity">
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">Activity</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2" data-testid="tab-users">
               <Users className="h-4 w-4" />
@@ -1918,6 +2039,10 @@ export default function Settings() {
 
           <TabsContent value="logs">
             <SubmissionLogsTab />
+          </TabsContent>
+
+          <TabsContent value="activity">
+            <ActivityLogsTab />
           </TabsContent>
 
           <TabsContent value="users">

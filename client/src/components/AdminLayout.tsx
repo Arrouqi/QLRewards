@@ -149,6 +149,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <div className="mb-3 px-2">
               <p className="text-sm text-white/60">Logged in as</p>
               <p className="text-white font-medium" data-testid="text-username">{session.username}</p>
+              {session.role && (
+                <p className="text-xs text-white/40 capitalize mt-0.5" data-testid="text-role">{session.role}</p>
+              )}
             </div>
           )}
           {session?.role === "admin" && (

@@ -286,3 +286,21 @@ export const systemSettings = pgTable("system_settings", {
 });
 
 export type SystemSetting = typeof systemSettings.$inferSelect;
+
+export const activityLogs = pgTable("activity_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull(),
+  action: text("action").notNull(),
+  merchantId: text("merchant_id"),
+  merchantName: text("merchant_name"),
+  details: text("details"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+export type ActivityLog = typeof activityLogs.$inferSelect;

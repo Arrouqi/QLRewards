@@ -43,7 +43,8 @@ Preferred communication style: Simple, everyday language.
 - **merchants**: Stores merchant onboarding applications with company info, documents (CR, trade license, tax card, logo, cover image, etc.), WhatsApp number, sales order PDF (Azure URL), signed contract, `submittedBy` (admin who forwarded to moderation), `offersCreated` (integer counter), and status flow (pending ↔ moderation → created → licensing → licensed; any non-archived → archived; archived → pending/moderation). Admin role can permanently delete archived merchants.
 - **merchantDeals**: Stores deal offers per merchant with category, pricing, discount percentage OR discounted price, rules, images, and availability days
 - **merchantNotes**: Internal notes/comments on merchant applications (author, content, timestamp); thread-style, add-only
-- **adminUsers**: Stores admin credentials for the dashboard (managed via Settings → Users tab, admin-only)
+- **adminUsers**: Stores admin credentials for the dashboard (managed via Settings → Users tab, admin-only). Roles: `sales` (forward pending→moderation only, edit pending merchants only), `moderation` (manage moderation+ merchants, no access to With Sales), `admin` (full access including settings, archive management, permanent delete, activity logs)
+- **activityLogs**: Tracks user actions (status changes, edits) with username, action, merchantId, merchantName, details, timestamp. Admin-only viewing & clearing via Settings → Activity tab.
 - **submissionLogs**: Records form submissions (merchant onboarding & deal creation) with status, request body (base64 files sanitized), fields received, file info, errors, IP, user agent, processing time. Toggled on/off via system settings. Admin-only viewing & clearing via Settings → Submission Logs tab.
 - **systemSettings**: Key-value store for system configuration (e.g., `submission_logging_enabled`). Admin-only write access.
 - **session**: PostgreSQL session store table (auto-created)
