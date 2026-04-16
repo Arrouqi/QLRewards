@@ -1340,9 +1340,6 @@ export async function registerRoutes(
         if (!allowedFromStatuses.includes(existingMerchant.status)) {
           return res.status(403).json({ error: "Moderation team can only manage merchants from In Moderation onwards" });
         }
-        if (status === "pending") {
-          return res.status(403).json({ error: "Moderation team cannot move merchants back to With Sales" });
-        }
       }
       
       if (status === "created" && existingMerchant.status !== "moderation" && existingMerchant.status !== "licensing") {

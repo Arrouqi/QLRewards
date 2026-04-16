@@ -539,16 +539,14 @@ export default function MerchantManagement() {
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                 Mark as Created
                               </DropdownMenuItem>
-                              {!isModeration && (
-                                <DropdownMenuItem
-                                  onClick={() => confirmStatusChange(merchant, "pending")}
-                                  className="text-amber-600"
-                                  data-testid={`menu-back-pending-${merchant.id}`}
-                                >
-                                  <Undo2 className="h-4 w-4 mr-2" />
-                                  Move to With Sales
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem
+                                onClick={() => confirmStatusChange(merchant, "pending")}
+                                className="text-amber-600"
+                                data-testid={`menu-back-pending-${merchant.id}`}
+                              >
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                Move to With Sales
+                              </DropdownMenuItem>
                             </>
                           )}
                           {merchant.status === "created" && !isSales && (
@@ -603,16 +601,14 @@ export default function MerchantManagement() {
                           )}
                           {merchant.status === "archived" && (
                             <>
-                              {!isModeration && (
-                                <DropdownMenuItem
-                                  onClick={() => confirmStatusChange(merchant, "pending")}
-                                  className="text-amber-600"
-                                  data-testid={`menu-restore-pending-${merchant.id}`}
-                                >
-                                  <Undo2 className="h-4 w-4 mr-2" />
-                                  Restore to With Sales
-                                </DropdownMenuItem>
-                              )}
+                              <DropdownMenuItem
+                                onClick={() => confirmStatusChange(merchant, "pending")}
+                                className="text-amber-600"
+                                data-testid={`menu-restore-pending-${merchant.id}`}
+                              >
+                                <Undo2 className="h-4 w-4 mr-2" />
+                                Restore to With Sales
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => confirmStatusChange(merchant, "moderation")}
                                 className="text-blue-600"

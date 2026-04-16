@@ -1405,16 +1405,14 @@ export default function MerchantView() {
                 )}
                 {merchant.status === "archived" && (
                   <>
-                    {!isModeration && (
-                      <Button
-                        variant="outline"
-                        onClick={() => confirmStatusChange("pending")}
-                        className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                        data-testid="button-restore-pending"
-                      >
-                        Restore to With Sales
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => confirmStatusChange("pending")}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                      data-testid="button-restore-pending"
+                    >
+                      Restore to With Sales
+                    </Button>
                     <Button
                       onClick={() => confirmStatusChange("moderation")}
                       className="bg-blue-600 hover:bg-blue-700"
@@ -1437,16 +1435,14 @@ export default function MerchantView() {
                 )}
                 {merchant.status === "moderation" && !isSales && (
                   <>
-                    {!isModeration && (
-                      <Button
-                        variant="outline"
-                        onClick={() => confirmStatusChange("pending")}
-                        className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                        data-testid="button-back-pending"
-                      >
-                        Move to With Sales
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => confirmStatusChange("pending")}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                      data-testid="button-back-pending"
+                    >
+                      Move to With Sales
+                    </Button>
                     <Button
                       onClick={() => confirmStatusChange("created")}
                       className="bg-green-600 hover:bg-green-700"
