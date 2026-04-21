@@ -1276,10 +1276,14 @@ export async function registerRoutes(
         }
       }
       
-      // Update merchant data
-      const merchant = await storage.updateMerchant(req.params.id, merchantData);
-      if (!merchant) {
-        return res.status(404).json({ error: "Merchant not found" });
+      // Update merchant data (skip when nothing to update — e.g., body had only brands/deals/companyType)
+      let merchant = existingMerchantForEdit;
+      if (Object.keys(merchantData).length > 0) {
+        const updated = await storage.updateMerchant(req.params.id, merchantData);
+        if (!updated) {
+          return res.status(404).json({ error: "Merchant not found" });
+        }
+        merchant = updated;
       }
 
       // Replace brands if provided

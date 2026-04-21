@@ -30,6 +30,10 @@ ALTER TABLE merchants ALTER COLUMN business_categories DROP NOT NULL;
 ALTER TABLE merchant_deals ADD COLUMN IF NOT EXISTS brand_id text;
 
 -- 4. Create merchant_brands table
+-- (If merchant_brands already exists without ON DELETE CASCADE, run:
+--   ALTER TABLE merchant_brands DROP CONSTRAINT IF EXISTS merchant_brands_merchant_id_fkey;
+--   ALTER TABLE merchant_brands ADD CONSTRAINT merchant_brands_merchant_id_fkey
+--     FOREIGN KEY (merchant_id) REFERENCES merchants(id) ON DELETE CASCADE; )
 CREATE TABLE IF NOT EXISTS merchant_brands (
   id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
   merchant_id varchar NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,

@@ -462,6 +462,7 @@ export class DatabaseStorage implements IStorage {
     await db.transaction(async (tx) => {
       await tx.delete(merchantNotes).where(eq(merchantNotes.merchantId, id));
       await tx.delete(merchantDeals).where(eq(merchantDeals.merchantId, id));
+      await tx.delete(merchantBrands).where(eq(merchantBrands.merchantId, id));
       await tx.delete(merchants).where(eq(merchants.id, id));
     });
   }

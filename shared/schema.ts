@@ -223,7 +223,7 @@ export type Merchant = typeof merchants.$inferSelect;
 
 export const merchantBrands = pgTable("merchant_brands", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  merchantId: varchar("merchant_id").notNull().references(() => merchants.id),
+  merchantId: varchar("merchant_id").notNull().references(() => merchants.id, { onDelete: "cascade" }),
   brandName: text("brand_name"),
   address: text("address"),
   contactPerson: text("contact_person"),
