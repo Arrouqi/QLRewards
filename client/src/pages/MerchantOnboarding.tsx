@@ -1,4 +1,4 @@
-import { useState, useRef, ChangeEvent, useCallback, useMemo } from "react";
+import { useState, useRef, ChangeEvent, useCallback, useMemo, useEffect } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -99,6 +99,25 @@ const branchSchema = z.object({
   location: z.string().optional(),
   phone: z.string().min(1, "Branch phone is required"),
   detail: z.string().optional(),
+  brandId: z.string().optional(),
+});
+
+const brandSchema = z.object({
+  brandName: z.string().optional(),
+  address: z.string().optional(),
+  contactPerson: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  whatsapp: z.string().optional(),
+  crNumber: z.string().optional(),
+  crDocument: z.string().optional(),
+  establishmentCard: z.string().optional(),
+  tradeLicense: z.string().optional(),
+  taxCardDocument: z.string().optional(),
+  menuPriceList: z.string().optional(),
+  logo: z.string().optional(),
+  coverImage: z.string().optional(),
+  businessCategories: z.array(z.string()).optional(),
 });
 
 const dealSchema = z.object({
@@ -126,19 +145,21 @@ const dealSchema = z.object({
 });
 
 const merchantSchema = z.object({
+  companyType: z.enum(["individual", "group"]).default("individual"),
   companyName: z.string().min(1, "Company name is required"),
-  crNumber: z.string().regex(/^[a-zA-Z0-9]{4,14}$/, "CR number must be 4-14 alphanumeric characters"),
-  brandName: z.string().min(1, "Brand name is required"),
+  crNumber: z.string().optional(),
+  brandName: z.string().optional(),
   address: z.string().min(1, "Address is required"),
   contactPerson: z.string().min(1, "Contact person is required"),
   email: z.string().email("Valid email is required"),
   phone: z.string().min(1, "Phone number is required"),
-  products: z.array(z.string()).min(1, "Select at least one product"),
-  businessCategories: z.array(z.string()).min(1, "Select at least one category"),
+  products: z.array(z.string()).optional(),
+  businessCategories: z.array(z.string()).optional(),
   branches: z.array(branchSchema).optional(),
+  brands: z.array(brandSchema).optional(),
   subscriptionFee: z.string().default("0"),
   transactionFee: z.string().default("3.00"),
-  crDocument: z.string().min(1, "CR Document is required"),
+  crDocument: z.string().optional(),
   establishmentCard: z.string().optional(),
   tradeLicense: z.string().optional(),
   menuPriceList: z.string().optional(),
@@ -152,6 +173,29 @@ const merchantSchema = z.object({
     message: "You must accept the terms and conditions to submit",
   }),
   deals: z.array(dealSchema).optional(),
+}).superRefine((data, ctx) => {
+  if (data.companyType === "group") {
+    if (!data.brands || data.brands.length < 1) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brands"], message: "At least one brand is required for group companies" });
+    }
+    return;
+  }
+  // Individual: keep all the original required fields
+  if (!data.crNumber || !/^[a-zA-Z0-9]{4,14}$/.test(data.crNumber)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crNumber"], message: "CR number must be 4-14 alphanumeric characters" });
+  }
+  if (!data.brandName || data.brandName.trim() === "") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandName"], message: "Brand name is required" });
+  }
+  if (!data.products || data.products.length === 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["products"], message: "Select at least one product" });
+  }
+  if (!data.businessCategories || data.businessCategories.length === 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["businessCategories"], message: "Select at least one category" });
+  }
+  if (!data.crDocument || data.crDocument.trim() === "") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crDocument"], message: "CR Document is required" });
+  }
 });
 
 type MerchantFormValues = z.infer<typeof merchantSchema>;
@@ -203,6 +247,7 @@ export default function MerchantOnboarding() {
   const form = useForm<MerchantFormValues>({
     resolver: zodResolver(merchantSchema),
     defaultValues: {
+      companyType: "individual",
       companyName: "",
       crNumber: "",
       brandName: "",
@@ -213,6 +258,7 @@ export default function MerchantOnboarding() {
       products: [],
       businessCategories: [],
       branches: [],
+      brands: [],
       subscriptionFee: "0",
       transactionFee: "3.00",
       deals: [],
@@ -230,10 +276,47 @@ export default function MerchantOnboarding() {
     },
   });
 
+  const companyType = useWatch({ control: form.control, name: "companyType" }) || "individual";
+  const isGroup = companyType === "group";
+
   const { fields: branchFields, append: appendBranch, remove: removeBranch } = useFieldArray({
     control: form.control,
     name: "branches",
   });
+
+  const { fields: brandFields, append: appendBrand, remove: removeBrand } = useFieldArray({
+    control: form.control,
+    name: "brands",
+  });
+
+  const brandsValue = useWatch({ control: form.control, name: "brands" }) || [];
+
+  const addBrand = () => {
+    appendBrand({
+      brandName: "",
+      address: "",
+      contactPerson: "",
+      email: "",
+      phone: "",
+      whatsapp: "",
+      crNumber: "",
+      crDocument: "",
+      establishmentCard: "",
+      tradeLicense: "",
+      taxCardDocument: "",
+      menuPriceList: "",
+      logo: "",
+      coverImage: "",
+      businessCategories: [],
+    });
+  };
+
+  // Auto-add the first brand when switching to group
+  useEffect(() => {
+    if (isGroup && brandFields.length === 0) {
+      addBrand();
+    }
+  }, [isGroup]);
 
   const { fields: dealFields, append: appendDeal, remove: removeDeal } = useFieldArray({
     control: form.control,
@@ -300,9 +383,23 @@ export default function MerchantOnboarding() {
 
     try {
       const formattedBranches = data.branches?.map(b => JSON.stringify(b)) || [];
+
+      const isGroupSubmit = data.companyType === "group";
+      if (isGroupSubmit) {
+        if (!data.brands || data.brands.length === 0) {
+          toast({ title: "At least one brand required", description: "Group companies must have at least one brand.", variant: "destructive" });
+          setIsSubmitting(false);
+          return;
+        }
+        if (data.brands.length > 50) {
+          toast({ title: "Too many brands", description: "Maximum 50 brands per group.", variant: "destructive" });
+          setIsSubmitting(false);
+          return;
+        }
+      }
       
       // Validate that multi-branch merchants have selected branches for each deal
-      if ((data.branches?.length || 0) > 1 && data.deals && data.deals.length > 0) {
+      if (!isGroupSubmit && (data.branches?.length || 0) > 1 && data.deals && data.deals.length > 0) {
         for (let i = 0; i < data.deals.length; i++) {
           const deal = data.deals[i];
           if (!deal.branches || deal.branches.length === 0) {
@@ -317,13 +414,32 @@ export default function MerchantOnboarding() {
         }
       }
 
+      const payload: any = {
+        ...data,
+        branches: formattedBranches,
+      };
+      if (isGroupSubmit) {
+        // Strip individual-only fields & blank deals on group
+        payload.deals = [];
+        payload.crNumber = undefined;
+        payload.brandName = undefined;
+        payload.crDocument = undefined;
+        payload.establishmentCard = undefined;
+        payload.tradeLicense = undefined;
+        payload.menuPriceList = undefined;
+        payload.taxCardDocument = undefined;
+        payload.logo = undefined;
+        payload.coverImage = undefined;
+        payload.products = [];
+        payload.businessCategories = [];
+      } else {
+        payload.brands = [];
+      }
+
       const response = await fetch("/api/merchants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          branches: formattedBranches,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -470,12 +586,60 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
+            {/* Company Type */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-[#00426D]">Company Type</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="companyType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(["individual", "group"] as const).map((opt) => {
+                          const selected = field.value === opt;
+                          return (
+                            <label
+                              key={opt}
+                              className={cn(
+                                "flex flex-col gap-1 p-4 rounded-lg border-2 cursor-pointer transition-all",
+                                selected ? "border-[#FF7F39] bg-[#FF7F39]/10" : "border-slate-200 hover:border-[#FF7F39]/50"
+                              )}
+                              data-testid={`radio-company-type-${opt}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  checked={selected}
+                                  onChange={() => field.onChange(opt)}
+                                  className="h-4 w-4 accent-[#FF7F39]"
+                                />
+                                <span className="font-semibold capitalize">{opt}</span>
+                              </div>
+                              <span className="text-xs text-slate-600 ml-6">
+                                {opt === "individual"
+                                  ? "Single brand / company with one CR."
+                                  : "Group with multiple brands, each with its own details and documents."}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
             {/* Company Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-[#00426D]">
                   <Building2 className="h-5 w-5" />
-                  Company Information
+                  {isGroup ? "Group Information" : "Company Information"}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -494,41 +658,45 @@ export default function MerchantOnboarding() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="crNumber"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1.5">
-                          CR Number *
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                              <TooltipContent><p className="max-w-xs text-xs">Your Commercial Registration number issued by the Ministry of Commerce. 4-14 alphanumeric characters.</p></TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g. 123456 or ABC1234" maxLength={14} data-testid="input-cr-number" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {!isGroup && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="crNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-1.5">
+                              CR Number *
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
+                                  <TooltipContent><p className="max-w-xs text-xs">Your Commercial Registration number issued by the Ministry of Commerce. 4-14 alphanumeric characters.</p></TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. 123456 or ABC1234" maxLength={14} data-testid="input-cr-number" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                  <FormField
-                    control={form.control}
-                    name="brandName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Merchant Brand Name *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Enter brand name" data-testid="input-brand-name" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      <FormField
+                        control={form.control}
+                        name="brandName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Merchant Brand Name *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Enter brand name" data-testid="input-brand-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
                 </div>
 
                 <FormField
@@ -640,7 +808,8 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
-            {/* Products Selection */}
+            {/* Products Selection - Individual only */}
+            {!isGroup && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-[#00426D]">Living Deals Products <span className="text-sm font-normal text-slate-500">(select all that apply)</span></CardTitle>
@@ -680,7 +849,10 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
-            {/* Business Categories */}
+            )}
+
+            {/* Business Categories - Individual only */}
+            {!isGroup && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-[#00426D]">Business Categories</CardTitle>
@@ -719,6 +891,45 @@ export default function MerchantOnboarding() {
                 </div>
               </CardContent>
             </Card>
+
+            )}
+
+            {/* Brands - Group only */}
+            {isGroup && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-[#00426D]">
+                    Brands <span className="text-slate-400 font-normal text-sm">({brandFields.length}/50)</span>
+                  </CardTitle>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addBrand}
+                    disabled={brandFields.length >= 50}
+                    data-testid="button-add-brand"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Brand
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {brandFields.length === 0 && (
+                    <p className="text-slate-500 text-sm text-center py-4">No brands added yet.</p>
+                  )}
+                  {brandFields.map((brand, bIdx) => (
+                    <BrandFormSection
+                      key={brand.id}
+                      index={bIdx}
+                      form={form}
+                      categories={categories}
+                      onRemove={() => removeBrand(bIdx)}
+                      handleFileUpload={handleFileUpload}
+                    />
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Branches */}
             <Card>
@@ -811,13 +1022,41 @@ export default function MerchantOnboarding() {
                           </FormItem>
                         )}
                       />
+                      {isGroup && (
+                        <FormField
+                          control={form.control}
+                          name={`branches.${index}.brandId`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Brand</FormLabel>
+                              <FormControl>
+                                <select
+                                  value={field.value || ""}
+                                  onChange={(e) => field.onChange(e.target.value || undefined)}
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                  data-testid={`select-branch-brand-${index}`}
+                                >
+                                  <option value="">— Unassigned —</option>
+                                  {brandsValue.map((b: any, bIdx: number) => (
+                                    <option key={bIdx} value={String(bIdx)}>
+                                      {b.brandName?.trim() || `Brand ${bIdx + 1}`}
+                                    </option>
+                                  ))}
+                                </select>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            {/* Deals Section */}
+            {/* Deals Section - Individual only */}
+            {!isGroup && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-[#00426D]">
@@ -858,6 +1097,8 @@ export default function MerchantOnboarding() {
                 ))}
               </CardContent>
             </Card>
+
+            )}
 
             {/* Fee Information */}
             <Card>
@@ -937,7 +1178,8 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
-            {/* Documents */}
+            {/* Documents - Individual only (group documents are per-brand) */}
+            {!isGroup && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-[#00426D]">
@@ -1002,6 +1244,8 @@ export default function MerchantOnboarding() {
                 </div>
               </CardContent>
             </Card>
+
+            )}
 
             {/* Terms */}
             <Card>
@@ -1112,9 +1356,9 @@ export default function MerchantOnboarding() {
 
 function DocumentUpload({ label, field, form, onChange, accept }: {
   label: string;
-  field: keyof MerchantFormValues;
+  field: any;
   form: any;
-  onChange: (field: keyof MerchantFormValues, e: ChangeEvent<HTMLInputElement>) => void;
+  onChange: (field: any, e: ChangeEvent<HTMLInputElement>) => void;
   accept?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -1171,6 +1415,173 @@ function DocumentUpload({ label, field, form, onChange, accept }: {
       {fieldError && (
         <p className="text-sm text-red-500" data-testid={`text-error-${field}`}>{fieldError.message as string}</p>
       )}
+    </div>
+  );
+}
+
+function BrandFormSection({ index, form, categories, onRemove, handleFileUpload }: {
+  index: number;
+  form: any;
+  categories: Category[];
+  onRemove: () => void;
+  handleFileUpload: (field: any, e: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const brandCats: string[] = (useWatch({ control: form.control, name: `brands.${index}.businessCategories` as any }) as string[]) || [];
+
+  return (
+    <div className="p-4 border-2 border-[#00426D]/15 rounded-lg space-y-4 relative bg-slate-50/40" data-testid={`brand-section-${index}`}>
+      <div className="flex items-center justify-between">
+        <h4 className="font-semibold text-[#00426D]">Brand {index + 1}</h4>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="text-red-500 hover:text-red-700"
+          onClick={onRemove}
+          data-testid={`button-remove-brand-${index}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name={`brands.${index}.brandName`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Brand Name</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value || ""} placeholder="Brand name" data-testid={`input-brand-${index}-name`} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`brands.${index}.crNumber`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>CR Number</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value || ""} placeholder="e.g. 123456" maxLength={14} data-testid={`input-brand-${index}-cr`} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <FormField
+        control={form.control}
+        name={`brands.${index}.address`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Address</FormLabel>
+            <FormControl>
+              <Input {...field} value={field.value || ""} placeholder="Brand address" data-testid={`input-brand-${index}-address`} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <Separator />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name={`brands.${index}.contactPerson`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Contact Person</FormLabel>
+              <FormControl><Input {...field} value={field.value || ""} placeholder="Full name" data-testid={`input-brand-${index}-contact`} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`brands.${index}.email`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl><Input {...field} value={field.value || ""} type="email" placeholder="email@brand.com" data-testid={`input-brand-${index}-email`} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`brands.${index}.phone`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone</FormLabel>
+              <FormControl>
+                <PhoneInput value={field.value || ""} onChange={field.onChange} placeholder="Phone" data-testid={`input-brand-${index}-phone`} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name={`brands.${index}.whatsapp`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>WhatsApp</FormLabel>
+              <FormControl>
+                <PhoneInput value={field.value || ""} onChange={field.onChange} placeholder="WhatsApp" data-testid={`input-brand-${index}-whatsapp`} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      <Separator />
+
+      <div>
+        <Label className="text-sm font-medium text-[#00426D]">Business Categories</Label>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+          {categories.map((c) => {
+            const sel = brandCats.includes(c.name);
+            return (
+              <label key={c.id} className={cn(
+                "flex items-center gap-2 p-2 rounded border cursor-pointer text-xs",
+                sel ? "border-[#FF7F39] bg-[#FF7F39]/10" : "border-slate-200"
+              )} data-testid={`checkbox-brand-${index}-cat-${c.id}`}>
+                <input
+                  type="checkbox"
+                  checked={sel}
+                  onChange={(e) => {
+                    if (e.target.checked) form.setValue(`brands.${index}.businessCategories`, [...brandCats, c.name]);
+                    else form.setValue(`brands.${index}.businessCategories`, brandCats.filter((v) => v !== c.name));
+                  }}
+                  className="h-3 w-3 accent-[#FF7F39]"
+                />
+                <span>{c.name}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      <Separator />
+
+      <div>
+        <Label className="text-sm font-medium text-[#00426D]">Documents</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+          <DocumentUpload label="CR Document" field={`brands.${index}.crDocument` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label="Establishment Card" field={`brands.${index}.establishmentCard` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label="Trade License" field={`brands.${index}.tradeLicense` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label="Menu / Price List" field={`brands.${index}.menuPriceList` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label="Tax Card" field={`brands.${index}.taxCardDocument` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label="Logo" field={`brands.${index}.logo` as any} form={form} onChange={handleFileUpload} accept="image/*" />
+          <DocumentUpload label="Cover Image" field={`brands.${index}.coverImage` as any} form={form} onChange={handleFileUpload} accept="image/*" />
+        </div>
+      </div>
     </div>
   );
 }

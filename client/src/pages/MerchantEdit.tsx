@@ -123,6 +123,10 @@ export default function MerchantEdit() {
   });
 
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [companyType, setCompanyType] = useState<"individual" | "group">("individual");
+  const isGroup = companyType === "group";
+  const dealCap = isGroup ? 200 : 50;
   const [discountTypes, setDiscountTypes] = useState<Record<number, "percentage" | "discountedPrice">>({});
   const [categories, setCategories] = useState<CategoryWithSubs[]>([]);
   const [claimTerms, setClaimTerms] = useState<Term[]>([]);
@@ -175,6 +179,8 @@ export default function MerchantEdit() {
       }
 
       setMerchant(data);
+      setCompanyType(data.companyType === "group" ? "group" : "individual");
+      setBrands(Array.isArray(data.brands) ? data.brands : []);
       setFormData({
         companyName: data.companyName || "",
         crNumber: data.crNumber || "",
@@ -355,9 +361,14 @@ export default function MerchantEdit() {
 
     const validationErrors: string[] = [];
     if (!formData.companyName.trim()) validationErrors.push("Company name is required");
-    if (!formData.crNumber.trim()) validationErrors.push("CR number is required");
-    if (formData.crNumber && !/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber)) validationErrors.push("CR number must be 4-14 alphanumeric characters");
-    if (!formData.brandName.trim()) validationErrors.push("Brand name is required");
+    if (!isGroup) {
+      if (!formData.crNumber.trim()) validationErrors.push("CR number is required");
+      if (formData.crNumber && !/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber)) validationErrors.push("CR number must be 4-14 alphanumeric characters");
+      if (!formData.brandName.trim()) validationErrors.push("Brand name is required");
+    } else {
+      if (brands.length === 0) validationErrors.push("Group merchants must have at least one brand");
+      if (brands.length > 50) validationErrors.push("Maximum 50 brands per group");
+    }
     if (!formData.contactPerson.trim()) validationErrors.push("Contact person is required");
     if (!formData.email.trim()) validationErrors.push("Email is required");
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) validationErrors.push("Invalid email format");
@@ -381,6 +392,10 @@ export default function MerchantEdit() {
       });
       return;
     }
+    if (deals.length > dealCap) {
+      toast({ title: `Maximum ${dealCap} deals exceeded`, variant: "destructive" });
+      return;
+    }
     
     setIsSaving(true);
     try {
@@ -393,6 +408,9 @@ export default function MerchantEdit() {
         logo: merchant.logo || null,
         coverImage: merchant.coverImage || null,
       };
+      if (isGroup) {
+        updateData.brands = brands;
+      }
       if (merchant.crDocument) updateData.crDocument = merchant.crDocument;
       if (merchant.establishmentCard) updateData.establishmentCard = merchant.establishmentCard;
       if (merchant.tradeLicense) updateData.tradeLicense = merchant.tradeLicense;
@@ -473,9 +491,21 @@ export default function MerchantEdit() {
           </Button>
         </div>
 
+        <Card className="border-[#00426D]/20 bg-[#00426D]/5">
+          <CardContent className="pt-6 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wide">Company Type</p>
+              <p className="text-base font-semibold text-[#00426D]" data-testid="text-company-type">
+                {isGroup ? "Group (multiple brands)" : "Individual (single brand)"}
+              </p>
+            </div>
+            <span className="text-xs text-slate-500 italic">Type cannot be changed after submission</span>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
-            <CardTitle className="text-[#00426D]">Company Information</CardTitle>
+            <CardTitle className="text-[#00426D]">{isGroup ? "Group Information" : "Company Information"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -845,16 +875,101 @@ export default function MerchantEdit() {
           </CardContent>
         </Card>
 
+        {/* Brands - Group only */}
+        {isGroup && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-[#00426D]">Brands ({brands.length}/50)</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={brands.length >= 50}
+                onClick={() => setBrands([...brands, {
+                  brandName: "", address: "", contactPerson: "", email: "", phone: "", whatsapp: "",
+                  crNumber: "", crDocument: null, establishmentCard: null, tradeLicense: null,
+                  taxCardDocument: null, menuPriceList: null, logo: null, coverImage: null,
+                  businessCategories: [],
+                }])}
+                data-testid="button-add-brand"
+              >
+                <Plus className="h-4 w-4 mr-1" /> Add Brand
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {brands.length === 0 && (
+                <p className="text-slate-500 text-sm text-center py-4">No brands. Add at least one.</p>
+              )}
+              {brands.map((b, idx) => (
+                <div key={idx} className="p-4 border-2 border-[#00426D]/15 rounded-lg space-y-3 bg-slate-50/40" data-testid={`brand-edit-${idx}`}>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-[#00426D]">Brand {idx + 1}</h4>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-red-500"
+                      onClick={() => setBrands(brands.filter((_, i) => i !== idx))}
+                      data-testid={`button-remove-brand-${idx}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Brand Name</Label>
+                      <Input value={b.brandName || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, brandName: e.target.value } : x))} data-testid={`input-brand-${idx}-name`} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>CR Number</Label>
+                      <Input value={b.crNumber || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, crNumber: e.target.value } : x))} maxLength={14} data-testid={`input-brand-${idx}-cr`} />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label>Address</Label>
+                      <Input value={b.address || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, address: e.target.value } : x))} data-testid={`input-brand-${idx}-address`} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Contact Person</Label>
+                      <Input value={b.contactPerson || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, contactPerson: e.target.value } : x))} data-testid={`input-brand-${idx}-contact`} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Email</Label>
+                      <Input type="email" value={b.email || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, email: e.target.value } : x))} data-testid={`input-brand-${idx}-email`} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Phone</Label>
+                      <Input value={b.phone || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, phone: e.target.value } : x))} data-testid={`input-brand-${idx}-phone`} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>WhatsApp</Label>
+                      <Input value={b.whatsapp || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, whatsapp: e.target.value } : x))} data-testid={`input-brand-${idx}-whatsapp`} />
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-500 pt-2 border-t">
+                    Documents: {[
+                      b.crDocument && "CR",
+                      b.tradeLicense && "Trade License",
+                      b.taxCardDocument && "Tax Card",
+                      b.establishmentCard && "Establishment Card",
+                      b.menuPriceList && "Menu",
+                      b.logo && "Logo",
+                      b.coverImage && "Cover",
+                    ].filter(Boolean).join(", ") || "None uploaded"}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Deals Section */}
         <Card>
           <CardHeader>
             <CardTitle className="text-[#00426D] flex items-center justify-between">
-              <span>Deals ({deals.length}/50)</span>
+              <span>Deals ({deals.length}/{dealCap})</span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={addNewDeal}
-                disabled={deals.length >= 50}
+                disabled={deals.length >= dealCap}
                 data-testid="button-add-deal"
               >
                 <Plus className="h-4 w-4 mr-1" />
@@ -863,8 +978,8 @@ export default function MerchantEdit() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {deals.length >= 50 && (
-              <p className="text-amber-600 text-sm text-center py-2 bg-amber-50 rounded-md">Maximum of 50 deals reached.</p>
+            {deals.length >= dealCap && (
+              <p className="text-amber-600 text-sm text-center py-2 bg-amber-50 rounded-md">Maximum of {dealCap} deals reached.</p>
             )}
             {deals.length === 0 ? (
               <p className="text-slate-500 text-center py-4">No deals submitted with this application.</p>

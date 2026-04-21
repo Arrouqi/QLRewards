@@ -152,15 +152,16 @@ export type EmailSettings = typeof emailSettings.$inferSelect;
 
 export const merchants = pgTable("merchants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyType: text("company_type").notNull().default("individual"),
   companyName: text("company_name").notNull(),
-  crNumber: text("cr_number").notNull(),
-  brandName: text("brand_name").notNull(),
+  crNumber: text("cr_number"),
+  brandName: text("brand_name"),
   address: text("address").notNull(),
   contactPerson: text("contact_person").notNull(),
   email: text("email").notNull(),
   phone: text("phone").notNull(),
-  products: text("products").array().notNull(),
-  businessCategories: text("business_categories").array().notNull(),
+  products: text("products").array(),
+  businessCategories: text("business_categories").array(),
   branches: text("branches").array(),
   subscriptionFee: text("subscription_fee"),
   transactionFee: text("transaction_fee"),
@@ -191,20 +192,87 @@ export const merchants = pgTable("merchants", {
 });
 
 export const insertMerchantSchema = createInsertSchema(merchants, {
-  crNumber: z.string().regex(/^[a-zA-Z0-9]{4,14}$/, "CR number must be 4-14 alphanumeric characters"),
+  crNumber: z.string().regex(/^[a-zA-Z0-9]{4,14}$/, "CR number must be 4-14 alphanumeric characters").nullable().optional(),
+  brandName: z.string().nullable().optional(),
+  products: z.array(z.string()).nullable().optional(),
+  businessCategories: z.array(z.string()).nullable().optional(),
+  companyType: z.enum(["individual", "group"]).default("individual"),
 }).omit({
   id: true,
   status: true,
   submittedBy: true,
   createdAt: true,
+}).superRefine((data, ctx) => {
+  if (data.companyType === "group") return;
+  if (!data.crNumber || !/^[a-zA-Z0-9]{4,14}$/.test(data.crNumber)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crNumber"], message: "CR number must be 4-14 alphanumeric characters" });
+  }
+  if (!data.brandName || data.brandName.trim() === "") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandName"], message: "Brand name is required" });
+  }
+  if (!data.products || data.products.length === 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["products"], message: "Products are required" });
+  }
+  if (!data.businessCategories || data.businessCategories.length === 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["businessCategories"], message: "Business categories are required" });
+  }
 });
 
 export type InsertMerchant = z.infer<typeof insertMerchantSchema>;
 export type Merchant = typeof merchants.$inferSelect;
 
+export const merchantBrands = pgTable("merchant_brands", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  merchantId: varchar("merchant_id").notNull().references(() => merchants.id),
+  brandName: text("brand_name"),
+  address: text("address"),
+  contactPerson: text("contact_person"),
+  email: text("email"),
+  phone: text("phone"),
+  whatsapp: text("whatsapp"),
+  crNumber: text("cr_number"),
+  crDocument: text("cr_document"),
+  tradeLicense: text("trade_license"),
+  taxCardDocument: text("tax_card_document"),
+  establishmentCard: text("establishment_card"),
+  menuPriceList: text("menu_price_list"),
+  logo: text("logo"),
+  coverImage: text("cover_image"),
+  businessCategories: text("business_categories").array(),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const brandPayloadSchema = z.object({
+  brandName: z.string().max(200).nullable().optional(),
+  address: z.string().max(500).nullable().optional(),
+  contactPerson: z.string().max(200).nullable().optional(),
+  email: z.union([z.string().email().max(200), z.literal(""), z.null()]).optional(),
+  phone: z.string().max(50).nullable().optional(),
+  whatsapp: z.string().max(50).nullable().optional(),
+  crNumber: z.union([z.string().regex(/^[a-zA-Z0-9]{4,14}$/), z.literal(""), z.null()]).optional(),
+  crDocument: z.string().nullable().optional(),
+  tradeLicense: z.string().nullable().optional(),
+  taxCardDocument: z.string().nullable().optional(),
+  establishmentCard: z.string().nullable().optional(),
+  menuPriceList: z.string().nullable().optional(),
+  logo: z.string().nullable().optional(),
+  coverImage: z.string().nullable().optional(),
+  businessCategories: z.array(z.string().max(100)).max(50).nullable().optional(),
+});
+
+export const insertMerchantBrandSchema = createInsertSchema(merchantBrands).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMerchantBrand = z.infer<typeof insertMerchantBrandSchema>;
+export type MerchantBrand = typeof merchantBrands.$inferSelect;
+
 export const merchantDeals = pgTable("merchant_deals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   merchantId: varchar("merchant_id").notNull().references(() => merchants.id),
+  brandId: text("brand_id"),
   category: text("category").notNull(),
   subCategory: text("sub_category").notNull(),
   dealType: text("deal_type").notNull(),

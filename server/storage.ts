@@ -7,12 +7,13 @@ import {
   type EmailRecipient, type InsertEmailRecipient,
   type EmailSettings, type InsertEmailSettings,
   type Merchant, type InsertMerchant,
+  type MerchantBrand, type InsertMerchantBrand,
   type MerchantDeal, type InsertMerchantDeal,
   type MerchantNote, type InsertMerchantNote,
   type SubmissionLog, type InsertSubmissionLog,
   type SystemSetting,
   type ActivityLog, type InsertActivityLog,
-  deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantDeals, merchantNotes,
+  deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantBrands, merchantDeals, merchantNotes,
   submissionLogs, systemSettings, activityLogs
 } from "@shared/schema";
 import { db } from "./db";
@@ -74,6 +75,10 @@ export interface IStorage {
   createMerchantNote(note: InsertMerchantNote): Promise<MerchantNote>;
   updateMerchantOffersCreated(id: string, offersCreated: number): Promise<Merchant | undefined>;
   deleteMerchant(id: string): Promise<void>;
+  getMerchantBrandsByMerchantId(merchantId: string): Promise<MerchantBrand[]>;
+  createMerchantBrand(brand: InsertMerchantBrand): Promise<MerchantBrand>;
+  replaceMerchantBrands(merchantId: string, brands: Omit<InsertMerchantBrand, "merchantId">[]): Promise<MerchantBrand[]>;
+  deleteMerchantBrandsByMerchantId(merchantId: string): Promise<void>;
   createSubmissionLog(log: InsertSubmissionLog): Promise<SubmissionLog>;
   getSubmissionLogs(limit?: number, offset?: number): Promise<SubmissionLog[]>;
   getSubmissionLogCount(): Promise<number>;
@@ -419,6 +424,28 @@ export class DatabaseStorage implements IStorage {
 
   async getMerchantNotes(merchantId: string): Promise<MerchantNote[]> {
     return await db.select().from(merchantNotes).where(eq(merchantNotes.merchantId, merchantId)).orderBy(merchantNotes.createdAt);
+  }
+
+  async getMerchantBrandsByMerchantId(merchantId: string): Promise<MerchantBrand[]> {
+    return await db.select().from(merchantBrands).where(eq(merchantBrands.merchantId, merchantId)).orderBy(merchantBrands.displayOrder);
+  }
+
+  async createMerchantBrand(brand: InsertMerchantBrand): Promise<MerchantBrand> {
+    const [newBrand] = await db.insert(merchantBrands).values(brand).returning();
+    return newBrand;
+  }
+
+  async replaceMerchantBrands(merchantId: string, brands: Omit<InsertMerchantBrand, "merchantId">[]): Promise<MerchantBrand[]> {
+    return await db.transaction(async (tx) => {
+      await tx.delete(merchantBrands).where(eq(merchantBrands.merchantId, merchantId));
+      if (brands.length === 0) return [];
+      const rows = brands.map((b, i) => ({ ...b, merchantId, displayOrder: b.displayOrder ?? i }));
+      return await tx.insert(merchantBrands).values(rows).returning();
+    });
+  }
+
+  async deleteMerchantBrandsByMerchantId(merchantId: string): Promise<void> {
+    await db.delete(merchantBrands).where(eq(merchantBrands.merchantId, merchantId));
   }
 
   async createMerchantNote(note: InsertMerchantNote): Promise<MerchantNote> {

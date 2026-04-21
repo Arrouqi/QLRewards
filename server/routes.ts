@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema, insertMerchantNoteSchema } from "@shared/schema";
+import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema, insertMerchantNoteSchema, brandPayloadSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -969,7 +969,8 @@ export async function registerRoutes(
   app.post("/api/merchants", async (req, res) => {
     const startTime = Date.now();
     try {
-      const { deals, ...merchantData } = req.body;
+      const { deals, brands, ...merchantData } = req.body;
+      const isGroup = merchantData.companyType === "group";
       
       const documentFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'companyStamp', 'signedContractUpload', 'taxCardDocument', 'logo', 'coverImage'];
       for (const field of documentFields) {
@@ -987,6 +988,45 @@ export async function registerRoutes(
           }
         }
       }
+
+      // For group: upload all brand documents to Azure before creating merchant
+      const brandDocFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'taxCardDocument', 'logo', 'coverImage'];
+      const processedBrands: any[] = [];
+      if (isGroup && Array.isArray(brands)) {
+        if (brands.length < 1) {
+          const errorMsg = "Group merchants must have at least one brand";
+          await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
+          return res.status(400).json({ error: errorMsg });
+        }
+        if (brands.length > 50) {
+          const errorMsg = "Group merchants cannot have more than 50 brands";
+          await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
+          return res.status(400).json({ error: errorMsg });
+        }
+        for (let bIdx = 0; bIdx < brands.length; bIdx++) {
+          const brandParse = brandPayloadSchema.safeParse(brands[bIdx]);
+          if (!brandParse.success) {
+            return res.status(400).json({ error: `Brand ${bIdx + 1} validation failed`, details: brandParse.error.flatten() });
+          }
+          const brand = { ...brands[bIdx] };
+          for (const field of brandDocFields) {
+            if (brand[field] && typeof brand[field] === 'string' && brand[field].startsWith('data:')) {
+              try {
+                const urls = await uploadMultipleImages([brand[field]], `merchant-brand-${bIdx}-${field}`);
+                brand[field] = urls[0];
+              } catch (uploadError) {
+                console.error(`[Azure] Brand ${bIdx} ${field} upload failed:`, uploadError);
+                await logFormSubmission("merchant_onboarding", "failed", req, startTime, {
+                  errorMessage: `Brand file upload failed for ${field}: ${(uploadError as Error).message}`,
+                  errorDetails: (uploadError as Error).stack,
+                });
+                return res.status(500).json({ error: `Failed to upload brand ${bIdx + 1} ${field}. Please try again.` });
+              }
+            }
+          }
+          processedBrands.push(brand);
+        }
+      }
       
       const parsedBranches = (merchantData.branches || []).map((b: string, idx: number) => {
         try {
@@ -997,7 +1037,8 @@ export async function registerRoutes(
         }
       });
       
-      if (deals && Array.isArray(deals)) {
+      // Skip deal validation entirely for group (deals added later via edit)
+      if (!isGroup && deals && Array.isArray(deals)) {
         for (const deal of deals) {
           const dealBranches = deal.branches || [];
           if (parsedBranches.length > 1 && (!dealBranches || dealBranches.length === 0)) {
@@ -1016,8 +1057,31 @@ export async function registerRoutes(
       
       const validatedMerchant = insertMerchantSchema.parse(merchantData);
       const merchant = await storage.createMerchant(validatedMerchant);
+
+      // Save brands for group merchants
+      if (isGroup && processedBrands.length > 0) {
+        const brandRows = processedBrands.map((b, i) => ({
+          brandName: b.brandName || null,
+          address: b.address || null,
+          contactPerson: b.contactPerson || null,
+          email: b.email || null,
+          phone: b.phone || null,
+          whatsapp: b.whatsapp || null,
+          crNumber: b.crNumber || null,
+          crDocument: b.crDocument || null,
+          tradeLicense: b.tradeLicense || null,
+          taxCardDocument: b.taxCardDocument || null,
+          establishmentCard: b.establishmentCard || null,
+          menuPriceList: b.menuPriceList || null,
+          logo: b.logo || null,
+          coverImage: b.coverImage || null,
+          businessCategories: b.businessCategories || null,
+          displayOrder: i,
+        }));
+        await storage.replaceMerchantBrands(merchant.id, brandRows);
+      }
       
-      if (deals && Array.isArray(deals)) {
+      if (!isGroup && deals && Array.isArray(deals)) {
         for (const deal of deals) {
           try {
             let imageUrls: string[] = [];
@@ -1105,7 +1169,8 @@ export async function registerRoutes(
       }
       
       const deals = await storage.getMerchantDealsByMerchantId(merchant.id);
-      res.json({ ...merchant, deals });
+      const brands = merchant.companyType === "group" ? await storage.getMerchantBrandsByMerchantId(merchant.id) : [];
+      res.json({ ...merchant, deals, brands });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1119,7 +1184,8 @@ export async function registerRoutes(
       }
       
       const deals = await storage.getMerchantDealsByMerchantId(merchant.id);
-      res.json({ ...merchant, deals });
+      const brands = merchant.companyType === "group" ? await storage.getMerchantBrandsByMerchantId(merchant.id) : [];
+      res.json({ ...merchant, deals, brands });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -1143,7 +1209,11 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Moderation team cannot edit merchants in With Sales status" });
       }
       
-      const { deals: dealUpdates, ...merchantData } = req.body;
+      const { deals: dealUpdates, brands: brandUpdates, ...merchantData } = req.body;
+      
+      // Lock companyType: never allow it to be changed via edit
+      delete merchantData.companyType;
+      const isGroup = existingMerchantForEdit.companyType === "group";
       
       const docFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'taxCardDocument', 'logo', 'coverImage'];
       for (const field of docFields) {
@@ -1156,11 +1226,65 @@ export async function registerRoutes(
           }
         }
       }
+
+      // Process brand updates for group merchants
+      const brandDocFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'taxCardDocument', 'logo', 'coverImage'];
+      let processedBrandRows: any[] | null = null;
+      if (isGroup && Array.isArray(brandUpdates)) {
+        if (brandUpdates.length < 1) {
+          return res.status(400).json({ error: "Group merchants must have at least one brand" });
+        }
+        if (brandUpdates.length > 50) {
+          return res.status(400).json({ error: "Group merchants cannot have more than 50 brands" });
+        }
+        processedBrandRows = [];
+        for (let bIdx = 0; bIdx < brandUpdates.length; bIdx++) {
+          const brandParse = brandPayloadSchema.safeParse(brandUpdates[bIdx]);
+          if (!brandParse.success) {
+            return res.status(400).json({ error: `Brand ${bIdx + 1} validation failed`, details: brandParse.error.flatten() });
+          }
+          const brand = { ...brandUpdates[bIdx] };
+          for (const field of brandDocFields) {
+            if (brand[field] && typeof brand[field] === 'string' && brand[field].startsWith('data:')) {
+              try {
+                const urls = await uploadMultipleImages([brand[field]], `merchant-${req.params.id}-brand-${bIdx}-${field}`);
+                brand[field] = urls[0];
+              } catch (uploadError) {
+                console.error(`[Azure] Brand ${bIdx} ${field} upload failed:`, uploadError);
+                return res.status(500).json({ error: `Failed to upload brand ${bIdx + 1} ${field}.` });
+              }
+            }
+          }
+          processedBrandRows.push({
+            brandName: brand.brandName || null,
+            address: brand.address || null,
+            contactPerson: brand.contactPerson || null,
+            email: brand.email || null,
+            phone: brand.phone || null,
+            whatsapp: brand.whatsapp || null,
+            crNumber: brand.crNumber || null,
+            crDocument: brand.crDocument || null,
+            tradeLicense: brand.tradeLicense || null,
+            taxCardDocument: brand.taxCardDocument || null,
+            establishmentCard: brand.establishmentCard || null,
+            menuPriceList: brand.menuPriceList || null,
+            logo: brand.logo || null,
+            coverImage: brand.coverImage || null,
+            businessCategories: brand.businessCategories || null,
+            displayOrder: bIdx,
+          });
+        }
+      }
       
       // Update merchant data
       const merchant = await storage.updateMerchant(req.params.id, merchantData);
       if (!merchant) {
         return res.status(404).json({ error: "Merchant not found" });
+      }
+
+      // Replace brands if provided
+      if (processedBrandRows !== null) {
+        await storage.replaceMerchantBrands(req.params.id, processedBrandRows);
       }
       
       // Update deals if provided

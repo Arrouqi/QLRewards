@@ -14,6 +14,46 @@ Preferred communication style: Simple, everyday language.
 - Always list any new columns/tables added so the user can run the corresponding `ALTER TABLE` statements on their production DB
 - The Replit environment is for development/testing only
 
+#### Pending Production Migrations (Group Company feature)
+Run these on the production DB before deploying the Group Company feature:
+```sql
+-- 1. Add companyType to merchants
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS company_type text NOT NULL DEFAULT 'individual';
+
+-- 2. Make individual-only fields nullable
+ALTER TABLE merchants ALTER COLUMN cr_number DROP NOT NULL;
+ALTER TABLE merchants ALTER COLUMN brand_name DROP NOT NULL;
+ALTER TABLE merchants ALTER COLUMN products DROP NOT NULL;
+ALTER TABLE merchants ALTER COLUMN business_categories DROP NOT NULL;
+
+-- 3. Add brandId to merchant_deals (nullable)
+ALTER TABLE merchant_deals ADD COLUMN IF NOT EXISTS brand_id text;
+
+-- 4. Create merchant_brands table
+CREATE TABLE IF NOT EXISTS merchant_brands (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id varchar NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+  brand_name text,
+  address text,
+  contact_person text,
+  email text,
+  phone text,
+  whatsapp text,
+  cr_number text,
+  cr_document text,
+  establishment_card text,
+  trade_license text,
+  tax_card_document text,
+  menu_price_list text,
+  logo text,
+  cover_image text,
+  business_categories text[],
+  display_order integer NOT NULL DEFAULT 0,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_merchant_brands_merchant_id ON merchant_brands(merchant_id);
+```
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -40,8 +80,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Data Models
 - **deals**: Stores merchant deal submissions with fields for category, pricing, discount info, rules, and approval status
-- **merchants**: Stores merchant onboarding applications with company info, documents (CR, trade license, tax card, logo, cover image, etc.), WhatsApp number, sales order PDF (Azure URL), signed contract, `submittedBy` (admin who forwarded to moderation), `offersCreated` (integer counter), and status flow (pending ↔ moderation → created → licensing → licensed; any non-archived → archived; archived → pending/moderation). Admin role can permanently delete archived merchants.
-- **merchantDeals**: Stores deal offers per merchant with category, pricing, discount percentage OR discounted price, rules, images, and availability days
+- **merchants**: Stores merchant onboarding applications with company info, documents (CR, trade license, tax card, logo, cover image, etc.), WhatsApp number, sales order PDF (Azure URL), signed contract, `submittedBy` (admin who forwarded to moderation), `offersCreated` (integer counter), `companyType` ('individual' | 'group', default 'individual'), and status flow (pending ↔ moderation → created → licensing → licensed; any non-archived → archived; archived → pending/moderation). Admin role can permanently delete archived merchants. For `companyType='group'` merchants: `crNumber`, `brandName`, per-merchant CR/trade/tax/menu/logo/cover documents, `products`, and `businessCategories` are all empty/null at the merchant level — those values live per-brand in `merchantBrands` instead.
+- **merchantBrands**: Per-brand records for `companyType='group'` merchants (1-50 per merchant). Holds brandName, address, contactPerson, email, phone, whatsapp, crNumber, document URLs (crDocument, establishmentCard, tradeLicense, taxCardDocument, menuPriceList, logo, coverImage), businessCategories array, and displayOrder. All fields nullable. Branches (JSON) and merchantDeals can each reference a brand via `brandId` (the brand's index/UUID).
+- **merchantDeals**: Stores deal offers per merchant with category, pricing, discount percentage OR discounted price, rules, images, and availability days. Optional `brandId` for group merchants.
 - **merchantNotes**: Internal notes/comments on merchant applications (author, content, timestamp); thread-style, add-only
 - **adminUsers**: Stores admin credentials for the dashboard (managed via Settings → Users tab, admin-only). Roles: `sales` (forward pending→moderation only, edit pending merchants only), `moderation` (manage moderation+ merchants, no access to With Sales), `admin` (full access including settings, archive management, permanent delete, activity logs)
 - **activityLogs**: Tracks user actions (status changes, edits) with username, action, merchantId, merchantName, details, timestamp. Admin-only viewing & clearing via Settings → Activity tab.

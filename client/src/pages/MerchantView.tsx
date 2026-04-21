@@ -747,7 +747,14 @@ export default function MerchantView() {
                   <CardTitle className="text-2xl text-[#00426D]" data-testid="text-company-name">
                     {merchant.companyName}
                   </CardTitle>
-                  <p className="text-slate-500">{merchant.brandName}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {(merchant as any).companyType === "group" ? (
+                      <Badge className="bg-[#00426D] text-white" data-testid="badge-company-type">Group</Badge>
+                    ) : (
+                      <Badge variant="outline" data-testid="badge-company-type">Individual</Badge>
+                    )}
+                    {merchant.brandName && <p className="text-slate-500">{merchant.brandName}</p>}
+                  </div>
                 </div>
               </div>
               <p className="text-sm text-slate-500">
@@ -758,13 +765,15 @@ export default function MerchantView() {
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-slate-400" />
-                  <div>
-                    <p className="text-xs text-slate-500">CR Number</p>
-                    <p className="font-medium">{merchant.crNumber}</p>
+                {(merchant as any).companyType !== "group" && (
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-slate-400" />
+                    <div>
+                      <p className="text-xs text-slate-500">CR Number</p>
+                      <p className="font-medium">{merchant.crNumber}</p>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex items-center gap-3">
                   <MapPin className="h-5 w-5 text-slate-400" />
                   <div>
@@ -828,6 +837,50 @@ export default function MerchantView() {
           </CardContent>
         </Card>
 
+        {(merchant as any).companyType === "group" && Array.isArray((merchant as any).brands) && (merchant as any).brands.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-[#00426D]">Brands ({(merchant as any).brands.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(merchant as any).brands.map((b: any, idx: number) => (
+                <div key={b.id || idx} className="p-4 border-2 border-[#00426D]/15 rounded-lg bg-slate-50/40 space-y-3" data-testid={`brand-view-${idx}`}>
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-[#00426D]">{b.brandName || `Brand ${idx + 1}`}</h4>
+                    {b.crNumber && <span className="text-xs text-slate-500">CR: {b.crNumber}</span>}
+                  </div>
+                  {b.address && <p className="text-sm text-slate-600"><MapPin className="h-3.5 w-3.5 inline mr-1" />{b.address}</p>}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    {b.contactPerson && <div><span className="text-xs text-slate-500">Contact:</span> {b.contactPerson}</div>}
+                    {b.email && <div><span className="text-xs text-slate-500">Email:</span> {b.email}</div>}
+                    {b.phone && <div><span className="text-xs text-slate-500">Phone:</span> {b.phone}</div>}
+                    {b.whatsapp && <div><span className="text-xs text-slate-500">WhatsApp:</span> {b.whatsapp}</div>}
+                  </div>
+                  {Array.isArray(b.businessCategories) && b.businessCategories.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {b.businessCategories.map((c: string) => <Badge key={c} variant="outline" className="text-xs">{c}</Badge>)}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2 text-xs pt-2 border-t border-slate-200">
+                    {[
+                      { label: "CR", url: b.crDocument },
+                      { label: "Trade License", url: b.tradeLicense },
+                      { label: "Tax Card", url: b.taxCardDocument },
+                      { label: "Establishment Card", url: b.establishmentCard },
+                      { label: "Menu", url: b.menuPriceList },
+                      { label: "Logo", url: b.logo },
+                      { label: "Cover", url: b.coverImage },
+                    ].filter((d) => d.url).map((d) => (
+                      <a key={d.label} href={d.url} target="_blank" rel="noopener noreferrer" className="text-[#00426D] underline" data-testid={`link-brand-${idx}-${d.label}`}>{d.label}</a>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {(merchant as any).companyType !== "group" && (
         <Card>
           <CardHeader>
             <CardTitle className="text-[#00426D]">Documents</CardTitle>
@@ -869,6 +922,8 @@ export default function MerchantView() {
             </div>
           </CardContent>
         </Card>
+
+        )}
 
         {merchant.branches && merchant.branches.length > 0 && (
           <Card>
