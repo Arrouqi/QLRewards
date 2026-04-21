@@ -1377,6 +1377,7 @@ export async function registerRoutes(
               otherRules: deal.otherRules || null,
               branches: deal.branches || [],
               images,
+              brandId: deal.brandId || null,
             });
           }
         }

@@ -1532,16 +1532,79 @@ export default function MerchantEdit() {
                         />
                       </div>
                       
-                      {deal.branches && deal.branches.length > 0 && (
+                      {isGroup && brands.length > 0 && (
                         <div className="space-y-2">
-                          <Label>Applicable Branches</Label>
-                          <div className="flex flex-wrap gap-1">
-                            {deal.branches.map((branch, i) => (
-                              <Badge key={i} variant="secondary">{branch}</Badge>
-                            ))}
-                          </div>
+                          <Label>Brand (optional)</Label>
+                          <Select
+                            value={(deal as any).brandId || "__none__"}
+                            onValueChange={(val) => handleDealChange(index, "brandId" as any, val === "__none__" ? null : val)}
+                          >
+                            <SelectTrigger data-testid={`select-deal-${index}-brand`}>
+                              <SelectValue placeholder="Select a brand" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— None —</SelectItem>
+                              {brands.map((b: any, bi: number) => (
+                                <SelectItem key={b.id || bi} value={b.id || String(bi)}>
+                                  {b.brandName || `Brand ${bi + 1}`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       )}
+
+                      <div className="space-y-2">
+                        {branches.length === 0 ? (
+                          <>
+                            <Label>Applicable Branches</Label>
+                            <p className="text-sm text-slate-500">Add branches above first.</p>
+                          </>
+                        ) : branches.length === 1 ? (
+                          <>
+                            <Label>Applicable Branch</Label>
+                            <p className="text-sm text-slate-600 p-2 bg-slate-50 rounded border">
+                              {branches[0]?.name || "Branch 1"} (automatically selected)
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <Label>Applicable Branches *</Label>
+                            <p className="text-xs text-slate-500">Select at least one branch</p>
+                            <div className="space-y-2">
+                              {branches.map((branch: any, branchIndex: number) => {
+                                const displayName = branch?.name || `Branch ${branchIndex + 1}`;
+                                const dealBranches = deal.branches || [];
+                                const isSelected = dealBranches.includes(displayName);
+                                return (
+                                  <label
+                                    key={branchIndex}
+                                    className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
+                                    data-testid={`label-deal-${index}-branch-${branchIndex}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        const next = e.target.checked
+                                          ? [...dealBranches, displayName]
+                                          : dealBranches.filter((v: string) => v !== displayName);
+                                        handleDealChange(index, "branches", next);
+                                      }}
+                                      className="h-4 w-4 accent-[#00426D]"
+                                      data-testid={`checkbox-deal-${index}-branch-${branchIndex}`}
+                                    />
+                                    <span className="text-sm">{displayName}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            {(deal.branches || []).length === 0 && (
+                              <p className="text-sm text-red-500">Please select at least one branch</p>
+                            )}
+                          </>
+                        )}
+                      </div>
                       
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
