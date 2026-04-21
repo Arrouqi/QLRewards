@@ -124,6 +124,9 @@ export default function MerchantEdit() {
 
   const [deals, setDeals] = useState<Deal[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [activeBrandDoc, setActiveBrandDoc] = useState<{ idx: number; field: string } | null>(null);
+  const brandDocFileRef = useRef<HTMLInputElement>(null);
   const [companyType, setCompanyType] = useState<"individual" | "group">("individual");
   const isGroup = companyType === "group";
   const dealCap = isGroup ? 200 : 50;
@@ -181,6 +184,12 @@ export default function MerchantEdit() {
       setMerchant(data);
       setCompanyType(data.companyType === "group" ? "group" : "individual");
       setBrands(Array.isArray(data.brands) ? data.brands : []);
+      const parsedBranches = Array.isArray(data.branches)
+        ? data.branches.map((b: any) => {
+            try { return typeof b === "string" ? JSON.parse(b) : b; } catch { return { name: String(b), location: "", phone: "", detail: "" }; }
+          })
+        : [];
+      setBranches(parsedBranches);
       setFormData({
         companyName: data.companyName || "",
         crNumber: data.crNumber || "",
@@ -356,6 +365,19 @@ export default function MerchantEdit() {
     reader.readAsDataURL(file);
   };
 
+  const handleBrandDocUpload = (idx: number, field: string, file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setBrands(prev => prev.map((b, i) => i === idx ? { ...b, [field]: dataUrl } : b));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const updateBranch = (idx: number, patch: Record<string, any>) => {
+    setBranches(prev => prev.map((b, i) => i === idx ? { ...b, ...patch } : b));
+  };
+
   const handleSave = async () => {
     if (!merchant) return;
 
@@ -409,8 +431,16 @@ export default function MerchantEdit() {
         coverImage: merchant.coverImage || null,
       };
       if (isGroup) {
-        updateData.brands = brands;
+        updateData.brands = brands.map((b) => ({
+          ...b,
+          businessCategories: Array.isArray(b.businessCategories)
+            ? b.businessCategories
+            : (typeof b.businessCategories === "string" && b.businessCategories
+                ? b.businessCategories.split(",").map((c: string) => c.trim()).filter(Boolean)
+                : []),
+        }));
       }
+      updateData.branches = branches.map((b) => JSON.stringify(b));
       if (merchant.crDocument) updateData.crDocument = merchant.crDocument;
       if (merchant.establishmentCard) updateData.establishmentCard = merchant.establishmentCard;
       if (merchant.tradeLicense) updateData.tradeLicense = merchant.tradeLicense;
@@ -520,32 +550,36 @@ export default function MerchantEdit() {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="crNumber">CR Number</Label>
-                <Input
-                  id="crNumber"
-                  name="crNumber"
-                  value={formData.crNumber}
-                  onChange={handleChange}
-                  placeholder="e.g. 123456 or ABC1234"
-                  maxLength={14}
-                  data-testid="input-cr-number"
-                />
-                {formData.crNumber && !/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber) && (
-                  <p className="text-sm text-red-500">CR number must be 4-14 alphanumeric characters</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="brandName">Brand Name</Label>
-                <Input
-                  id="brandName"
-                  name="brandName"
-                  value={formData.brandName}
-                  onChange={handleChange}
-                  data-testid="input-brand-name"
-                />
-              </div>
+              {!isGroup && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="crNumber">CR Number</Label>
+                    <Input
+                      id="crNumber"
+                      name="crNumber"
+                      value={formData.crNumber}
+                      onChange={handleChange}
+                      placeholder="e.g. 123456 or ABC1234"
+                      maxLength={14}
+                      data-testid="input-cr-number"
+                    />
+                    {formData.crNumber && !/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber) && (
+                      <p className="text-sm text-red-500">CR number must be 4-14 alphanumeric characters</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="brandName">Brand Name</Label>
+                    <Input
+                      id="brandName"
+                      name="brandName"
+                      value={formData.brandName}
+                      onChange={handleChange}
+                      data-testid="input-brand-name"
+                    />
+                  </div>
+                </>
+              )}
               
               <div className="space-y-2">
                 <Label htmlFor="contactPerson">Contact Person</Label>
@@ -635,29 +669,33 @@ export default function MerchantEdit() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="products">Products (comma-separated)</Label>
-              <Input
-                id="products"
-                name="products"
-                value={formData.products}
-                onChange={handleChange}
-                placeholder="e.g. Food, Beverages, Retail"
-                data-testid="input-products"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="businessCategories">Business Categories (comma-separated)</Label>
-              <Input
-                id="businessCategories"
-                name="businessCategories"
-                value={formData.businessCategories}
-                onChange={handleChange}
-                placeholder="e.g. Restaurant, Cafe, Retail Store"
-                data-testid="input-categories"
-              />
-            </div>
+            {!isGroup && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="products">Products (comma-separated)</Label>
+                  <Input
+                    id="products"
+                    name="products"
+                    value={formData.products}
+                    onChange={handleChange}
+                    placeholder="e.g. Food, Beverages, Retail"
+                    data-testid="input-products"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="businessCategories">Business Categories (comma-separated)</Label>
+                  <Input
+                    id="businessCategories"
+                    name="businessCategories"
+                    value={formData.businessCategories}
+                    onChange={handleChange}
+                    placeholder="e.g. Restaurant, Cafe, Retail Store"
+                    data-testid="input-categories"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -799,7 +837,8 @@ export default function MerchantEdit() {
           </CardContent>
         </Card>
 
-        {/* Documents Section */}
+        {/* Documents Section - individual only (group docs live per-brand) */}
+        {!isGroup && (
         <Card>
           <CardHeader>
             <CardTitle className="text-[#00426D]">Documents</CardTitle>
@@ -874,6 +913,7 @@ export default function MerchantEdit() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Brands - Group only */}
         {isGroup && (
@@ -943,22 +983,160 @@ export default function MerchantEdit() {
                       <Input value={b.whatsapp || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, whatsapp: e.target.value } : x))} data-testid={`input-brand-${idx}-whatsapp`} />
                     </div>
                   </div>
-                  <div className="text-xs text-slate-500 pt-2 border-t">
-                    Documents: {[
-                      b.crDocument && "CR",
-                      b.tradeLicense && "Trade License",
-                      b.taxCardDocument && "Tax Card",
-                      b.establishmentCard && "Establishment Card",
-                      b.menuPriceList && "Menu",
-                      b.logo && "Logo",
-                      b.coverImage && "Cover",
-                    ].filter(Boolean).join(", ") || "None uploaded"}
+                  <div className="space-y-1">
+                    <Label>Business Categories (comma-separated)</Label>
+                    <Input
+                      value={Array.isArray(b.businessCategories) ? b.businessCategories.join(", ") : (b.businessCategories || "")}
+                      onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, businessCategories: e.target.value } : x))}
+                      placeholder="e.g. Restaurant, Cafe, Retail Store"
+                      data-testid={`input-brand-${idx}-categories`}
+                    />
+                  </div>
+
+                  <div className="pt-3 border-t">
+                    <p className="text-sm font-medium text-[#00426D] mb-2">Brand Documents</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { label: "CR Document", field: "crDocument" },
+                        { label: "Establishment Card", field: "establishmentCard" },
+                        { label: "Trade License", field: "tradeLicense" },
+                        { label: "Tax Card", field: "taxCardDocument" },
+                        { label: "Menu/Price List", field: "menuPriceList" },
+                        { label: "Logo", field: "logo" },
+                        { label: "Cover Image", field: "coverImage" },
+                      ].map((doc) => {
+                        const value = b[doc.field] as string | undefined;
+                        const isUploaded = !!value;
+                        return (
+                          <div key={doc.field} className="p-3 border rounded-lg text-center bg-white">
+                            <FileText className={`h-6 w-6 mx-auto mb-1 ${isUploaded ? 'text-green-500' : 'text-slate-400'}`} />
+                            <p className="text-xs font-medium mb-1">{doc.label}</p>
+                            {isUploaded ? (
+                              <div className="space-y-0.5">
+                                {!value?.startsWith('data:') && (
+                                  <a href={value} target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline text-xs block" data-testid={`link-brand-${idx}-${doc.field}`}>View</a>
+                                )}
+                                <button
+                                  type="button"
+                                  className="text-xs text-blue-600 hover:underline block w-full"
+                                  onClick={() => { setActiveBrandDoc({ idx, field: doc.field }); brandDocFileRef.current?.click(); }}
+                                  data-testid={`button-replace-brand-${idx}-${doc.field}`}
+                                >
+                                  Replace
+                                </button>
+                                <button
+                                  type="button"
+                                  className="text-xs text-red-500 hover:underline block w-full"
+                                  onClick={() => setBrands(brands.map((x, i) => i === idx ? { ...x, [doc.field]: null } : x))}
+                                  data-testid={`button-remove-brand-${idx}-${doc.field}`}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className="text-xs text-blue-600 hover:underline"
+                                onClick={() => { setActiveBrandDoc({ idx, field: doc.field }); brandDocFileRef.current?.click(); }}
+                                data-testid={`button-upload-brand-${idx}-${doc.field}`}
+                              >
+                                Upload
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               ))}
+              <input
+                type="file"
+                ref={brandDocFileRef}
+                accept="image/*,.pdf,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file && activeBrandDoc) handleBrandDocUpload(activeBrandDoc.idx, activeBrandDoc.field, file);
+                  e.target.value = "";
+                }}
+                data-testid="input-brand-doc-file"
+              />
             </CardContent>
           </Card>
         )}
+
+        {/* Branches editor */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-[#00426D]">Branch Locations ({branches.length})</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBranches([...branches, { name: "", location: "", phone: "", detail: "", ...(isGroup ? { brandId: "" } : {}) }])}
+              data-testid="button-add-branch"
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add Branch
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {branches.length === 0 && (
+              <p className="text-slate-500 text-sm text-center py-4">No branches added.</p>
+            )}
+            {branches.map((br, idx) => (
+              <div key={idx} className="p-4 border-2 border-[#00426D]/15 rounded-lg space-y-3 bg-slate-50/40" data-testid={`branch-edit-${idx}`}>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-[#00426D]">Branch {idx + 1}</h4>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-red-500"
+                    onClick={() => setBranches(branches.filter((_, i) => i !== idx))}
+                    data-testid={`button-remove-branch-${idx}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>Branch Name</Label>
+                    <Input value={br.name || ""} onChange={(e) => updateBranch(idx, { name: e.target.value })} data-testid={`input-branch-${idx}-name`} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Phone</Label>
+                    <Input value={br.phone || ""} onChange={(e) => updateBranch(idx, { phone: e.target.value })} data-testid={`input-branch-${idx}-phone`} />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label>Location URL (Google Maps)</Label>
+                    <Input value={br.location || ""} onChange={(e) => updateBranch(idx, { location: e.target.value })} placeholder="https://maps.google.com/..." data-testid={`input-branch-${idx}-location`} />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <Label>Address Details</Label>
+                    <Textarea value={br.detail || ""} onChange={(e) => updateBranch(idx, { detail: e.target.value })} rows={2} data-testid={`input-branch-${idx}-detail`} />
+                  </div>
+                  {isGroup && brands.length > 0 && (
+                    <div className="space-y-1 md:col-span-2">
+                      <Label>Belongs to Brand (optional)</Label>
+                      <Select value={br.brandId || "__none__"} onValueChange={(val) => updateBranch(idx, { brandId: val === "__none__" ? "" : val })}>
+                        <SelectTrigger data-testid={`select-branch-${idx}-brand`}>
+                          <SelectValue placeholder="Select brand" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— None —</SelectItem>
+                          {brands.map((br2, brIdx) => (
+                            <SelectItem key={brIdx} value={String(brIdx)}>
+                              {br2.brandName || `Brand ${brIdx + 1}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
         {/* Deals Section */}
         <Card>
