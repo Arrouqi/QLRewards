@@ -73,6 +73,26 @@ interface Merchant {
   submittedBy?: string;
   offersCreated?: number;
   deals?: any[];
+  companyType?: "individual" | "group";
+  brands?: Array<{
+    id?: string;
+    brandName?: string | null;
+    crNumber?: string | null;
+    address?: string | null;
+    contactPerson?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    whatsapp?: string | null;
+    businessCategories?: string[] | null;
+    crDocument?: string | null;
+    establishmentCard?: string | null;
+    tradeLicense?: string | null;
+    taxCardDocument?: string | null;
+    menuPriceList?: string | null;
+    logo?: string | null;
+    coverImage?: string | null;
+    displayOrder?: number;
+  }>;
 }
 
 interface MerchantNote {
@@ -435,31 +455,72 @@ export default function MerchantView() {
 
     drawHeader();
 
-    drawSectionHeader("COMPANY INFORMATION");
+    const isGroup = merchant.companyType === "group";
+    const brandsList = (merchant.brands || []).slice().sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+
+    drawSectionHeader(isGroup ? "GROUP INFORMATION" : "COMPANY INFORMATION");
     drawField("Company Name", merchant.companyName);
-    drawField("CR Number", merchant.crNumber);
-    drawField("Brand Name", merchant.brandName);
+    if (isGroup) {
+      drawField("Company Type", "Group");
+    } else {
+      drawField("CR Number", merchant.crNumber);
+      drawField("Brand Name", merchant.brandName);
+    }
     drawField("Address", merchant.address);
     drawField("Contact Person", merchant.contactPerson);
     drawField("Email", merchant.email);
     drawField("Phone", merchant.phone);
-    if (merchant.products?.length > 0) {
-      drawField("Product Types", merchant.products.join(", "));
-    }
-    if (merchant.businessCategories?.length > 0) {
-      drawField("Business Categories", merchant.businessCategories.join(", "));
+    if (!isGroup) {
+      if (merchant.products?.length > 0) {
+        drawField("Product Types", merchant.products.join(", "));
+      }
+      if (merchant.businessCategories?.length > 0) {
+        drawField("Business Categories", merchant.businessCategories.join(", "));
+      }
     }
     y += 3;
 
-    const documents = [];
-    if (merchant.crDocument) documents.push("CR Document");
-    if (merchant.establishmentCard) documents.push("Establishment Card");
-    if (merchant.tradeLicense) documents.push("Trade License");
-    if (merchant.menuPriceList) documents.push("Menu/Price List");
-    if (documents.length > 0) {
-      drawField("Documents Uploaded", documents.join(", "));
+    if (!isGroup) {
+      const documents = [];
+      if (merchant.crDocument) documents.push("CR Document");
+      if (merchant.establishmentCard) documents.push("Establishment Card");
+      if (merchant.tradeLicense) documents.push("Trade License");
+      if (merchant.menuPriceList) documents.push("Menu/Price List");
+      if (documents.length > 0) {
+        drawField("Documents Uploaded", documents.join(", "));
+      }
+      y += 5;
     }
-    y += 5;
+
+    if (isGroup && brandsList.length > 0) {
+      drawSectionHeader(`BRANDS (${brandsList.length})`);
+      brandsList.forEach((brand, index) => {
+        checkPageBreak(30);
+        drawSubsectionTitle(`Brand ${index + 1}: ${brand.brandName || "Unnamed"}`);
+        if (brand.crNumber) drawField("CR Number", brand.crNumber, 5);
+        if (brand.address) drawField("Address", brand.address, 5);
+        if (brand.contactPerson) drawField("Contact Person", brand.contactPerson, 5);
+        if (brand.email) drawField("Email", brand.email, 5);
+        if (brand.phone) drawField("Phone", brand.phone, 5);
+        if (brand.whatsapp) drawField("WhatsApp", brand.whatsapp, 5);
+        if (brand.businessCategories && brand.businessCategories.length > 0) {
+          drawField("Business Categories", brand.businessCategories.join(", "), 5);
+        }
+        const brandDocs: string[] = [];
+        if (brand.crDocument) brandDocs.push("CR Document");
+        if (brand.establishmentCard) brandDocs.push("Establishment Card");
+        if (brand.tradeLicense) brandDocs.push("Trade License");
+        if (brand.taxCardDocument) brandDocs.push("Tax Card");
+        if (brand.menuPriceList) brandDocs.push("Menu/Price List");
+        if (brand.logo) brandDocs.push("Logo");
+        if (brand.coverImage) brandDocs.push("Cover Image");
+        if (brandDocs.length > 0) {
+          drawField("Documents Uploaded", brandDocs.join(", "), 5);
+        }
+        drawDivider();
+      });
+      y += 3;
+    }
 
     drawSectionHeader("FEE STRUCTURE");
     const subscriptionFee = merchant.subscriptionFee || "0";
@@ -490,6 +551,13 @@ export default function MerchantView() {
         try {
           const branch = typeof branchStr === 'string' ? JSON.parse(branchStr) : branchStr;
           drawSubsectionTitle(`Branch ${index + 1}: ${branch.name}`);
+          if (isGroup && branch.brandId !== undefined && branch.brandId !== null && branch.brandId !== "") {
+            const bid = String(branch.brandId);
+            const matched = /^\d+$/.test(bid)
+              ? brandsList[parseInt(bid, 10)]
+              : brandsList.find(b => b.id === bid);
+            if (matched?.brandName) drawField("Brand", matched.brandName, 5);
+          }
           if (branch.location) drawField("Google Maps URL", branch.location, 5);
           if (branch.phone) drawField("Phone", branch.phone, 5);
           if (branch.detail) drawField("Details", branch.detail, 5);
