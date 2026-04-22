@@ -4,170 +4,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Qatar Living – Deals</title>
-
-  <!-- ── App Store smart-banner fallbacks (optional but helpful) ── -->
   <meta name="apple-itunes-app" content="app-id=961568535, app-argument=ql://RewardsScreen" />
   <meta name="google-play-app" content="app-id=com.qatarliving.classifieds" />
-
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0d1117;
-      --card: #161b22;
-      --accent: #e8b84b;
-      --text: #f0f6fc;
-      --muted: #8b949e;
-      --radius: 14px;
-    }
-
-    body {
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg);
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      color: var(--text);
-      padding: 24px;
-    }
-
-    .card {
-      background: var(--card);
-      border: 1px solid #30363d;
-      border-radius: var(--radius);
-      padding: 40px 32px 36px;
-      max-width: 360px;
-      width: 100%;
-      text-align: center;
-      animation: rise .5s ease both;
-    }
-
-    @keyframes rise {
-      from { opacity: 0; transform: translateY(18px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .logo {
-      width: 72px;
-      height: 72px;
-      border-radius: 18px;
-      background: var(--accent);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      margin-bottom: 20px;
-      box-shadow: 0 0 0 6px rgba(232,184,75,.15);
-    }
-
-    h1 { font-size: 1.35rem; font-weight: 700; margin-bottom: 6px; }
-    p  { font-size: .9rem; color: var(--muted); line-height: 1.55; margin-bottom: 28px; }
-
-    .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid #30363d;
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 20px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .status {
-      font-size: .82rem;
-      color: var(--muted);
-      min-height: 1.2em;
-      margin-bottom: 24px;
-    }
-
-    .btn {
-      display: inline-block;
-      padding: 13px 28px;
-      border-radius: 10px;
-      font-size: .95rem;
-      font-weight: 600;
-      text-decoration: none;
-      cursor: pointer;
-      border: none;
-      transition: opacity .2s, transform .15s;
-      width: 100%;
-    }
-    .btn:hover  { opacity: .88; transform: translateY(-1px); }
-    .btn:active { transform: scale(.97); }
-    .btn-primary { background: var(--accent); color: #0d1117; }
-    .btn-ghost   { background: transparent; color: var(--accent);
-                   border: 1.5px solid var(--accent); margin-top: 10px; }
-
-    .hidden { display: none !important; }
-    footer  { margin-top: 32px; font-size: .75rem; color: #484f58; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#0d1117;--accent:#e8b84b;--text:#f0f6fc;--muted:#8b949e;}
+    html,body{height:100%;}
+    body{display:flex;align-items:center;justify-content:center;background:var(--bg);font-family:'Segoe UI',system-ui,sans-serif;color:var(--text);padding:24px;}
+    .wrap{text-align:center;}
+    .logo{width:64px;height:64px;border-radius:16px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;font-size:1.7rem;margin-bottom:18px;box-shadow:0 0 0 6px rgba(232,184,75,.15);}
+    h1{font-size:1.1rem;font-weight:600;margin-bottom:6px;}
+    p{font-size:.85rem;color:var(--muted);}
+    .spinner{width:32px;height:32px;border:3px solid #30363d;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:18px auto 0;}
+    @keyframes spin{to{transform:rotate(360deg);}}
   </style>
 </head>
 <body>
-
-<div class="card">
-  <div class="logo">🏷️</div>
-
-  <!-- ── State: detecting ── -->
-  <div id="state-detecting">
-    <h1>Opening Deals&hellip;</h1>
-    <p>Taking you to the Qatar Living Deals page.</p>
+  <div class="wrap">
+    <div class="logo">🏷️</div>
+    <h1>Opening Qatar Living…</h1>
+    <p>Taking you to the Deals.</p>
     <div class="spinner"></div>
-    <div class="status" id="status-text">Launching app&hellip;</div>
   </div>
 
-  <!-- ── State: fallback (shown if app didn't open) ── -->
-  <div id="state-fallback" class="hidden">
-    <h1>Get the App</h1>
-    <p>Download Qatar Living to browse exclusive deals and rewards.</p>
-    <a id="store-link" href="#" class="btn btn-primary">Download Qatar Living</a>
-    <a href="https://www.qatarliving.com/deals" class="btn btn-ghost">Open in Browser Instead</a>
-  </div>
-</div>
+  <script>
+    var DEEP_LINK   = 'ql://RewardsScreen';
+    var ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.qatarliving.classifieds&hl=en-US';
+    var IOS_URL     = 'https://apps.apple.com/us/app/qatar-living/id961568535';
+    var WEB_URL     = 'https://www.qatarliving.com/deals';
+    var FALLBACK_MS = 1500;
 
-<footer>Qatar Living &copy; 2025</footer>
+    var ua        = navigator.userAgent || '';
+    var isIOS     = /iphone|ipad|ipod/i.test(ua);
+    var isAndroid = /android/i.test(ua);
 
-<script>
-  // ── Config ──────────────────────────────────────────────────────────────────
-  const DEEP_LINK    = 'ql://RewardsScreen';
-  const ANDROID_URL  = 'https://play.google.com/store/apps/details?id=com.qatarliving.classifieds&hl=en-US';
-  const IOS_URL      = 'https://apps.apple.com/us/app/qatar-living/id961568535';
-  const FALLBACK_MS  = 2200;   // wait 2.2 s before showing the fallback UI
+    if (!isIOS && !isAndroid) {
+      // Desktop → web
+      window.location.replace(WEB_URL);
+    } else {
+      var storeUrl = isIOS ? IOS_URL : ANDROID_URL;
 
-  // ── Platform detection ──────────────────────────────────────────────────────
-  const ua        = navigator.userAgent || '';
-  const isIOS     = /iphone|ipad|ipod/i.test(ua);
-  const isAndroid = /android/i.test(ua);
+      // If the app opens, the page becomes hidden — cancel the store redirect.
+      var t = setTimeout(function () {
+        window.location.replace(storeUrl);
+      }, FALLBACK_MS);
 
-  const storeUrl  = isIOS ? IOS_URL : (isAndroid ? ANDROID_URL : null);
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) clearTimeout(t);
+      });
+      window.addEventListener('pagehide', function () { clearTimeout(t); });
+      window.addEventListener('blur',     function () { clearTimeout(t); });
 
-  // Pre-set the store button so it's ready when shown
-  const storeLink = document.getElementById('store-link');
-  if (isIOS)     { storeLink.textContent = 'Download on the App Store';  storeLink.href = IOS_URL; }
-  else           { storeLink.textContent = 'Get it on Google Play';      storeLink.href = ANDROID_URL; }
-
-  function showFallback() {
-    document.getElementById('state-detecting').classList.add('hidden');
-    document.getElementById('state-fallback').classList.remove('hidden');
-  }
-
-  // ── Main logic ──────────────────────────────────────────────────────────────
-  if (!isIOS && !isAndroid) {
-    // Desktop – just go to the web deals page
-    window.location.replace('https://www.qatarliving.com/deals');
-  } else {
-    // Mobile – attempt deep link, fall back to store after timeout
-    const t = setTimeout(showFallback, FALLBACK_MS);
-
-    // Pause timer if user leaves (app opened successfully)
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) clearTimeout(t);
-    });
-
-    // Fire the deep link
-    window.location.href = DEEP_LINK;
-  }
-</script>
+      // Fire the deep link
+      window.location.href = DEEP_LINK;
+    }
+  </script>
 </body>
 </html>
