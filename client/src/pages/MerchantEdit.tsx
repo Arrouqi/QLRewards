@@ -59,6 +59,7 @@ interface Deal {
   otherRules?: string;
   branches?: string[];
   images?: string[];
+  brandId?: string | null;
 }
 
 interface Merchant {
@@ -98,6 +99,9 @@ export default function MerchantEdit() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [expandedDeals, setExpandedDeals] = useState<number[]>([]);
+  const [brandsOpen, setBrandsOpen] = useState(true);
+  const [branchesOpen, setBranchesOpen] = useState(true);
+  const [dealsOpen, setDealsOpen] = useState(true);
   const [isUploadingSalesOrder, setIsUploadingSalesOrder] = useState(false);
   const salesOrderFileRef = useRef<HTMLInputElement>(null);
   const dealImageFileRef = useRef<HTMLInputElement>(null);
@@ -234,6 +238,7 @@ export default function MerchantEdit() {
             otherRules: deal.otherRules || "",
             branches: deal.branches || [],
             images: deal.images || [],
+            brandId: deal.brandId ?? null,
           };
         });
         setDeals(parsedDeals);
@@ -242,8 +247,14 @@ export default function MerchantEdit() {
           types[i] = d.discountedPrice ? "discountedPrice" : "percentage";
         });
         setDiscountTypes(types);
-        setExpandedDeals(parsedDeals.map((_: any, i: number) => i));
+        // Default existing deals collapsed so the form isn't overwhelming
+        setExpandedDeals([]);
       }
+      // Default Brands & Branches collapsed when there's existing data
+      const hasBrands = Array.isArray(data.brands) && data.brands.length > 0;
+      const hasBranches = Array.isArray(data.branches) && data.branches.length > 0;
+      setBrandsOpen(!hasBrands);
+      setBranchesOpen(!hasBranches);
     } catch (error) {
       toast({ title: "Error loading merchant", variant: "destructive" });
       setLocation("/admin/merchants");
@@ -490,7 +501,7 @@ export default function MerchantEdit() {
   return (
     <AdminLayout>
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="sticky top-0 z-30 -mx-4 px-4 py-3 bg-white/95 backdrop-blur border-b border-slate-200 flex items-center justify-between shadow-sm">
           <Button
             variant="ghost"
             onClick={() => setLocation(`/admin/merchants/${merchant.id}`)}
@@ -500,7 +511,7 @@ export default function MerchantEdit() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Merchant
           </Button>
-          
+
           <Button
             onClick={handleSave}
             disabled={isSaving}
@@ -918,23 +929,32 @@ export default function MerchantEdit() {
         {/* Brands - Group only */}
         {isGroup && (
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-[#00426D]">Brands ({brands.length}/50)</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <button
+                type="button"
+                className="flex items-center gap-2 text-left"
+                onClick={() => setBrandsOpen((v) => !v)}
+                data-testid="toggle-brands"
+              >
+                {brandsOpen ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+                <CardTitle className="text-[#00426D]">Brands ({brands.length}/50)</CardTitle>
+              </button>
               <Button
                 variant="outline"
                 size="sm"
                 disabled={brands.length >= 50}
-                onClick={() => setBrands([...brands, {
+                onClick={() => { setBrandsOpen(true); setBrands([...brands, {
                   brandName: "", address: "", contactPerson: "", email: "", phone: "", whatsapp: "",
                   crNumber: "", crDocument: null, establishmentCard: null, tradeLicense: null,
                   taxCardDocument: null, menuPriceList: null, logo: null, coverImage: null,
                   businessCategories: [],
-                }])}
+                }]); }}
                 data-testid="button-add-brand"
               >
                 <Plus className="h-4 w-4 mr-1" /> Add Brand
               </Button>
             </CardHeader>
+            {brandsOpen && (
             <CardContent className="space-y-4">
               {brands.length === 0 && (
                 <p className="text-slate-500 text-sm text-center py-4">No brands. Add at least one.</p>
@@ -1063,22 +1083,32 @@ export default function MerchantEdit() {
                 data-testid="input-brand-doc-file"
               />
             </CardContent>
+            )}
           </Card>
         )}
 
         {/* Branches editor */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-[#00426D]">Branch Locations ({branches.length})</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <button
+              type="button"
+              className="flex items-center gap-2 text-left"
+              onClick={() => setBranchesOpen((v) => !v)}
+              data-testid="toggle-branches"
+            >
+              {branchesOpen ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+              <CardTitle className="text-[#00426D]">Branch Locations ({branches.length})</CardTitle>
+            </button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setBranches([...branches, { name: "", location: "", phone: "", detail: "", ...(isGroup ? { brandId: "" } : {}) }])}
+              onClick={() => { setBranchesOpen(true); setBranches([...branches, { name: "", location: "", phone: "", detail: "", ...(isGroup ? { brandId: "" } : {}) }]); }}
               data-testid="button-add-branch"
             >
               <Plus className="h-4 w-4 mr-1" /> Add Branch
             </Button>
           </CardHeader>
+          {branchesOpen && (
           <CardContent className="space-y-4">
             {branches.length === 0 && (
               <p className="text-slate-500 text-sm text-center py-4">No branches added.</p>
@@ -1124,7 +1154,7 @@ export default function MerchantEdit() {
                         <SelectContent>
                           <SelectItem value="__none__">— None —</SelectItem>
                           {brands.map((br2, brIdx) => (
-                            <SelectItem key={brIdx} value={String(brIdx)}>
+                            <SelectItem key={br2.id || brIdx} value={br2.id || String(brIdx)}>
                               {br2.brandName || `Brand ${brIdx + 1}`}
                             </SelectItem>
                           ))}
@@ -1136,17 +1166,26 @@ export default function MerchantEdit() {
               </div>
             ))}
           </CardContent>
+          )}
         </Card>
 
         {/* Deals Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-[#00426D] flex items-center justify-between">
-              <span>Deals ({deals.length}/{dealCap})</span>
+            <CardTitle className="text-[#00426D] flex items-center justify-between gap-2">
+              <button
+                type="button"
+                className="flex items-center gap-2 text-left"
+                onClick={() => setDealsOpen((v) => !v)}
+                data-testid="toggle-deals"
+              >
+                {dealsOpen ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+                <span>Deals ({deals.length}/{dealCap})</span>
+              </button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={addNewDeal}
+                onClick={() => { setDealsOpen(true); addNewDeal(); }}
                 disabled={deals.length >= dealCap}
                 data-testid="button-add-deal"
               >
@@ -1155,6 +1194,7 @@ export default function MerchantEdit() {
               </Button>
             </CardTitle>
           </CardHeader>
+          {dealsOpen && (
           <CardContent className="space-y-4">
             {deals.length >= dealCap && (
               <p className="text-amber-600 text-sm text-center py-2 bg-amber-50 rounded-md">Maximum of {dealCap} deals reached.</p>
@@ -1536,8 +1576,27 @@ export default function MerchantEdit() {
                         <div className="space-y-2">
                           <Label>Brand (optional)</Label>
                           <Select
-                            value={(deal as any).brandId || "__none__"}
-                            onValueChange={(val) => handleDealChange(index, "brandId" as any, val === "__none__" ? null : val)}
+                            value={deal.brandId || "__none__"}
+                            onValueChange={(val) => {
+                              const newBrandId = val === "__none__" ? null : val;
+                              handleDealChange(index, "brandId", newBrandId);
+                              if (newBrandId) {
+                                const brandIdx = brands.findIndex((b: any, i: number) => b.id === newBrandId || String(i) === newBrandId);
+                                if (brandIdx >= 0) {
+                                  const allowedNames = branches
+                                    .filter((br: any, bi: number) => {
+                                      const ref = br?.brandId;
+                                      const refIdx = brands.findIndex((b: any, i: number) => b.id === ref || String(i) === ref);
+                                      return refIdx === brandIdx;
+                                    })
+                                    .map((br: any, bi: number) => br?.name || `Branch ${bi + 1}`);
+                                  const filtered = (deal.branches || []).filter((n: string) => allowedNames.includes(n));
+                                  if (filtered.length !== (deal.branches || []).length) {
+                                    handleDealChange(index, "branches", filtered);
+                                  }
+                                }
+                              }
+                            }}
                           >
                             <SelectTrigger data-testid={`select-deal-${index}-brand`}>
                               <SelectValue placeholder="Select a brand" />
@@ -1554,25 +1613,43 @@ export default function MerchantEdit() {
                         </div>
                       )}
 
+                      {(() => {
+                        const selectedBrandIdx = isGroup && deal.brandId
+                          ? brands.findIndex((b: any, i: number) => b.id === deal.brandId || String(i) === deal.brandId)
+                          : -1;
+                        const visibleBranches = selectedBrandIdx >= 0
+                          ? branches
+                              .map((br: any, bi: number) => ({ br, bi }))
+                              .filter(({ br }) => {
+                                const ref = br?.brandId;
+                                const refIdx = brands.findIndex((b: any, i: number) => b.id === ref || String(i) === ref);
+                                return refIdx === selectedBrandIdx;
+                              })
+                          : branches.map((br: any, bi: number) => ({ br, bi }));
+                        return (
                       <div className="space-y-2">
-                        {branches.length === 0 ? (
+                        {visibleBranches.length === 0 ? (
                           <>
                             <Label>Applicable Branches</Label>
-                            <p className="text-sm text-slate-500">Add branches above first.</p>
+                            <p className="text-sm text-slate-500">
+                              {selectedBrandIdx >= 0
+                                ? "No branches assigned to this brand yet. Add branches above and assign them to this brand."
+                                : "Add branches above first."}
+                            </p>
                           </>
-                        ) : branches.length === 1 ? (
+                        ) : visibleBranches.length === 1 ? (
                           <>
                             <Label>Applicable Branch</Label>
                             <p className="text-sm text-slate-600 p-2 bg-slate-50 rounded border">
-                              {branches[0]?.name || "Branch 1"} (automatically selected)
+                              {visibleBranches[0].br?.name || `Branch ${visibleBranches[0].bi + 1}`} (automatically selected)
                             </p>
                           </>
                         ) : (
                           <>
                             <Label>Applicable Branches *</Label>
-                            <p className="text-xs text-slate-500">Select at least one branch</p>
+                            <p className="text-xs text-slate-500">Select one or more</p>
                             <div className="space-y-2">
-                              {branches.map((branch: any, branchIndex: number) => {
+                              {visibleBranches.map(({ br: branch, bi: branchIndex }) => {
                                 const displayName = branch?.name || `Branch ${branchIndex + 1}`;
                                 const dealBranches = deal.branches || [];
                                 const isSelected = dealBranches.includes(displayName);
@@ -1605,7 +1682,9 @@ export default function MerchantEdit() {
                           </>
                         )}
                       </div>
-                      
+                        );
+                      })()}
+
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <Label>Deal Images ({(deal.images || []).length}/4 minimum)</Label>
@@ -1651,6 +1730,7 @@ export default function MerchantEdit() {
               ))
             )}
           </CardContent>
+          )}
         </Card>
       </div>
     </AdminLayout>
