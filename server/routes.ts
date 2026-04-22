@@ -8,6 +8,7 @@ import connectPgSimple from "connect-pg-simple";
 import { db } from "./db";
 import { sendNewDealNotification, sendModerationNotification, sendMerchantConfirmation, sendMerchantOnboardingNotification, sendMerchantModerationNotification, sendMerchantOnboardingConfirmation, sendMerchantSignedContractConfirmation } from "./email";
 import { uploadMultipleImages, migrateExistingImages } from "./azureStorage";
+import path from "path";
 
 const PgSession = connectPgSimple(session);
 
@@ -170,6 +171,11 @@ export async function registerRoutes(
       console.error("[SubmissionLog] Failed to write log:", logError);
     }
   }
+
+  // Pretty-URL alias for the QL deals deep-link landing page (the actual file lives in client/public/ql-deals.html)
+  app.get(["/ql-deals", "/ql-deal", "/deals-app"], (_req, res) => {
+    res.sendFile(path.resolve(import.meta.dirname, "..", "client", "public", "ql-deals.html"));
+  });
 
   app.post("/api/deals", async (req, res) => {
     const startTime = Date.now();
