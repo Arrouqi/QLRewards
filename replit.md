@@ -58,6 +58,28 @@ CREATE TABLE IF NOT EXISTS merchant_brands (
 CREATE INDEX IF NOT EXISTS idx_merchant_brands_merchant_id ON merchant_brands(merchant_id);
 ```
 
+#### Pending Production Migrations (Redirect Analytics feature)
+Run these on the production DB before deploying the Redirect Analytics feature:
+```sql
+CREATE TABLE IF NOT EXISTS redirect_logs (
+  id           varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+  visitor_id   text,
+  platform     text,
+  outcome      text,
+  browser      text,
+  os           text,
+  device       text,
+  user_agent   text,
+  ip_address   text,
+  referrer     text,
+  page_path    text,
+  created_at   timestamp NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_redirect_logs_created_at ON redirect_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_redirect_logs_visitor_id ON redirect_logs(visitor_id);
+CREATE INDEX IF NOT EXISTS idx_redirect_logs_platform   ON redirect_logs(platform);
+```
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -92,6 +114,7 @@ CREATE INDEX IF NOT EXISTS idx_merchant_brands_merchant_id ON merchant_brands(me
 - **activityLogs**: Tracks user actions (status changes, edits) with username, action, merchantId, merchantName, details, timestamp. Admin-only viewing & clearing via Settings → Activity tab.
 - **submissionLogs**: Records form submissions (merchant onboarding & deal creation) with status, request body (base64 files sanitized), fields received, file info, errors, IP, user agent, processing time. Toggled on/off via system settings. Admin-only viewing & clearing via Settings → Submission Logs tab.
 - **systemSettings**: Key-value store for system configuration (e.g., `submission_logging_enabled`). Admin-only write access.
+- **redirectLogs**: Tracks every hit on the public `/ql-deals` (and `/ql-deal`, `/deals-app`) deep-link landing page. Each row stores a per-browser `visitor_id` (UUID set in localStorage on first visit), `platform` (ios/android/desktop), `outcome` (app_attempt/store/web — what the JS chose to do), parsed `browser`/`os`/`device` from server-side UA parsing (`server/uaParser.ts`), raw user agent, IP, referrer, and pagePath. Written by the public, fire-and-forget `POST /api/track/ql-deals` endpoint (called via `navigator.sendBeacon`). Read via admin-only `GET /api/admin/redirect-logs` (raw rows) and `GET /api/admin/redirect-logs/stats` (aggregations). Admin dashboard at `/admin/redirect-analytics` shows KPI cards, hits-over-time line chart, platform/outcome/device pie charts, top browsers/OS bar charts, top referrers, and a raw log table with CSV export and clear-all.
 - **session**: PostgreSQL session store table (auto-created)
 
 ### Project Structure

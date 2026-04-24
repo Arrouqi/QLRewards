@@ -13,11 +13,12 @@ import {
   type SubmissionLog, type InsertSubmissionLog,
   type SystemSetting,
   type ActivityLog, type InsertActivityLog,
+  type RedirectLog, type InsertRedirectLog,
   deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantBrands, merchantDeals, merchantNotes,
-  submissionLogs, systemSettings, activityLogs
+  submissionLogs, systemSettings, activityLogs, redirectLogs
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, inArray, and, desc } from "drizzle-orm";
+import { eq, inArray, and, desc, sql, gte } from "drizzle-orm";
 
 export interface IStorage {
   createDeal(deal: InsertDeal): Promise<Deal>;
@@ -88,6 +89,20 @@ export interface IStorage {
   createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
   getActivityLogs(limit?: number, offset?: number): Promise<ActivityLog[]>;
   clearActivityLogs(): Promise<void>;
+  createRedirectLog(log: InsertRedirectLog): Promise<RedirectLog>;
+  getRedirectLogs(limit?: number, offset?: number, sinceDays?: number): Promise<RedirectLog[]>;
+  getRedirectLogStats(sinceDays?: number): Promise<{
+    total: number;
+    uniqueVisitors: number;
+    byPlatform: { key: string; count: number }[];
+    byOutcome: { key: string; count: number }[];
+    byBrowser: { key: string; count: number }[];
+    byOs: { key: string; count: number }[];
+    byDevice: { key: string; count: number }[];
+    byReferrer: { key: string; count: number }[];
+    byDay: { day: string; count: number; uniqueVisitors: number }[];
+  }>;
+  clearRedirectLogs(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -510,6 +525,79 @@ export class DatabaseStorage implements IStorage {
 
   async clearActivityLogs(): Promise<void> {
     await db.delete(activityLogs);
+  }
+
+  async createRedirectLog(log: InsertRedirectLog): Promise<RedirectLog> {
+    const [newLog] = await db.insert(redirectLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getRedirectLogs(limit = 200, offset = 0, sinceDays?: number): Promise<RedirectLog[]> {
+    let query = db.select().from(redirectLogs).$dynamic();
+    if (sinceDays && sinceDays > 0) {
+      const cutoff = new Date(Date.now() - sinceDays * 86400000);
+      query = query.where(gte(redirectLogs.createdAt, cutoff));
+    }
+    return await query.orderBy(desc(redirectLogs.createdAt)).limit(limit).offset(offset);
+  }
+
+  async getRedirectLogStats(sinceDays?: number) {
+    const cutoff = sinceDays && sinceDays > 0 ? new Date(Date.now() - sinceDays * 86400000) : null;
+    const whereClause = cutoff ? gte(redirectLogs.createdAt, cutoff) : undefined;
+
+    const groupBy = async (col: any) => {
+      const base = db
+        .select({ key: col, count: sql<number>`count(*)::int` })
+        .from(redirectLogs)
+        .$dynamic();
+      const filtered = whereClause ? base.where(whereClause) : base;
+      const rows = await filtered.groupBy(col).orderBy(desc(sql`count(*)`));
+      return rows.map((r: any) => ({ key: r.key ?? "(unknown)", count: Number(r.count) }));
+    };
+
+    const totalQ = db.select({ c: sql<number>`count(*)::int` }).from(redirectLogs).$dynamic();
+    const totalRow = await (whereClause ? totalQ.where(whereClause) : totalQ);
+    const total = Number(totalRow[0]?.c ?? 0);
+
+    const uniqQ = db
+      .select({ c: sql<number>`count(distinct ${redirectLogs.visitorId})::int` })
+      .from(redirectLogs)
+      .$dynamic();
+    const uniqRow = await (whereClause ? uniqQ.where(whereClause) : uniqQ);
+    const uniqueVisitors = Number(uniqRow[0]?.c ?? 0);
+
+    const dayQ = db
+      .select({
+        day: sql<string>`to_char(date_trunc('day', ${redirectLogs.createdAt}), 'YYYY-MM-DD')`,
+        count: sql<number>`count(*)::int`,
+        uniqueVisitors: sql<number>`count(distinct ${redirectLogs.visitorId})::int`,
+      })
+      .from(redirectLogs)
+      .$dynamic();
+    const dayFiltered = whereClause ? dayQ.where(whereClause) : dayQ;
+    const byDayRows = await dayFiltered
+      .groupBy(sql`date_trunc('day', ${redirectLogs.createdAt})`)
+      .orderBy(sql`date_trunc('day', ${redirectLogs.createdAt})`);
+
+    return {
+      total,
+      uniqueVisitors,
+      byPlatform: await groupBy(redirectLogs.platform),
+      byOutcome: await groupBy(redirectLogs.outcome),
+      byBrowser: await groupBy(redirectLogs.browser),
+      byOs: await groupBy(redirectLogs.os),
+      byDevice: await groupBy(redirectLogs.device),
+      byReferrer: await groupBy(redirectLogs.referrer),
+      byDay: byDayRows.map((r: any) => ({
+        day: r.day,
+        count: Number(r.count),
+        uniqueVisitors: Number(r.uniqueVisitors),
+      })),
+    };
+  }
+
+  async clearRedirectLogs(): Promise<void> {
+    await db.delete(redirectLogs);
   }
 }
 

@@ -21,6 +21,7 @@ import MerchantSuccess from "@/pages/MerchantSuccess";
 import ExistingMerchants from "@/pages/ExistingMerchants";
 import LiveOffers from "@/pages/LiveOffers";
 import Overview from "@/pages/Overview";
+import RedirectAnalytics from "@/pages/RedirectAnalytics";
 
 function Router() {
   return (
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/admin/settings" component={Settings} />
       <Route path="/admin/existing-merchants" component={ExistingMerchants} />
       <Route path="/admin/live-offers" component={LiveOffers} />
+      <Route path="/admin/redirect-analytics" component={RedirectAnalytics} />
       <Route path="/admin/merchants" component={MerchantManagement} />
       <Route path="/admin/merchants/:id" component={MerchantView} />
       <Route path="/admin/merchants/:id/edit" component={MerchantEdit} />

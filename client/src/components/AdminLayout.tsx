@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Settings, LogOut, Users, Menu, X, Mail, Building2, Store, BarChart3, Tag } from "lucide-react";
+import { LayoutDashboard, Settings, LogOut, Users, Menu, X, Mail, Building2, Store, BarChart3, Tag, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -70,6 +70,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: Tag,
       href: "/admin/live-offers",
     },
+    ...(session?.role === "admin"
+      ? [{
+          label: "Redirect Analytics",
+          icon: Link2,
+          href: "/admin/redirect-analytics",
+        }]
+      : []),
   ];
 
   return (

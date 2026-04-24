@@ -1,4 +1,4 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema, insertMerchantNoteSchema, brandPayloadSchema } from "@shared/schema";
@@ -8,6 +8,7 @@ import connectPgSimple from "connect-pg-simple";
 import { db } from "./db";
 import { sendNewDealNotification, sendModerationNotification, sendMerchantConfirmation, sendMerchantOnboardingNotification, sendMerchantModerationNotification, sendMerchantOnboardingConfirmation, sendMerchantSignedContractConfirmation } from "./email";
 import { uploadMultipleImages, migrateExistingImages } from "./azureStorage";
+import { parseUserAgent } from "./uaParser";
 import path from "path";
 
 const PgSession = connectPgSimple(session);
@@ -175,6 +176,96 @@ export async function registerRoutes(
   // Pretty-URL alias for the QL deals deep-link landing page (the actual file lives in client/public/ql-deals.html)
   app.get(["/ql-deals", "/ql-deal", "/deals-app"], (_req, res) => {
     res.sendFile(path.resolve(import.meta.dirname, "..", "client", "public", "ql-deals.html"));
+  });
+
+  // Per-IP rate limiter for the public tracking endpoint (in-memory; resets on restart)
+  const trackRateBuckets = new Map<string, { count: number; windowStart: number }>();
+  const TRACK_WINDOW_MS = 60_000;
+  const TRACK_MAX_PER_WINDOW = 30; // 30 hits/min/IP — generous, just blocks scripted floods
+  function trackRateLimit(req: Request, res: Response, next: NextFunction) {
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+    const now = Date.now();
+    const b = trackRateBuckets.get(ip);
+    if (!b || now - b.windowStart > TRACK_WINDOW_MS) {
+      trackRateBuckets.set(ip, { count: 1, windowStart: now });
+    } else {
+      b.count++;
+      if (b.count > TRACK_MAX_PER_WINDOW) {
+        return res.status(204).end(); // silent drop — don't leak rate-limit info
+      }
+    }
+    // Best-effort cleanup of stale buckets so the Map doesn't grow forever
+    if (trackRateBuckets.size > 5000) {
+      for (const [k, v] of trackRateBuckets) {
+        if (now - v.windowStart > TRACK_WINDOW_MS) trackRateBuckets.delete(k);
+      }
+    }
+    next();
+  }
+
+  // Public tracking endpoint for the ql-deals redirect page (called via sendBeacon)
+  app.post("/api/track/ql-deals", trackRateLimit, express.json({ limit: "10kb" }), async (req, res) => {
+    try {
+      const body = (req.body || {}) as { visitorId?: string; platform?: string; outcome?: string; pagePath?: string };
+      const ua = req.headers["user-agent"] || "";
+      const parsed = parseUserAgent(ua);
+      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || null;
+      const referrer = (req.headers["referer"] as string) || null;
+
+      const allowedPlatforms = new Set(["ios", "android", "desktop"]);
+      const allowedOutcomes = new Set(["app_attempt", "store", "web"]);
+
+      await storage.createRedirectLog({
+        visitorId: typeof body.visitorId === "string" ? body.visitorId.slice(0, 64) : null,
+        platform: body.platform && allowedPlatforms.has(body.platform) ? body.platform : null,
+        outcome: body.outcome && allowedOutcomes.has(body.outcome) ? body.outcome : null,
+        browser: parsed.browser,
+        os: parsed.os,
+        device: parsed.device,
+        userAgent: typeof ua === "string" ? ua.slice(0, 1000) : null,
+        ipAddress: ip,
+        referrer: referrer ? referrer.slice(0, 500) : null,
+        pagePath: typeof body.pagePath === "string" ? body.pagePath.slice(0, 200) : null,
+      });
+      res.status(204).end();
+    } catch (e) {
+      console.error("[redirect-track] failed", e);
+      res.status(204).end();
+    }
+  });
+
+  // Admin analytics endpoints for redirect logs
+  app.get("/api/admin/redirect-logs/stats", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
+      const stats = await storage.getRedirectLogStats(sinceDays && sinceDays > 0 ? sinceDays : undefined);
+      res.json(stats);
+    } catch (e: any) {
+      console.error("[redirect-stats] failed", e);
+      res.status(500).json({ error: "Failed to load stats" });
+    }
+  });
+
+  app.get("/api/admin/redirect-logs", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt((req.query.limit as string) || "200", 10) || 200, 1000);
+      const offset = parseInt((req.query.offset as string) || "0", 10) || 0;
+      const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
+      const rows = await storage.getRedirectLogs(limit, offset, sinceDays && sinceDays > 0 ? sinceDays : undefined);
+      res.json(rows);
+    } catch (e: any) {
+      console.error("[redirect-logs] failed", e);
+      res.status(500).json({ error: "Failed to load logs" });
+    }
+  });
+
+  app.delete("/api/admin/redirect-logs", requireAuth, requireAdmin, async (_req, res) => {
+    try {
+      await storage.clearRedirectLogs();
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: "Failed to clear logs" });
+    }
   });
 
   app.post("/api/deals", async (req, res) => {

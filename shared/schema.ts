@@ -372,3 +372,26 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
 
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type ActivityLog = typeof activityLogs.$inferSelect;
+
+export const redirectLogs = pgTable("redirect_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  visitorId: text("visitor_id"),
+  platform: text("platform"),
+  outcome: text("outcome"),
+  browser: text("browser"),
+  os: text("os"),
+  device: text("device"),
+  userAgent: text("user_agent"),
+  ipAddress: text("ip_address"),
+  referrer: text("referrer"),
+  pagePath: text("page_path"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertRedirectLogSchema = createInsertSchema(redirectLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertRedirectLog = z.infer<typeof insertRedirectLogSchema>;
+export type RedirectLog = typeof redirectLogs.$inferSelect;
