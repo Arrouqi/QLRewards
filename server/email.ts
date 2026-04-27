@@ -971,3 +971,94 @@ This is an automated confirmation email from Qatar Living Deals.
     console.error("[Email] Failed to send signed contract confirmation:", error);
   }
 }
+
+// Feedback Email Functions
+
+export async function sendFeedbackNotification(feedback: any, recipientEmails: string[]): Promise<void> {
+  const settings = await storage.getEmailSettings();
+
+  if (!settings || !settings.isEnabled) {
+    console.log("[Email] Email notifications are disabled. Enable them in Settings.");
+    return;
+  }
+  if (!settings.apiKey) {
+    console.log("[Email] No API key configured.");
+    return;
+  }
+  if (recipientEmails.length === 0) {
+    console.log("[Email] No recipients configured for feedback notification.");
+    return;
+  }
+
+  const transporter = await getEmailTransporter();
+  if (!transporter) {
+    console.log("[Email] Failed to create email transporter.");
+    return;
+  }
+
+  const fromEmail = settings.fromEmail || "noreply@qatarliving.com";
+  const fromName = settings.fromName || "Qatar Living Deals";
+  const typeLabel = feedback.feedbackType === "mystery_shopper" ? "Mystery Shopper" : "Code Training";
+  const subject = `New ${typeLabel} Feedback Submission${feedback.shopperName ? ` - ${feedback.shopperName}` : ""}`;
+
+  const rows: Array<[string, string]> = [
+    ["Type", typeLabel],
+    ["Shopper Name", feedback.shopperName || "—"],
+    ["Visit Date(s)", feedback.visitDates || "—"],
+    ["Total Budget (QAR)", feedback.totalBudgetQar || "—"],
+    ["Merchant", feedback.merchantName || "—"],
+    ["Location", feedback.merchantLocation || "—"],
+    ["Submitted", new Date(feedback.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })],
+  ];
+
+  const tableHtml = rows.map(([k, v]) => `
+    <tr>
+      <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-weight: bold; color: #6b7280; width: 160px;">${k}:</td>
+      <td style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; color: #111827;">${v}</td>
+    </tr>
+  `).join("");
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><title>New Feedback Submission</title></head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: #00426D; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Qatar Living Deals</h1>
+        <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0; font-size: 14px;">New ${typeLabel} Feedback</p>
+      </div>
+      <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none;">
+        <h2 style="color: #00426D; margin-top: 0; margin-bottom: 20px;">A new feedback has been submitted</h2>
+        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 25px;">
+          <table style="width: 100%; border-collapse: collapse;">${tableHtml}</table>
+        </div>
+        <div style="text-align: center;">
+          <a href="${DASHBOARD_URL}/admin/feedbacks/${feedback.id}"
+             style="display: inline-block; background: #00426D; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+            View Feedback
+          </a>
+        </div>
+        <p style="color: #6b7280; font-size: 13px; margin-top: 25px; text-align: center;">
+          This is an automated notification from Qatar Living Deals Admin Portal.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = rows.map(([k, v]) => `${k}: ${v}`).join("\n") +
+    `\n\nView Feedback: ${DASHBOARD_URL}/admin/feedbacks/${feedback.id}`;
+
+  try {
+    await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: recipientEmails.join(", "),
+      subject,
+      text: textContent,
+      html: htmlContent,
+    });
+    console.log(`[Email] Feedback notification sent to ${recipientEmails.length} recipient(s)`);
+  } catch (error) {
+    console.error("[Email] Failed to send feedback notification:", error);
+  }
+}

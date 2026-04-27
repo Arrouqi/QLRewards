@@ -14,8 +14,10 @@ import {
   type SystemSetting,
   type ActivityLog, type InsertActivityLog,
   type RedirectLog, type InsertRedirectLog,
+  type Feedback, type InsertFeedback,
+  type FeedbackComment, type InsertFeedbackComment,
   deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantBrands, merchantDeals, merchantNotes,
-  submissionLogs, systemSettings, activityLogs, redirectLogs
+  submissionLogs, systemSettings, activityLogs, redirectLogs, feedbacks, feedbackComments
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, inArray, and, desc, sql, gte } from "drizzle-orm";
@@ -103,6 +105,13 @@ export interface IStorage {
     byDay: { day: string; count: number; uniqueVisitors: number }[];
   }>;
   clearRedirectLogs(): Promise<void>;
+  createFeedback(feedback: InsertFeedback & { ipAddress?: string | null; userAgent?: string | null }): Promise<Feedback>;
+  getAllFeedbacks(filter?: { feedbackType?: string; status?: string; search?: string }): Promise<Feedback[]>;
+  getFeedbackById(id: string): Promise<Feedback | undefined>;
+  updateFeedbackStatus(id: string, status: string): Promise<Feedback | undefined>;
+  deleteFeedback(id: string): Promise<void>;
+  getFeedbackComments(feedbackId: string): Promise<FeedbackComment[]>;
+  createFeedbackComment(comment: InsertFeedbackComment): Promise<FeedbackComment>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -598,6 +607,51 @@ export class DatabaseStorage implements IStorage {
 
   async clearRedirectLogs(): Promise<void> {
     await db.delete(redirectLogs);
+  }
+
+  async createFeedback(feedback: InsertFeedback & { ipAddress?: string | null; userAgent?: string | null }): Promise<Feedback> {
+    const [row] = await db.insert(feedbacks).values(feedback).returning();
+    return row;
+  }
+
+  async getAllFeedbacks(filter?: { feedbackType?: string; status?: string; search?: string }): Promise<Feedback[]> {
+    let q = db.select().from(feedbacks).$dynamic();
+    const conds: any[] = [];
+    if (filter?.feedbackType) conds.push(eq(feedbacks.feedbackType, filter.feedbackType));
+    if (filter?.status) conds.push(eq(feedbacks.status, filter.status));
+    if (filter?.search && filter.search.trim()) {
+      const term = `%${filter.search.trim().toLowerCase()}%`;
+      conds.push(sql`(
+        lower(coalesce(${feedbacks.shopperName}, '')) like ${term}
+        or lower(coalesce(${feedbacks.merchantName}, '')) like ${term}
+        or lower(coalesce(${feedbacks.merchantLocation}, '')) like ${term}
+      )`);
+    }
+    if (conds.length > 0) q = q.where(and(...conds));
+    return await q.orderBy(desc(feedbacks.createdAt));
+  }
+
+  async getFeedbackById(id: string): Promise<Feedback | undefined> {
+    const [row] = await db.select().from(feedbacks).where(eq(feedbacks.id, id));
+    return row;
+  }
+
+  async updateFeedbackStatus(id: string, status: string): Promise<Feedback | undefined> {
+    const [row] = await db.update(feedbacks).set({ status }).where(eq(feedbacks.id, id)).returning();
+    return row;
+  }
+
+  async deleteFeedback(id: string): Promise<void> {
+    await db.delete(feedbacks).where(eq(feedbacks.id, id));
+  }
+
+  async getFeedbackComments(feedbackId: string): Promise<FeedbackComment[]> {
+    return await db.select().from(feedbackComments).where(eq(feedbackComments.feedbackId, feedbackId)).orderBy(feedbackComments.createdAt);
+  }
+
+  async createFeedbackComment(comment: InsertFeedbackComment): Promise<FeedbackComment> {
+    const [row] = await db.insert(feedbackComments).values(comment).returning();
+    return row;
   }
 }
 

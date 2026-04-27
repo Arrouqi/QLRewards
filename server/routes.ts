@@ -1,12 +1,12 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema, insertMerchantNoteSchema, brandPayloadSchema } from "@shared/schema";
+import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema, insertMerchantNoteSchema, brandPayloadSchema, insertFeedbackSchema, insertFeedbackCommentSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { db } from "./db";
-import { sendNewDealNotification, sendModerationNotification, sendMerchantConfirmation, sendMerchantOnboardingNotification, sendMerchantModerationNotification, sendMerchantOnboardingConfirmation, sendMerchantSignedContractConfirmation } from "./email";
+import { sendNewDealNotification, sendModerationNotification, sendMerchantConfirmation, sendMerchantOnboardingNotification, sendMerchantModerationNotification, sendMerchantOnboardingConfirmation, sendMerchantSignedContractConfirmation, sendFeedbackNotification } from "./email";
 import { uploadMultipleImages, migrateExistingImages } from "./azureStorage";
 import { parseUserAgent } from "./uaParser";
 import path from "path";
@@ -178,30 +178,47 @@ export async function registerRoutes(
     res.sendFile(path.resolve(import.meta.dirname, "..", "client", "public", "ql-deals.html"));
   });
 
-  // Per-IP rate limiter for the public tracking endpoint (in-memory; resets on restart)
-  const trackRateBuckets = new Map<string, { count: number; windowStart: number }>();
-  const TRACK_WINDOW_MS = 60_000;
-  const TRACK_MAX_PER_WINDOW = 30; // 30 hits/min/IP — generous, just blocks scripted floods
-  function trackRateLimit(req: Request, res: Response, next: NextFunction) {
-    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
-    const now = Date.now();
-    const b = trackRateBuckets.get(ip);
-    if (!b || now - b.windowStart > TRACK_WINDOW_MS) {
-      trackRateBuckets.set(ip, { count: 1, windowStart: now });
-    } else {
-      b.count++;
-      if (b.count > TRACK_MAX_PER_WINDOW) {
-        return res.status(204).end(); // silent drop — don't leak rate-limit info
+  // Per-IP rate limiter factory for public endpoints (in-memory; resets on restart)
+  function makeRateLimiter(opts: { windowMs: number; max: number; onLimit?: (res: Response) => void }) {
+    const buckets = new Map<string, { count: number; windowStart: number }>();
+    return function rateLimit(req: Request, res: Response, next: NextFunction) {
+      const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+      const now = Date.now();
+      const b = buckets.get(ip);
+      if (!b || now - b.windowStart > opts.windowMs) {
+        buckets.set(ip, { count: 1, windowStart: now });
+      } else {
+        b.count++;
+        if (b.count > opts.max) {
+          if (opts.onLimit) {
+            opts.onLimit(res);
+          } else {
+            res.status(429).json({ error: "Too many requests. Please try again later." });
+          }
+          return;
+        }
       }
-    }
-    // Best-effort cleanup of stale buckets so the Map doesn't grow forever
-    if (trackRateBuckets.size > 5000) {
-      for (const [k, v] of trackRateBuckets) {
-        if (now - v.windowStart > TRACK_WINDOW_MS) trackRateBuckets.delete(k);
+      if (buckets.size > 5000) {
+        for (const [k, v] of buckets) {
+          if (now - v.windowStart > opts.windowMs) buckets.delete(k);
+        }
       }
-    }
-    next();
+      next();
+    };
   }
+
+  // Existing tracking endpoint: silent 204 drop on overflow
+  const trackRateLimit = makeRateLimiter({
+    windowMs: 60_000,
+    max: 30,
+    onLimit: (res) => res.status(204).end(),
+  });
+
+  // Public Feedback submit: 5 per minute per IP — generous for legit shoppers, blocks abuse
+  const feedbackSubmitRateLimit = makeRateLimiter({ windowMs: 60_000, max: 5 });
+
+  // Public merchant search (Feedback form picker): 60 per minute per IP — supports type-as-you-search
+  const publicMerchantsRateLimit = makeRateLimiter({ windowMs: 60_000, max: 60 });
 
   // Public tracking endpoint for the ql-deals redirect page (called via sendBeacon)
   app.post("/api/track/ql-deals", trackRateLimit, express.json({ limit: "10kb" }), async (req, res) => {
@@ -265,6 +282,111 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ error: "Failed to clear logs" });
+    }
+  });
+
+  // ===== Feedbacks =====
+  // Public: submit a feedback (rate-limited)
+  app.post("/api/feedbacks", feedbackSubmitRateLimit, async (req, res) => {
+    try {
+      const data = insertFeedbackSchema.parse(req.body);
+      if (!data.feedbackType || !["mystery_shopper", "code_training"].includes(data.feedbackType)) {
+        return res.status(400).json({ error: "Invalid feedbackType" });
+      }
+      const ipAddress =
+        (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+        req.socket.remoteAddress ||
+        null;
+      const userAgent = (req.headers["user-agent"] as string) || null;
+      const feedback = await storage.createFeedback({ ...data, ipAddress, userAgent });
+
+      // Notify (same recipients as merchant onboarding alerts)
+      try {
+        const recipients = await storage.getActiveEmailRecipientsByType("sales");
+        const emails = recipients.map((r) => r.email);
+        if (emails.length > 0) {
+          sendFeedbackNotification(feedback, emails).catch((err) => {
+            console.error("[Email] Failed feedback notification:", err);
+          });
+        }
+      } catch (err) {
+        console.error("[Feedback] notify error:", err);
+      }
+
+      res.json({ success: true, id: feedback.id });
+    } catch (err: any) {
+      console.error("[Feedback] create error:", err);
+      res.status(400).json({ error: err?.message || "Failed to submit feedback" });
+    }
+  });
+
+  // Admin: list feedbacks (any auth role)
+  app.get("/api/feedbacks", requireAuth, async (req, res) => {
+    try {
+      const { type, status, search } = req.query as Record<string, string | undefined>;
+      const list = await storage.getAllFeedbacks({
+        feedbackType: type || undefined,
+        status: status || undefined,
+        search: search || undefined,
+      });
+      res.json(list);
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Failed to fetch feedbacks" });
+    }
+  });
+
+  // Admin: get one with comments
+  app.get("/api/feedbacks/:id", requireAuth, async (req, res) => {
+    try {
+      const feedback = await storage.getFeedbackById(req.params.id);
+      if (!feedback) return res.status(404).json({ error: "Feedback not found" });
+      const comments = await storage.getFeedbackComments(feedback.id);
+      res.json({ ...feedback, comments });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Failed to fetch feedback" });
+    }
+  });
+
+  // Admin: update status
+  app.patch("/api/feedbacks/:id", requireAuth, async (req, res) => {
+    try {
+      const { status } = req.body as { status?: string };
+      if (!status || !["new", "reviewed", "archived"].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      const updated = await storage.updateFeedbackStatus(req.params.id, status);
+      if (!updated) return res.status(404).json({ error: "Feedback not found" });
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Failed to update feedback" });
+    }
+  });
+
+  // Admin only: delete
+  app.delete("/api/feedbacks/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteFeedback(req.params.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Failed to delete feedback" });
+    }
+  });
+
+  // Admin: comments
+  app.post("/api/feedbacks/:id/comments", requireAuth, async (req, res) => {
+    try {
+      const data = insertFeedbackCommentSchema.parse({
+        feedbackId: req.params.id,
+        author: (req.session as any)?.username || "admin",
+        content: req.body?.content,
+      });
+      if (!data.content || !data.content.trim()) {
+        return res.status(400).json({ error: "Comment content is required" });
+      }
+      const comment = await storage.createFeedbackComment(data);
+      res.json(comment);
+    } catch (err: any) {
+      res.status(400).json({ error: err?.message || "Failed to add comment" });
     }
   });
 
@@ -1773,6 +1895,54 @@ export async function registerRoutes(
       res.json(merchant);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Public lightweight merchant lookup for the public Feedback form (name + id only) — rate-limited
+  app.get("/api/public/merchants", publicMerchantsRateLimit, async (req, res) => {
+    try {
+      const esUrl = process.env.ELASTIC_URL;
+      const esApiKey = process.env.ELASTIC_API_KEY;
+      if (!esUrl || !esApiKey) {
+        return res.json({ merchants: [], total: 0 });
+      }
+      const search = (req.query.search as string) || "";
+      const size = Math.min(parseInt(req.query.size as string) || 30, 100);
+      const query: any = search
+        ? {
+            bool: {
+              should: [
+                { match_phrase_prefix: { agencyName: search } },
+                { wildcard: { agencyName: { value: `*${search.toLowerCase()}*`, case_insensitive: true } } },
+              ],
+              minimum_should_match: 1,
+            },
+          }
+        : { match_all: {} };
+      const esResponse = await fetch(`${esUrl}prod_merchants/_search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `ApiKey ${esApiKey}`,
+        },
+        body: JSON.stringify({
+          query,
+          size,
+          _source: ["agencyName", "category"],
+          sort: [{ "agencyName.keyword": { order: "asc", unmapped_type: "keyword" } }],
+        }),
+      });
+      if (!esResponse.ok) return res.json({ merchants: [], total: 0 });
+      const data = await esResponse.json();
+      const merchants = (data.hits?.hits || []).map((hit: any) => ({
+        id: hit._id,
+        agencyName: hit._source?.agencyName,
+        category: hit._source?.category?.name || hit._source?.category || undefined,
+      }));
+      res.json({ merchants, total: data.hits?.total?.value || 0 });
+    } catch (e: any) {
+      console.error("[public/merchants] error:", e.message);
+      res.json({ merchants: [], total: 0 });
     }
   });
 

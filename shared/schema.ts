@@ -373,6 +373,74 @@ export const insertActivityLogSchema = createInsertSchema(activityLogs).omit({
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 
+export const feedbacks = pgTable("feedbacks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  feedbackType: text("feedback_type").notNull(), // 'mystery_shopper' | 'code_training'
+  status: text("status").notNull().default("new"), // 'new' | 'reviewed' | 'archived'
+
+  // Shopper Information
+  shopperName: text("shopper_name"),
+  visitDates: text("visit_dates"),
+  totalBudgetQar: text("total_budget_qar"),
+
+  // Merchant Experience Summary (single merchant per submission)
+  merchantId: text("merchant_id"), // optional ES merchant id if picked from dropdown
+  merchantName: text("merchant_name"),
+  merchantLocation: text("merchant_location"),
+  visitDate: text("visit_date"),
+  staffKnowsRedeem: text("staff_knows_redeem"), // 'yes' | 'no'
+  staffScansQr: text("staff_scans_qr"),
+  rewardApprovedImmediately: text("reward_approved_immediately"),
+  redemptionSmooth: text("redemption_smooth"),
+  staffAwareOfOffer: text("staff_aware_of_offer"),
+  productServiceQuality: text("product_service_quality"), // 'poor'|'fair'|'good'|'very_good'|'excellent'
+  merchantComments: text("merchant_comments"),
+
+  // QL Rewards Platform Feedback
+  browseSelectEase: text("browse_select_ease"),
+  allOffersRedeemedAsDescribed: text("all_offers_redeemed_as_described"),
+  offersIssueExplanation: text("offers_issue_explanation"),
+  improvementSuggestions: text("improvement_suggestions"),
+
+  // Final Comments
+  enjoyedMost: text("enjoyed_most"),
+
+  // Code Training (placeholder for future fields, stored as JSON string)
+  codeTrainingPayload: text("code_training_payload"),
+
+  // metadata
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertFeedbackSchema = createInsertSchema(feedbacks).omit({
+  id: true,
+  createdAt: true,
+  ipAddress: true,
+  userAgent: true,
+  status: true,
+});
+
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+export type Feedback = typeof feedbacks.$inferSelect;
+
+export const feedbackComments = pgTable("feedback_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  feedbackId: varchar("feedback_id").notNull().references(() => feedbacks.id, { onDelete: "cascade" }),
+  author: text("author").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertFeedbackCommentSchema = createInsertSchema(feedbackComments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFeedbackComment = z.infer<typeof insertFeedbackCommentSchema>;
+export type FeedbackComment = typeof feedbackComments.$inferSelect;
+
 export const redirectLogs = pgTable("redirect_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   visitorId: text("visitor_id"),

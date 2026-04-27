@@ -22,6 +22,9 @@ import ExistingMerchants from "@/pages/ExistingMerchants";
 import LiveOffers from "@/pages/LiveOffers";
 import Overview from "@/pages/Overview";
 import RedirectAnalytics from "@/pages/RedirectAnalytics";
+import FeedbackForm from "@/pages/FeedbackForm";
+import FeedbackManagement from "@/pages/FeedbackManagement";
+import FeedbackView from "@/pages/FeedbackView";
 
 function Router() {
   return (
@@ -44,6 +47,9 @@ function Router() {
       <Route path="/admin/merchants" component={MerchantManagement} />
       <Route path="/admin/merchants/:id" component={MerchantView} />
       <Route path="/admin/merchants/:id/edit" component={MerchantEdit} />
+      <Route path="/admin/feedbacks" component={FeedbackManagement} />
+      <Route path="/admin/feedbacks/:id" component={FeedbackView} />
+      <Route path="/feedback" component={FeedbackForm} />
       <Route path="/merchant-success/:id" component={MerchantSuccess} />
       <Route component={NotFound} />
     </Switch>
