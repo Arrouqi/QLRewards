@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Search, Eye, MessageSquare, Loader2, Filter } from "lucide-react";
+import { Search, Eye, MessageSquare, Loader2, Filter, ExternalLink } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,8 +97,18 @@ export default function FeedbackManagement() {
               Review submissions from mystery shoppers and code training participants.
             </p>
           </div>
-          <div className="text-sm text-muted-foreground" data-testid="text-total-count">
-            Total: <strong>{feedbacks?.length ?? 0}</strong>
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground" data-testid="text-total-count">
+              Total: <strong>{feedbacks?.length ?? 0}</strong>
+            </div>
+            <Button
+              onClick={() => window.open("/feedback", "_blank")}
+              className="bg-[#00426D] hover:bg-[#003356]"
+              data-testid="button-feedback-form"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Feedback Form
+            </Button>
           </div>
         </div>
 
