@@ -87,7 +87,7 @@ export default function FeedbackManagement() {
     },
   });
 
-  const [tab, setTab] = useState<"overview" | "submissions">("overview");
+  const [tab, setTab] = useState<"analytics" | "submissions">("submissions");
   const [overviewType, setOverviewType] = useState<"mystery_shopper" | "merchant_referral">("mystery_shopper");
 
   return (
@@ -119,19 +119,27 @@ export default function FeedbackManagement() {
           </div>
         </div>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "overview" | "submissions")}>
-          <TabsList>
-            <TabsTrigger value="overview" data-testid="tab-overview">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="submissions" data-testid="tab-submissions">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "analytics" | "submissions")}>
+          <TabsList className="h-11 w-full justify-start rounded-none border-b bg-transparent p-0">
+            <TabsTrigger
+              value="submissions"
+              className="relative h-11 rounded-none border-b-2 border-transparent px-5 text-sm font-medium text-muted-foreground data-[state=active]:border-[#00426D] data-[state=active]:text-[#00426D] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              data-testid="tab-submissions"
+            >
               <ListOrdered className="mr-2 h-4 w-4" />
               Submissions
             </TabsTrigger>
+            <TabsTrigger
+              value="analytics"
+              className="relative h-11 rounded-none border-b-2 border-transparent px-5 text-sm font-medium text-muted-foreground data-[state=active]:border-[#00426D] data-[state=active]:text-[#00426D] data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              data-testid="tab-analytics"
+            >
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Analytics
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="mt-4 space-y-4">
+          <TabsContent value="analytics" className="mt-4 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground">Showing:</span>
               <div className="inline-flex rounded-md border bg-muted/30 p-0.5">

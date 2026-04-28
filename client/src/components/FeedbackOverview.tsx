@@ -1,24 +1,19 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, parseISO } from "date-fns";
 import {
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
   Tooltip as ReTooltip,
-  Legend,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
-  AreaChart,
-  Area,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, MessageSquare, Star, TrendingUp, Users, MapPin, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, MessageSquare, Star, TrendingUp, Users, CheckCircle2, XCircle } from "lucide-react";
 
 type FeedbackRow = {
   id: string;
@@ -134,16 +129,6 @@ function buildOrderedData(
   return order.map((k) => ({ name: labels[k] || k, key: k, value: c[k] || 0 }));
 }
 
-function buildDayBuckets(rows: FeedbackRow[]) {
-  const map: Record<string, number> = {};
-  for (const r of rows) {
-    const d = format(new Date(r.createdAt), "yyyy-MM-dd");
-    map[d] = (map[d] || 0) + 1;
-  }
-  const sorted = Object.keys(map).sort();
-  return sorted.map((d) => ({ day: format(parseISO(d), "MMM d"), count: map[d] }));
-}
-
 function buildTopMerchants(rows: FeedbackRow[], n = 5) {
   const map: Record<string, number> = {};
   for (const r of rows) {
@@ -155,15 +140,6 @@ function buildTopMerchants(rows: FeedbackRow[], n = 5) {
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, n);
-}
-
-function responseRate(rows: FeedbackRow[], key: keyof FeedbackRow) {
-  if (!rows.length) return 0;
-  const filled = rows.filter((r) => {
-    const v = r[key];
-    return v != null && String(v).trim() !== "";
-  }).length;
-  return Math.round((filled / rows.length) * 100);
 }
 
 interface Props {
@@ -190,8 +166,6 @@ export default function FeedbackOverview({ type }: Props) {
       reviewed: byStatus["reviewed"] || 0,
       archived: byStatus["archived"] || 0,
       uniqueMerchants: new Set(rows.map((r) => (r.merchantName || "").trim()).filter(Boolean)).size,
-      uniqueLocations: new Set(rows.map((r) => (r.merchantLocation || "").trim()).filter(Boolean)).size,
-      dayBuckets: buildDayBuckets(rows),
       topMerchants: buildTopMerchants(rows, 5),
     };
   }, [rows]);
@@ -226,34 +200,7 @@ export default function FeedbackOverview({ type }: Props) {
         <KpiCard label="Reviewed" value={stats.reviewed} icon={<CheckCircle2 className="h-4 w-4" />} accent="#16a34a" testId="kpi-reviewed" />
         <KpiCard label="Archived" value={stats.archived} icon={<XCircle className="h-4 w-4" />} accent="#94a3b8" testId="kpi-archived" />
         <KpiCard label="Merchants" value={stats.uniqueMerchants} icon={<Users className="h-4 w-4" />} accent="#7c3aed" testId="kpi-merchants" />
-        <KpiCard label="Locations" value={stats.uniqueLocations} icon={<MapPin className="h-4 w-4" />} accent="#0891b2" testId="kpi-locations" />
       </div>
-
-      {/* Submissions over time */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Submissions Over Time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.dayBuckets} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="fbArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.4} />
-                    <stop offset="100%" stopColor={PRIMARY} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                <ReTooltip />
-                <Area type="monotone" dataKey="count" stroke={PRIMARY} strokeWidth={2} fill="url(#fbArea)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
 
       {type === "mystery_shopper" ? (
         <MysteryShopperCharts rows={rows} />

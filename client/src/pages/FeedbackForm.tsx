@@ -690,7 +690,6 @@ export default function FeedbackForm() {
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
       shopperName: "",
-      visitDates: "",
       totalBudgetQar: "",
       merchantName: "",
       merchantId: undefined,
