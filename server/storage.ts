@@ -93,6 +93,7 @@ export interface IStorage {
   clearActivityLogs(): Promise<void>;
   createRedirectLog(log: InsertRedirectLog): Promise<RedirectLog>;
   getRedirectLogs(limit?: number, offset?: number, sinceDays?: number): Promise<RedirectLog[]>;
+  getRedirectLogCount(sinceDays?: number): Promise<number>;
   getRedirectLogStats(sinceDays?: number): Promise<{
     total: number;
     uniqueVisitors: number;
@@ -550,6 +551,14 @@ export class DatabaseStorage implements IStorage {
     return await query.orderBy(desc(redirectLogs.createdAt)).limit(limit).offset(offset);
   }
 
+  async getRedirectLogCount(sinceDays?: number): Promise<number> {
+    const cutoff = sinceDays && sinceDays > 0 ? new Date(Date.now() - sinceDays * 86400000) : null;
+    const q = db.select({ c: sql<number>`count(*)::int` }).from(redirectLogs).$dynamic();
+    const filtered = cutoff ? q.where(gte(redirectLogs.createdAt, cutoff)) : q;
+    const [row] = await filtered;
+    return Number(row?.c ?? 0);
+  }
+
   async getRedirectLogStats(sinceDays?: number) {
     const cutoff = sinceDays && sinceDays > 0 ? new Date(Date.now() - sinceDays * 86400000) : null;
     const whereClause = cutoff ? gte(redirectLogs.createdAt, cutoff) : undefined;
@@ -568,8 +577,9 @@ export class DatabaseStorage implements IStorage {
     const totalRow = await (whereClause ? totalQ.where(whereClause) : totalQ);
     const total = Number(totalRow[0]?.c ?? 0);
 
+    // Unique visitors: prefer visitorId, fall back to ipAddress so null visitorIds are not all lost
     const uniqQ = db
-      .select({ c: sql<number>`count(distinct ${redirectLogs.visitorId})::int` })
+      .select({ c: sql<number>`count(distinct coalesce(${redirectLogs.visitorId}, ${redirectLogs.ipAddress}))::int` })
       .from(redirectLogs)
       .$dynamic();
     const uniqRow = await (whereClause ? uniqQ.where(whereClause) : uniqQ);
@@ -579,7 +589,7 @@ export class DatabaseStorage implements IStorage {
       .select({
         day: sql<string>`to_char(date_trunc('day', ${redirectLogs.createdAt}), 'YYYY-MM-DD')`,
         count: sql<number>`count(*)::int`,
-        uniqueVisitors: sql<number>`count(distinct ${redirectLogs.visitorId})::int`,
+        uniqueVisitors: sql<number>`count(distinct coalesce(${redirectLogs.visitorId}, ${redirectLogs.ipAddress}))::int`,
       })
       .from(redirectLogs)
       .$dynamic();

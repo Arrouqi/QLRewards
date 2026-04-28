@@ -265,14 +265,31 @@ export async function registerRoutes(
 
   app.get("/api/admin/redirect-logs", requireAuth, requireAdmin, async (req, res) => {
     try {
-      const limit = Math.min(parseInt((req.query.limit as string) || "200", 10) || 200, 1000);
-      const offset = parseInt((req.query.offset as string) || "0", 10) || 0;
+      const PAGE_SIZE = 50;
+      const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
       const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
-      const rows = await storage.getRedirectLogs(limit, offset, sinceDays && sinceDays > 0 ? sinceDays : undefined);
-      res.json(rows);
+      const since = sinceDays && sinceDays > 0 ? sinceDays : undefined;
+      const offset = (page - 1) * PAGE_SIZE;
+      const [rows, total] = await Promise.all([
+        storage.getRedirectLogs(PAGE_SIZE, offset, since),
+        storage.getRedirectLogCount(since),
+      ]);
+      res.json({ rows, total, page, pageSize: PAGE_SIZE });
     } catch (e: any) {
       console.error("[redirect-logs] failed", e);
       res.status(500).json({ error: "Failed to load logs" });
+    }
+  });
+
+  app.get("/api/admin/redirect-logs/export", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
+      const since = sinceDays && sinceDays > 0 ? sinceDays : undefined;
+      const rows = await storage.getRedirectLogs(10000, 0, since);
+      res.json(rows);
+    } catch (e: any) {
+      console.error("[redirect-logs-export] failed", e);
+      res.status(500).json({ error: "Failed to export logs" });
     }
   });
 
