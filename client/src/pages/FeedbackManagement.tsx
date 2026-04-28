@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Search, Eye, MessageSquare, Loader2, Filter, ExternalLink, BarChart3, ListOrdered } from "lucide-react";
+import { Search, Eye, MessageSquare, Loader2, Filter, ExternalLink, BarChart3, ListOrdered, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import FeedbackOverview from "@/components/FeedbackOverview";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface Feedback {
   id: string;
@@ -51,6 +63,8 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "dest
 
 export default function FeedbackManagement() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -84,6 +98,30 @@ export default function FeedbackManagement() {
         throw new Error("Failed to load feedbacks");
       }
       return res.json();
+    },
+  });
+
+  const { data: session } = useQuery<{ role?: string }>({
+    queryKey: ["/api/auth/me"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (!res.ok) return {};
+      return res.json();
+    },
+  });
+  const isAdmin = session?.role === "admin";
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/feedbacks/${id}`, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Failed to delete");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/feedbacks"] });
+      toast({ title: "Submission deleted" });
+    },
+    onError: () => {
+      toast({ title: "Could not delete submission", variant: "destructive" });
     },
   });
 
@@ -284,15 +322,54 @@ export default function FeedbackManagement() {
                         {format(new Date(f.createdAt), "MMM d, yyyy h:mm a")}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setLocation(`/admin/feedbacks/${f.id}`)}
-                          data-testid={`button-view-${f.id}`}
-                        >
-                          <Eye className="mr-1 h-3.5 w-3.5" />
-                          View
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setLocation(`/admin/feedbacks/${f.id}`)}
+                            data-testid={`button-view-${f.id}`}
+                          >
+                            <Eye className="mr-1 h-3.5 w-3.5" />
+                            View
+                          </Button>
+                          {isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  data-testid={`button-delete-${f.id}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete this submission?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete the submission from{" "}
+                                    <strong>{f.shopperName || "this respondent"}</strong> and all associated
+                                    comments. This cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive hover:bg-destructive/90"
+                                    onClick={() => deleteMutation.mutate(f.id)}
+                                    disabled={deleteMutation.isPending}
+                                  >
+                                    {deleteMutation.isPending ? (
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : null}
+                                    Delete permanently
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

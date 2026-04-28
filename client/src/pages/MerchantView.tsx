@@ -1006,9 +1006,18 @@ export default function MerchantView() {
                 {merchant.branches.map((branchStr, index) => {
                   try {
                     const branch = typeof branchStr === 'string' ? JSON.parse(branchStr) : branchStr;
+                    const brandsList: any[] = (merchant as any).brands || [];
+                    const matchedBrand = branch.brandId
+                      ? brandsList.find((b: any, i: number) => b.id === branch.brandId || String(i) === String(branch.brandId))
+                      : null;
                     return (
                       <div key={index} className="p-4 bg-slate-50 rounded-lg">
-                        <p className="font-medium text-[#00426D]">{branch.name}</p>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-medium text-[#00426D]">{branch.name}</p>
+                          {matchedBrand?.brandName && (
+                            <span className="text-xs bg-[#00426D]/10 text-[#00426D] px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">{matchedBrand.brandName}</span>
+                          )}
+                        </div>
                         {branch.location && (
                           <a 
                             href={branch.location} 

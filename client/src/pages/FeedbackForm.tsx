@@ -659,17 +659,18 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="outline"
             onClick={() => form.reset()}
             disabled={submitting}
+            className="w-full sm:w-auto"
             data-testid="button-referral-reset"
           >
             Reset
           </Button>
-          <Button type="submit" size="lg" disabled={submitting} data-testid="button-referral-submit">
+          <Button type="submit" size="lg" disabled={submitting} className="w-full sm:w-auto" data-testid="button-referral-submit">
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Submit Feedback
           </Button>
@@ -735,7 +736,7 @@ export default function FeedbackForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-4 py-12">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-4 py-8 sm:py-12">
         <div className="mx-auto max-w-xl">
           <Card>
             <CardContent className="space-y-4 py-12 text-center">
@@ -771,14 +772,14 @@ export default function FeedbackForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 px-4 py-4 sm:py-8">
       <div className="mx-auto max-w-4xl">
         {/* Header */}
         <div className="mb-6 text-center">
           <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <MessageSquare className="h-6 w-6 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">
+          <h1 className="text-xl font-bold tracking-tight sm:text-3xl" data-testid="text-page-title">
             Qatar Living Rewards — Feedback
           </h1>
           <p className="mt-2 text-muted-foreground">
@@ -792,7 +793,7 @@ export default function FeedbackForm() {
             type="button"
             onClick={() => setActiveTab("mystery_shopper")}
             className={cn(
-              "flex items-center justify-center gap-2 rounded-lg border-2 p-4 text-sm font-semibold transition",
+              "flex items-center justify-center gap-2 rounded-lg border-2 p-3 text-sm font-semibold transition sm:p-4",
               activeTab === "mystery_shopper"
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-muted bg-white hover:border-primary/50",
@@ -806,7 +807,7 @@ export default function FeedbackForm() {
             type="button"
             onClick={() => setActiveTab("merchant_referral")}
             className={cn(
-              "flex items-center justify-center gap-2 rounded-lg border-2 p-4 text-sm font-semibold transition",
+              "flex items-center justify-center gap-2 rounded-lg border-2 p-3 text-sm font-semibold transition sm:p-4",
               activeTab === "merchant_referral"
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-muted bg-white hover:border-primary/50",
@@ -1082,12 +1083,13 @@ export default function FeedbackForm() {
                 </CardContent>
               </Card>
 
-              <div className="flex justify-end gap-3">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => form.reset()}
                   disabled={submitting}
+                  className="w-full sm:w-auto"
                   data-testid="button-reset"
                 >
                   Reset
@@ -1096,6 +1098,7 @@ export default function FeedbackForm() {
                   type="submit"
                   size="lg"
                   disabled={submitting}
+                  className="w-full sm:w-auto"
                   data-testid="button-submit-feedback"
                 >
                   {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

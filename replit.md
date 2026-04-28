@@ -95,6 +95,48 @@ ALTER TABLE feedbacks
   ADD COLUMN IF NOT EXISTS referral_could_improve text;
 ```
 
+#### Pending Production Migrations (Group Merchant feature)
+Run on production DB before deploying:
+```sql
+-- Add companyType to merchants (default 'individual' for all existing rows)
+ALTER TABLE merchants
+  ADD COLUMN IF NOT EXISTS company_type text NOT NULL DEFAULT 'individual';
+
+-- Make individual-only fields nullable on merchants
+-- (crNumber, brandName, products, businessCategories were previously required)
+-- These are already nullable in Postgres if created without NOT NULL constraint.
+-- If you previously added NOT NULL constraints manually, run:
+-- ALTER TABLE merchants ALTER COLUMN cr_number DROP NOT NULL;
+-- ALTER TABLE merchants ALTER COLUMN brand_name DROP NOT NULL;
+
+-- Create merchantBrands table (for group company type)
+CREATE TABLE IF NOT EXISTS merchant_brands (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id varchar NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+  brand_name text,
+  address text,
+  contact_person text,
+  email text,
+  phone text,
+  whatsapp text,
+  cr_number text,
+  cr_document text,
+  trade_license text,
+  tax_card_document text,
+  establishment_card text,
+  menu_price_list text,
+  logo text,
+  cover_image text,
+  business_categories text[],
+  display_order integer NOT NULL DEFAULT 0,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+-- Add brandId to merchantDeals (optional brand association for group merchants)
+ALTER TABLE merchant_deals
+  ADD COLUMN IF NOT EXISTS brand_id text;
+```
+
 ### Project Structure
 - `client/`: React frontend.
 - `server/`: Express backend.
