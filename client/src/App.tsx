@@ -18,8 +18,7 @@ import MerchantManagement from "@/pages/MerchantManagement";
 import MerchantView from "@/pages/MerchantView";
 import MerchantEdit from "@/pages/MerchantEdit";
 import MerchantSuccess from "@/pages/MerchantSuccess";
-import ExistingMerchants from "@/pages/ExistingMerchants";
-import LiveOffers from "@/pages/LiveOffers";
+import LiveData from "@/pages/LiveData";
 import Overview from "@/pages/Overview";
 import RedirectAnalytics from "@/pages/RedirectAnalytics";
 import FeedbackForm from "@/pages/FeedbackForm";
@@ -41,8 +40,9 @@ function Router() {
       <Route path="/admin/deals/:id/view" component={DealView} />
       <Route path="/admin/deals/:id/print" component={PrintDeal} />
       <Route path="/admin/settings" component={Settings} />
-      <Route path="/admin/existing-merchants" component={ExistingMerchants} />
-      <Route path="/admin/live-offers" component={LiveOffers} />
+      <Route path="/admin/live-data" component={LiveData} />
+      <Route path="/admin/existing-merchants">{() => <Redirect to="/admin/live-data?tab=merchants" />}</Route>
+      <Route path="/admin/live-offers">{() => <Redirect to="/admin/live-data?tab=deals" />}</Route>
       <Route path="/admin/redirect-analytics" component={RedirectAnalytics} />
       <Route path="/admin/merchants" component={MerchantManagement} />
       <Route path="/admin/merchants/:id" component={MerchantView} />

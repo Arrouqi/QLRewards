@@ -45,7 +45,7 @@ Preferred communication style: Simple, everyday language.
 - **adminUsers**: Admin credentials with roles (`sales`, `moderation`, `admin`) and specific permissions.
 - **activityLogs**: Tracks user actions for auditing.
 - **submissionLogs**: Records form submissions for debugging and monitoring.
-- **systemSettings**: Key-value store for system configuration.
+- **systemSettings**: Key-value store for system configuration. Includes `role_permissions` key storing JSON map of `{ moderation: [...], sales: [...] }` permission arrays.
 - **feedbacks**: Public feedback submissions. Two types: Mystery Shopper (full multi-section form) and Merchant Referral (Living Deals Staff Interaction form). Shared columns (`merchantName`, `merchantLocation`, `visitDate`, `shopperName`) are reused across both types; merchant referral has its own `referral_*` columns. Status: new/reviewed/archived.
 - **feedbackComments**: Internal comments on feedback entries.
 - **redirectLogs**: Tracks deep-link landing page hits, recording visitor info, platform, outcome, and device details for analytics.

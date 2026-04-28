@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, Settings, LogOut, Users, Menu, X, Mail, Building2, Store, BarChart3, Tag, Link2, MessageSquare } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { LayoutDashboard, Settings, LogOut, Menu, X, Building2, Store, BarChart3, Tag, Link2, MessageSquare, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { Permission } from "@/lib/permissions";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
+}
+
+interface MenuItem {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
+  permission?: Permission;
+  adminOnly?: boolean;
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
@@ -15,15 +25,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { toast } = useToast();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const queryClient = useQueryClient();
-
-  const { data: session } = useQuery({
-    queryKey: ["/api/auth/session"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/session", { credentials: "include" });
-      if (!res.ok) return { role: "user" };
-      return res.json();
-    },
-  });
+  const { can, role, username } = usePermissions();
 
   const handleLogout = async () => {
     try {
@@ -31,11 +33,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       queryClient.clear();
       setLocation("/admin/login");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to logout",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to logout", variant: "destructive" });
     }
   };
 
@@ -44,45 +42,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     setIsSidebarOpen(false);
   };
 
-  const menuItems = [
-    {
-      label: "Overview",
-      icon: BarChart3,
-      href: "/admin/overview",
-    },
-    {
-      label: "Merchant Requests",
-      icon: Building2,
-      href: "/admin/merchants",
-    },
-    {
-      label: "Deal Requests",
-      icon: LayoutDashboard,
-      href: "/admin/dashboard",
-    },
-    {
-      label: "Live Merchants",
-      icon: Store,
-      href: "/admin/existing-merchants",
-    },
-    {
-      label: "Live Deals",
-      icon: Tag,
-      href: "/admin/live-offers",
-    },
-    {
-      label: "Feedbacks",
-      icon: MessageSquare,
-      href: "/admin/feedbacks",
-    },
-    ...(session?.role === "admin"
-      ? [{
-          label: "Redirect Analytics",
-          icon: Link2,
-          href: "/admin/redirect-analytics",
-        }]
-      : []),
+  const allMenuItems: MenuItem[] = [
+    { label: "Overview", icon: BarChart3, href: "/admin/overview", permission: "overview.view" },
+    { label: "Merchant Requests", icon: Building2, href: "/admin/merchants", permission: "merchants.view" },
+    { label: "Deal Requests", icon: LayoutDashboard, href: "/admin/dashboard", permission: "deals.view" },
+    { label: "Live Data", icon: Database, href: "/admin/live-data", permission: "live_data.view" },
+    { label: "Feedbacks", icon: MessageSquare, href: "/admin/feedbacks", permission: "feedbacks.view" },
+    { label: "Redirect Analytics", icon: Link2, href: "/admin/redirect-analytics", permission: "redirect_analytics.view", adminOnly: true },
   ];
+
+  const menuItems = allMenuItems.filter((item) => {
+    if (item.adminOnly && role !== "admin") return false;
+    if (!item.permission) return true;
+    return can(item.permission);
+  });
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] flex flex-col md:flex-row">
@@ -103,10 +76,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
 
       <aside className={cn(
@@ -120,12 +90,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         <div className="md:hidden p-4 border-b border-white/10 flex justify-between items-center">
           <span className="font-bold">Menu</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsSidebarOpen(false)}
-            className="text-white hover:bg-white/10"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setIsSidebarOpen(false)} className="text-white hover:bg-white/10">
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -133,7 +98,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-2">
             {menuItems.map((item) => {
-              const isActive = location === item.href;
+              const isActive = location === item.href || (item.href === "/admin/live-data" && (location === "/admin/existing-merchants" || location === "/admin/live-offers"));
               const Icon = item.icon;
               return (
                 <li key={item.href}>
@@ -141,9 +106,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     onClick={() => handleNavigation(item.href)}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left",
-                      isActive
-                        ? "bg-white/20 text-white"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                      isActive ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
                     )}
                     data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
                   >
@@ -157,23 +120,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         <div className="p-4 border-t border-white/10">
-          {session?.username && (
+          {username && (
             <div className="mb-3 px-2">
               <p className="text-sm text-white/60">Logged in as</p>
-              <p className="text-white font-medium" data-testid="text-username">{session.username}</p>
-              {session.role && (
-                <p className="text-xs text-white/40 capitalize mt-0.5" data-testid="text-role">{session.role}</p>
-              )}
+              <p className="text-white font-medium" data-testid="text-username">{username}</p>
+              {role && <p className="text-xs text-white/40 capitalize mt-0.5" data-testid="text-role">{role}</p>}
             </div>
           )}
-          {session?.role === "admin" && (
+          {role === "admin" && (
             <button
               onClick={() => handleNavigation("/admin/settings")}
               className={cn(
                 "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-left text-sm mb-1",
-                location === "/admin/settings"
-                  ? "bg-white/20 text-white"
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
+                location === "/admin/settings" ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
               data-testid="nav-settings"
             >

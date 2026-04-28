@@ -2267,6 +2267,43 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/role-permissions", requireAuth, async (req, res) => {
+    try {
+      const raw = await storage.getSystemSetting("role_permissions");
+      if (!raw) {
+        const defaults = {
+          moderation: [
+            "overview.view", "merchants.view", "merchants.edit", "merchants.approve",
+            "deals.view", "deals.edit", "deals.approve",
+            "feedbacks.view", "feedbacks.manage",
+          ],
+          sales: [
+            "overview.view", "merchants.view", "deals.view",
+            "live_data.view", "feedbacks.view",
+          ],
+        };
+        return res.json(defaults);
+      }
+      res.json(JSON.parse(raw));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/role-permissions", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { moderation, sales } = req.body;
+      if (!Array.isArray(moderation) || !Array.isArray(sales)) {
+        return res.status(400).json({ error: "moderation and sales must be arrays" });
+      }
+      const value = JSON.stringify({ moderation, sales });
+      await storage.setSystemSetting("role_permissions", value);
+      res.json({ moderation, sales });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/admin/activity-logs", requireAuth, requireAdmin, async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 200;

@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Trash2, Loader2, AlertCircle, Settings as SettingsIcon, Send, CheckCircle2, XCircle, Users, Shield, Cloud, FolderCog, FileText, Pencil, Check, X, Mail, User } from "lucide-react";
+import { Plus, Trash2, Loader2, AlertCircle, Settings as SettingsIcon, Send, CheckCircle2, XCircle, Users, Shield, Cloud, FolderCog, FileText, Pencil, Check, X, Mail, User, Lock } from "lucide-react";
+import { ALL_PERMISSIONS, DEFAULT_ROLE_PERMISSIONS, CONFIGURABLE_ROLES, ROLE_LABELS } from "@/lib/permissions";
+import type { Permission } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -737,6 +739,173 @@ function ActivityLogsTab() {
   );
 }
 
+function PermissionsTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  type PermMap = Record<string, Permission[]>;
+
+  const { data: savedPerms, isLoading } = useQuery<PermMap>({
+    queryKey: ["/api/admin/role-permissions"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/role-permissions", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+  });
+
+  const [localPerms, setLocalPerms] = useState<PermMap | null>(null);
+
+  useEffect(() => {
+    if (savedPerms && !localPerms) {
+      setLocalPerms(savedPerms);
+    }
+  }, [savedPerms]);
+
+  const mutation = useMutation({
+    mutationFn: async (perms: PermMap) => {
+      const res = await fetch("/api/admin/role-permissions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(perms),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/role-permissions"] });
+      toast({ title: "Permissions saved", description: "Role permissions have been updated." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save permissions.", variant: "destructive" });
+    },
+  });
+
+  const togglePermission = (role: string, perm: Permission) => {
+    setLocalPerms((prev) => {
+      const current = prev ?? DEFAULT_ROLE_PERMISSIONS as PermMap;
+      const rolePerms = current[role] ?? [];
+      const next = rolePerms.includes(perm) ? rolePerms.filter((p) => p !== perm) : [...rolePerms, perm];
+      return { ...current, [role]: next };
+    });
+  };
+
+  const hasPermission = (role: string, perm: Permission): boolean => {
+    if (role === "admin") return true;
+    const perms = localPerms?.[role] ?? (DEFAULT_ROLE_PERMISSIONS as PermMap)[role] ?? [];
+    return perms.includes(perm);
+  };
+
+  const handleSave = () => {
+    if (!localPerms) return;
+    mutation.mutate(localPerms);
+  };
+
+  const handleReset = () => {
+    setLocalPerms(DEFAULT_ROLE_PERMISSIONS as PermMap);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-[#00426D]" />
+      </div>
+    );
+  }
+
+  const groups = Array.from(new Set(ALL_PERMISSIONS.map((p) => p.group)));
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-[#00426D]">
+          <Lock className="h-5 w-5" />
+          Role Permissions
+        </CardTitle>
+        <CardDescription>
+          Control which actions each role can perform. Admin always has full access and cannot be restricted.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm" data-testid="table-permissions">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="text-left py-3 pr-6 font-semibold text-slate-700 w-full">Permission</th>
+                {["admin", ...CONFIGURABLE_ROLES].map((role) => (
+                  <th key={role} className="text-center py-3 px-6 font-semibold text-slate-700 whitespace-nowrap min-w-[100px]">
+                    {ROLE_LABELS[role] ?? role}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map((group) => {
+                const groupPerms = ALL_PERMISSIONS.filter((p) => p.group === group);
+                return (
+                  <>
+                    <tr key={`group-${group}`} className="bg-slate-50">
+                      <td colSpan={1 + CONFIGURABLE_ROLES.length + 1} className="px-2 py-2">
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{group}</span>
+                      </td>
+                    </tr>
+                    {groupPerms.map((perm) => (
+                      <tr key={perm.key} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                        <td className="py-3 pr-6 text-slate-700">{perm.label}</td>
+                        <td className="py-3 px-6 text-center">
+                          <input
+                            type="checkbox"
+                            checked
+                            disabled
+                            className="h-4 w-4 rounded border-slate-300 accent-[#00426D] opacity-50 cursor-not-allowed"
+                            data-testid={`perm-admin-${perm.key}`}
+                          />
+                        </td>
+                        {CONFIGURABLE_ROLES.map((role) => (
+                          <td key={role} className="py-3 px-6 text-center">
+                            <input
+                              type="checkbox"
+                              checked={hasPermission(role, perm.key)}
+                              onChange={() => togglePermission(role, perm.key)}
+                              className="h-4 w-4 rounded border-slate-300 accent-[#00426D] cursor-pointer"
+                              data-testid={`perm-${role}-${perm.key}`}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            disabled={mutation.isPending}
+            data-testid="button-reset-permissions"
+          >
+            Reset to Defaults
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={mutation.isPending}
+            className="bg-[#00426D] hover:bg-[#003557]"
+            data-testid="button-save-permissions"
+          >
+            {mutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+            Save Permissions
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Settings() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -1464,7 +1633,7 @@ export default function Settings() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-6">
+          <TabsList className="grid w-full grid-cols-8 mb-6">
             <TabsTrigger value="email" className="flex items-center gap-2" data-testid="tab-email">
               <Mail className="h-4 w-4" />
               <span className="hidden sm:inline">Email</span>
@@ -1492,6 +1661,10 @@ export default function Settings() {
             <TabsTrigger value="users" className="flex items-center gap-2" data-testid="tab-users">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="flex items-center gap-2" data-testid="tab-permissions">
+              <Lock className="h-4 w-4" />
+              <span className="hidden sm:inline">Permissions</span>
             </TabsTrigger>
           </TabsList>
 
@@ -2047,6 +2220,10 @@ export default function Settings() {
 
           <TabsContent value="users">
             <UsersTab />
+          </TabsContent>
+
+          <TabsContent value="permissions">
+            <PermissionsTab />
           </TabsContent>
         </Tabs>
       </div>
