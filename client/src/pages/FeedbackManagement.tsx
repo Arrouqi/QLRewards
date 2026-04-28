@@ -2,8 +2,9 @@ import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Search, Eye, MessageSquare, Loader2, Filter, ExternalLink } from "lucide-react";
+import { Search, Eye, MessageSquare, Loader2, Filter, ExternalLink, BarChart3, ListOrdered } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
+import FeedbackOverview from "@/components/FeedbackOverview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Feedback {
   id: string;
@@ -85,6 +87,9 @@ export default function FeedbackManagement() {
     },
   });
 
+  const [tab, setTab] = useState<"overview" | "submissions">("overview");
+  const [overviewType, setOverviewType] = useState<"mystery_shopper" | "merchant_referral">("mystery_shopper");
+
   return (
     <AdminLayout>
       <div className="space-y-6 p-6">
@@ -94,13 +99,15 @@ export default function FeedbackManagement() {
               Feedbacks
             </h1>
             <p className="text-sm text-muted-foreground">
-              Review submissions from mystery shoppers and code training participants.
+              Review submissions from mystery shoppers and merchant referral participants.
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground" data-testid="text-total-count">
-              Total: <strong>{feedbacks?.length ?? 0}</strong>
-            </div>
+            {tab === "submissions" && (
+              <div className="text-sm text-muted-foreground" data-testid="text-total-count">
+                Total: <strong>{feedbacks?.length ?? 0}</strong>
+              </div>
+            )}
             <Button
               onClick={() => window.open("/feedback", "_blank")}
               className="bg-[#00426D] hover:bg-[#003356]"
@@ -111,6 +118,53 @@ export default function FeedbackManagement() {
             </Button>
           </div>
         </div>
+
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "overview" | "submissions")}>
+          <TabsList>
+            <TabsTrigger value="overview" data-testid="tab-overview">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="submissions" data-testid="tab-submissions">
+              <ListOrdered className="mr-2 h-4 w-4" />
+              Submissions
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="mt-4 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Showing:</span>
+              <div className="inline-flex rounded-md border bg-muted/30 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setOverviewType("mystery_shopper")}
+                  className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                    overviewType === "mystery_shopper"
+                      ? "bg-[#00426D] text-white"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid="button-overview-mystery"
+                >
+                  Mystery Shopper
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOverviewType("merchant_referral")}
+                  className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                    overviewType === "merchant_referral"
+                      ? "bg-[#00426D] text-white"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid="button-overview-referral"
+                >
+                  Merchant Referral
+                </button>
+              </div>
+            </div>
+            <FeedbackOverview type={overviewType} />
+          </TabsContent>
+
+          <TabsContent value="submissions" className="mt-4 space-y-4">
 
         {/* Filters */}
         <Card>
@@ -239,6 +293,8 @@ export default function FeedbackManagement() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   );
