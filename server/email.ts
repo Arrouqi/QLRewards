@@ -1006,8 +1006,8 @@ export async function sendFeedbackNotification(feedback: any, recipientEmails: s
     ["Name", feedback.shopperName || "—"],
     ["Merchant", feedback.merchantName || "—"],
     ["Location", feedback.merchantLocation || "—"],
-    ["Date of Visit", feedback.visitDate || "—"],
-    ["Time of Visit", feedback.visitTime || "—"],
+    ["Date", feedback.visitDate || "—"],
+    ["Time", feedback.visitTime || "—"],
     ...(feedback.feedbackType === "mystery_shopper"
       ? ([["Total Budget (QAR)", feedback.totalBudgetQar || "—"]] as Array<[string, string]>)
       : []),

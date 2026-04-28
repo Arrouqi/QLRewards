@@ -922,7 +922,7 @@ export default function FeedbackForm() {
                       name="visitDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Date of Visit *</FormLabel>
+                          <FormLabel>Date *</FormLabel>
                           <FormControl>
                             <Input type="date" {...field} data-testid="input-visit-date" />
                           </FormControl>
@@ -935,7 +935,7 @@ export default function FeedbackForm() {
                       name="visitTime"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Time of Visit *</FormLabel>
+                          <FormLabel>Time *</FormLabel>
                           <FormControl>
                             <Input type="time" {...field} data-testid="input-visit-time" />
                           </FormControl>

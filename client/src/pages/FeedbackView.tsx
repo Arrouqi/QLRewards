@@ -464,8 +464,8 @@ export default function FeedbackView() {
                   <dl>
                     <Field label="Merchant Name" value={feedback.merchantName} />
                     <Field label="Location" value={feedback.merchantLocation} />
-                    <Field label="Date of Visit" value={feedback.visitDate} />
-                    <Field label="Time of Visit" value={feedback.visitTime} />
+                    <Field label="Date" value={feedback.visitDate} />
+                    <Field label="Time" value={feedback.visitTime} />
                     <Field
                       label="Does the staff know how to redeem the offer?"
                       value={<YesNoBadge value={feedback.staffKnowsRedeem} />}
