@@ -41,13 +41,13 @@ type QualityValue = (typeof QUALITY_VALUES)[number];
 
 const feedbackSchema = z.object({
   shopperName: z.string().min(1, "Name is required"),
-  visitDates: z.string().min(1, "Date(s) of visits is required"),
   totalBudgetQar: z.string().min(1, "Total budget is required"),
 
   merchantName: z.string().min(1, "Merchant name is required"),
   merchantId: z.string().optional(),
   merchantLocation: z.string().min(1, "Location is required"),
   visitDate: z.string().min(1, "Date of visit is required"),
+  visitTime: z.string().min(1, "Time is required"),
 
   staffKnowsRedeem: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   staffScansQr: z.enum(["yes", "no"], { required_error: "Please select an option" }),
@@ -315,7 +315,7 @@ const referralSchema = z.object({
   merchantId: z.string().optional(),
   merchantLocation: z.string().min(1, "Branch name is required"),
   visitDate: z.string().min(1, "Date is required"),
-  referralVisitTime: z.string().min(1, "Time is required"),
+  visitTime: z.string().min(1, "Time is required"),
   shopperName: z.string().min(1, "Your name is required"),
 
   referralIntroducedDeals: z.enum(["yes", "no"], { required_error: "Please select an option" }),
@@ -446,7 +446,7 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
       merchantId: undefined,
       merchantLocation: "",
       visitDate: "",
-      referralVisitTime: "",
+      visitTime: "",
       shopperName: "",
       referralLikedMost: "",
       referralCouldImprove: "",
@@ -533,7 +533,7 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
               />
               <FormField
                 control={form.control}
-                name="referralVisitTime"
+                name="visitTime"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Time *</FormLabel>
@@ -851,23 +851,6 @@ export default function FeedbackForm() {
                   />
                   <FormField
                     control={form.control}
-                    name="visitDates"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date(s) of Visits *</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="e.g. Apr 12, 2026 or Apr 10–14, 2026"
-                            {...field}
-                            data-testid="input-visit-dates"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
                     name="totalBudgetQar"
                     render={({ field }) => (
                       <FormItem>
@@ -933,19 +916,34 @@ export default function FeedbackForm() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="visitDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date of Visit *</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} data-testid="input-visit-date" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="visitDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date of Visit *</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} data-testid="input-visit-date" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="visitTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Time of Visit *</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} data-testid="input-visit-time" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <div className="space-y-3 pt-2">
                     <YesNoField

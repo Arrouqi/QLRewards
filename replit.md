@@ -58,8 +58,9 @@ CREATE TABLE IF NOT EXISTS feedbacks (
   id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
   feedback_type text NOT NULL,
   status text NOT NULL DEFAULT 'new',
-  shopper_name text, visit_dates text, total_budget_qar text,
-  merchant_id text, merchant_name text, merchant_location text, visit_date text,
+  shopper_name text, total_budget_qar text,
+  merchant_id text, merchant_name text, merchant_location text,
+  visit_date text, visit_time text,
   staff_knows_redeem text, staff_scans_qr text, reward_approved_immediately text,
   redemption_smooth text, staff_aware_of_offer text,
   product_service_quality text, merchant_comments text,
@@ -78,10 +79,11 @@ CREATE TABLE IF NOT EXISTS feedback_comments (
   created_at timestamp NOT NULL DEFAULT now()
 );
 
--- Merchant Referral columns (rename of "Code Training")
+-- Merchant Referral columns (rename of "Code Training") + shared visit_time + drop unused visit_dates
 ALTER TABLE feedbacks DROP COLUMN IF EXISTS code_training_payload;
+ALTER TABLE feedbacks DROP COLUMN IF EXISTS visit_dates;
 ALTER TABLE feedbacks
-  ADD COLUMN IF NOT EXISTS referral_visit_time text,
+  ADD COLUMN IF NOT EXISTS visit_time text,
   ADD COLUMN IF NOT EXISTS referral_introduced_deals text,
   ADD COLUMN IF NOT EXISTS referral_encouraged_app_download text,
   ADD COLUMN IF NOT EXISTS referral_explained_offer text,

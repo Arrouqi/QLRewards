@@ -52,12 +52,12 @@ interface FeedbackDetail {
   feedbackType: string;
   status: string;
   shopperName: string | null;
-  visitDates: string | null;
   totalBudgetQar: string | null;
   merchantName: string | null;
   merchantId: string | null;
   merchantLocation: string | null;
   visitDate: string | null;
+  visitTime: string | null;
   staffKnowsRedeem: string | null;
   staffScansQr: string | null;
   rewardApprovedImmediately: string | null;
@@ -71,7 +71,6 @@ interface FeedbackDetail {
   improvementSuggestions: string | null;
   enjoyedMost: string | null;
   // Merchant Referral
-  referralVisitTime: string | null;
   referralIntroducedDeals: string | null;
   referralEncouragedAppDownload: string | null;
   referralExplainedOffer: string | null;
@@ -368,7 +367,6 @@ export default function FeedbackView() {
                   </h3>
                   <dl>
                     <Field label="Name" value={feedback.shopperName} />
-                    <Field label="Date(s) of Visits" value={feedback.visitDates} />
                     <Field label="Total Budget Used (QAR)" value={feedback.totalBudgetQar} />
                   </dl>
                 </>
@@ -387,7 +385,7 @@ export default function FeedbackView() {
                     <Field label="Merchant Name" value={feedback.merchantName} />
                     <Field label="Branch Name" value={feedback.merchantLocation} />
                     <Field label="Date" value={feedback.visitDate} />
-                    <Field label="Time" value={feedback.referralVisitTime} />
+                    <Field label="Time" value={feedback.visitTime} />
                   </dl>
                 </CardContent>
               </Card>
@@ -467,6 +465,7 @@ export default function FeedbackView() {
                     <Field label="Merchant Name" value={feedback.merchantName} />
                     <Field label="Location" value={feedback.merchantLocation} />
                     <Field label="Date of Visit" value={feedback.visitDate} />
+                    <Field label="Time of Visit" value={feedback.visitTime} />
                     <Field
                       label="Does the staff know how to redeem the offer?"
                       value={<YesNoBadge value={feedback.staffKnowsRedeem} />}

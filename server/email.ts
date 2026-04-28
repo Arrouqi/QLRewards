@@ -1003,11 +1003,14 @@ export async function sendFeedbackNotification(feedback: any, recipientEmails: s
 
   const rows: Array<[string, string]> = [
     ["Type", typeLabel],
-    ["Shopper Name", feedback.shopperName || "—"],
-    ["Visit Date(s)", feedback.visitDates || "—"],
-    ["Total Budget (QAR)", feedback.totalBudgetQar || "—"],
+    ["Name", feedback.shopperName || "—"],
     ["Merchant", feedback.merchantName || "—"],
     ["Location", feedback.merchantLocation || "—"],
+    ["Date of Visit", feedback.visitDate || "—"],
+    ["Time of Visit", feedback.visitTime || "—"],
+    ...(feedback.feedbackType === "mystery_shopper"
+      ? ([["Total Budget (QAR)", feedback.totalBudgetQar || "—"]] as Array<[string, string]>)
+      : []),
     ["Submitted", new Date(feedback.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })],
   ];
 

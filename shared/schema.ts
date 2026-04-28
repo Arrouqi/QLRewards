@@ -380,15 +380,16 @@ export const feedbacks = pgTable("feedbacks", {
 
   // Shopper Information (Mystery Shopper) / Your Name (Merchant Referral)
   shopperName: text("shopper_name"),
-  visitDates: text("visit_dates"),
   totalBudgetQar: text("total_budget_qar"),
 
   // Merchant Experience Summary (single merchant per submission)
-  // Shared with Merchant Referral: merchantName=Merchant Name, merchantLocation=Branch Name, visitDate=Date
+  // Shared with Merchant Referral: merchantName=Merchant Name, merchantLocation=Branch Name,
+  // visitDate=Date, visitTime=Time
   merchantId: text("merchant_id"), // optional ES merchant id if picked from dropdown
   merchantName: text("merchant_name"),
   merchantLocation: text("merchant_location"),
   visitDate: text("visit_date"),
+  visitTime: text("visit_time"),
   staffKnowsRedeem: text("staff_knows_redeem"), // 'yes' | 'no'
   staffScansQr: text("staff_scans_qr"),
   rewardApprovedImmediately: text("reward_approved_immediately"),
@@ -407,7 +408,6 @@ export const feedbacks = pgTable("feedbacks", {
   enjoyedMost: text("enjoyed_most"),
 
   // Merchant Referral - Living Deals Staff Interaction
-  referralVisitTime: text("referral_visit_time"), // free text "HH:MM"
   referralIntroducedDeals: text("referral_introduced_deals"), // 'yes' | 'no'
   referralEncouragedAppDownload: text("referral_encouraged_app_download"), // 'yes' | 'no'
   referralExplainedOffer: text("referral_explained_offer"), // 'yes' | 'no'
