@@ -998,7 +998,7 @@ export async function sendFeedbackNotification(feedback: any, recipientEmails: s
 
   const fromEmail = settings.fromEmail || "noreply@qatarliving.com";
   const fromName = settings.fromName || "Qatar Living Deals";
-  const typeLabel = feedback.feedbackType === "mystery_shopper" ? "Mystery Shopper" : "Code Training";
+  const typeLabel = feedback.feedbackType === "mystery_shopper" ? "Mystery Shopper" : "Merchant Referral";
   const subject = `New ${typeLabel} Feedback Submission${feedback.shopperName ? ` - ${feedback.shopperName}` : ""}`;
 
   const rows: Array<[string, string]> = [

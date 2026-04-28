@@ -46,9 +46,52 @@ Preferred communication style: Simple, everyday language.
 - **activityLogs**: Tracks user actions for auditing.
 - **submissionLogs**: Records form submissions for debugging and monitoring.
 - **systemSettings**: Key-value store for system configuration.
-- **feedbacks**: Public feedback submissions (e.g., Mystery Shopper), including submission details and status management.
+- **feedbacks**: Public feedback submissions. Two types: Mystery Shopper (full multi-section form) and Merchant Referral (Living Deals Staff Interaction form). Shared columns (`merchantName`, `merchantLocation`, `visitDate`, `shopperName`) are reused across both types; merchant referral has its own `referral_*` columns. Status: new/reviewed/archived.
 - **feedbackComments**: Internal comments on feedback entries.
 - **redirectLogs**: Tracks deep-link landing page hits, recording visitor info, platform, outcome, and device details for analytics.
+
+#### Pending Production Migrations (Feedbacks feature)
+Run on production DB before deploying:
+```sql
+-- Tables (initial Feedbacks rollout)
+CREATE TABLE IF NOT EXISTS feedbacks (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+  feedback_type text NOT NULL,
+  status text NOT NULL DEFAULT 'new',
+  shopper_name text, visit_dates text, total_budget_qar text,
+  merchant_id text, merchant_name text, merchant_location text, visit_date text,
+  staff_knows_redeem text, staff_scans_qr text, reward_approved_immediately text,
+  redemption_smooth text, staff_aware_of_offer text,
+  product_service_quality text, merchant_comments text,
+  browse_select_ease text, all_offers_redeemed_as_described text,
+  offers_issue_explanation text, improvement_suggestions text,
+  enjoyed_most text,
+  ip_address text, user_agent text,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS feedback_comments (
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+  feedback_id varchar NOT NULL REFERENCES feedbacks(id) ON DELETE CASCADE,
+  author text NOT NULL,
+  content text NOT NULL,
+  created_at timestamp NOT NULL DEFAULT now()
+);
+
+-- Merchant Referral columns (rename of "Code Training")
+ALTER TABLE feedbacks DROP COLUMN IF EXISTS code_training_payload;
+ALTER TABLE feedbacks
+  ADD COLUMN IF NOT EXISTS referral_visit_time text,
+  ADD COLUMN IF NOT EXISTS referral_introduced_deals text,
+  ADD COLUMN IF NOT EXISTS referral_encouraged_app_download text,
+  ADD COLUMN IF NOT EXISTS referral_explained_offer text,
+  ADD COLUMN IF NOT EXISTS referral_provided_promo_code text,
+  ADD COLUMN IF NOT EXISTS referral_subscription_smoothness text,
+  ADD COLUMN IF NOT EXISTS referral_staff_knowledge text,
+  ADD COLUMN IF NOT EXISTS referral_overall_satisfaction text,
+  ADD COLUMN IF NOT EXISTS referral_liked_most text,
+  ADD COLUMN IF NOT EXISTS referral_could_improve text;
+```
 
 ### Project Structure
 - `client/`: React frontend.

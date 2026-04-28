@@ -70,6 +70,17 @@ interface FeedbackDetail {
   offersIssueExplanation: string | null;
   improvementSuggestions: string | null;
   enjoyedMost: string | null;
+  // Merchant Referral
+  referralVisitTime: string | null;
+  referralIntroducedDeals: string | null;
+  referralEncouragedAppDownload: string | null;
+  referralExplainedOffer: string | null;
+  referralProvidedPromoCode: string | null;
+  referralSubscriptionSmoothness: string | null;
+  referralStaffKnowledge: string | null;
+  referralOverallSatisfaction: string | null;
+  referralLikedMost: string | null;
+  referralCouldImprove: string | null;
   createdAt: string;
   comments: Comment[];
 }
@@ -82,9 +93,24 @@ const QUALITY_LABEL: Record<string, string> = {
   excellent: "Excellent",
 };
 
+const SMOOTHNESS_LABEL: Record<string, string> = {
+  very_easy: "Very Easy",
+  easy: "Easy",
+  difficult: "Difficult",
+  very_difficult: "Very Difficult",
+};
+
+const SATISFACTION_LABEL: Record<string, string> = {
+  very_unsatisfied: "Very Unsatisfied",
+  unsatisfied: "Unsatisfied",
+  neutral: "Neutral",
+  satisfied: "Satisfied",
+  very_satisfied: "Very Satisfied",
+};
+
 const TYPE_LABEL: Record<string, string> = {
   mystery_shopper: "Mystery Shopper",
-  code_training: "Code Training",
+  merchant_referral: "Merchant Referral",
 };
 
 function Field({ label, value }: { label: string; value: any }) {
@@ -331,90 +357,184 @@ export default function FeedbackView() {
               </div>
             </CardHeader>
             <CardContent className="pt-6">
-              <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-primary">Shopper Information</h3>
-              <dl>
-                <Field label="Name" value={feedback.shopperName} />
-                <Field label="Date(s) of Visits" value={feedback.visitDates} />
-                <Field label="Total Budget Used (QAR)" value={feedback.totalBudgetQar} />
-              </dl>
+              {feedback.feedbackType === "merchant_referral" ? (
+                <dl>
+                  <Field label="Your Name" value={feedback.shopperName} />
+                </dl>
+              ) : (
+                <>
+                  <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-primary">
+                    Shopper Information
+                  </h3>
+                  <dl>
+                    <Field label="Name" value={feedback.shopperName} />
+                    <Field label="Date(s) of Visits" value={feedback.visitDates} />
+                    <Field label="Total Budget Used (QAR)" value={feedback.totalBudgetQar} />
+                  </dl>
+                </>
+              )}
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="bg-primary/5">
-              <CardTitle className="text-base">Merchant Experience Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <dl>
-                <Field label="Merchant Name" value={feedback.merchantName} />
-                <Field label="Location" value={feedback.merchantLocation} />
-                <Field label="Date of Visit" value={feedback.visitDate} />
-                <Field
-                  label="Does the staff know how to redeem the offer?"
-                  value={<YesNoBadge value={feedback.staffKnowsRedeem} />}
-                />
-                <Field
-                  label="When a reward is claimed, does the staff scan QR code?"
-                  value={<YesNoBadge value={feedback.staffScansQr} />}
-                />
-                <Field
-                  label="Is the reward approved immediately by the staff?"
-                  value={<YesNoBadge value={feedback.rewardApprovedImmediately} />}
-                />
-                <Field
-                  label="Offer Redemption Smooth?"
-                  value={<YesNoBadge value={feedback.redemptionSmooth} />}
-                />
-                <Field label="Staff Aware of Offer?" value={<YesNoBadge value={feedback.staffAwareOfOffer} />} />
-                <Field
-                  label="Product / Service Quality"
-                  value={
-                    feedback.productServiceQuality
-                      ? QUALITY_LABEL[feedback.productServiceQuality] || feedback.productServiceQuality
-                      : null
-                  }
-                />
-                <Field label="Comments" value={feedback.merchantComments} />
-              </dl>
-            </CardContent>
-          </Card>
+          {feedback.feedbackType === "merchant_referral" ? (
+            <>
+              <Card>
+                <CardHeader className="bg-primary/5">
+                  <CardTitle className="text-base">Visit Details</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <dl>
+                    <Field label="Merchant Name" value={feedback.merchantName} />
+                    <Field label="Branch Name" value={feedback.merchantLocation} />
+                    <Field label="Date" value={feedback.visitDate} />
+                    <Field label="Time" value={feedback.referralVisitTime} />
+                  </dl>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="bg-primary/5">
-              <CardTitle className="text-base">QL Rewards Platform Feedback</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <dl>
-                <Field
-                  label="How easy was it to browse and select offers?"
-                  value={
-                    feedback.browseSelectEase
-                      ? QUALITY_LABEL[feedback.browseSelectEase] || feedback.browseSelectEase
-                      : null
-                  }
-                />
-                <Field
-                  label="Did all offers redeem as described?"
-                  value={<YesNoBadge value={feedback.allOffersRedeemedAsDescribed} />}
-                />
-                {feedback.allOffersRedeemedAsDescribed === "no" && (
-                  <Field label="Explanation (if issues)" value={feedback.offersIssueExplanation} />
-                )}
-                <Field label="Suggestions for improving QL Rewards" value={feedback.improvementSuggestions} />
-              </dl>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="bg-primary/5">
+                  <CardTitle className="text-base">Staff Interaction</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <dl>
+                    <Field
+                      label="Did the staff introduce Qatar Living Deals to you?"
+                      value={<YesNoBadge value={feedback.referralIntroducedDeals} />}
+                    />
+                    <Field
+                      label="Did the staff ask or encourage you to download the Qatar Living app?"
+                      value={<YesNoBadge value={feedback.referralEncouragedAppDownload} />}
+                    />
+                    <Field
+                      label="Did the staff clearly explain the offer (discount, conditions, how to use it)?"
+                      value={<YesNoBadge value={feedback.referralExplainedOffer} />}
+                    />
+                    <Field
+                      label="Did the staff provide the correct promo code or guide you on how to scan/redeem the offer?"
+                      value={<YesNoBadge value={feedback.referralProvidedPromoCode} />}
+                    />
+                    <Field
+                      label="How smooth was the subscription process?"
+                      value={
+                        feedback.referralSubscriptionSmoothness
+                          ? SMOOTHNESS_LABEL[feedback.referralSubscriptionSmoothness] ||
+                            feedback.referralSubscriptionSmoothness
+                          : null
+                      }
+                    />
+                    <Field
+                      label="How would you rate the staff's knowledge about Qatar Living Deals?"
+                      value={
+                        feedback.referralStaffKnowledge
+                          ? QUALITY_LABEL[feedback.referralStaffKnowledge] || feedback.referralStaffKnowledge
+                          : null
+                      }
+                    />
+                    <Field
+                      label="Overall, how satisfied are you with your experience?"
+                      value={
+                        feedback.referralOverallSatisfaction
+                          ? SATISFACTION_LABEL[feedback.referralOverallSatisfaction] ||
+                            feedback.referralOverallSatisfaction
+                          : null
+                      }
+                    />
+                  </dl>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="bg-primary/5">
-              <CardTitle className="text-base">Final Comments</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <dl>
-                <Field label="What did you enjoy most about using QL Rewards?" value={feedback.enjoyedMost} />
-              </dl>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="bg-primary/5">
+                  <CardTitle className="text-base">Additional Feedback</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <dl>
+                    <Field label="What did you like most about your experience?" value={feedback.referralLikedMost} />
+                    <Field label="What can be improved?" value={feedback.referralCouldImprove} />
+                  </dl>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <>
+              <Card>
+                <CardHeader className="bg-primary/5">
+                  <CardTitle className="text-base">Merchant Experience Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <dl>
+                    <Field label="Merchant Name" value={feedback.merchantName} />
+                    <Field label="Location" value={feedback.merchantLocation} />
+                    <Field label="Date of Visit" value={feedback.visitDate} />
+                    <Field
+                      label="Does the staff know how to redeem the offer?"
+                      value={<YesNoBadge value={feedback.staffKnowsRedeem} />}
+                    />
+                    <Field
+                      label="When a reward is claimed, does the staff scan QR code?"
+                      value={<YesNoBadge value={feedback.staffScansQr} />}
+                    />
+                    <Field
+                      label="Is the reward approved immediately by the staff?"
+                      value={<YesNoBadge value={feedback.rewardApprovedImmediately} />}
+                    />
+                    <Field
+                      label="Offer Redemption Smooth?"
+                      value={<YesNoBadge value={feedback.redemptionSmooth} />}
+                    />
+                    <Field label="Staff Aware of Offer?" value={<YesNoBadge value={feedback.staffAwareOfOffer} />} />
+                    <Field
+                      label="Product / Service Quality"
+                      value={
+                        feedback.productServiceQuality
+                          ? QUALITY_LABEL[feedback.productServiceQuality] || feedback.productServiceQuality
+                          : null
+                      }
+                    />
+                    <Field label="Comments" value={feedback.merchantComments} />
+                  </dl>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="bg-primary/5">
+                  <CardTitle className="text-base">QL Rewards Platform Feedback</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <dl>
+                    <Field
+                      label="How easy was it to browse and select offers?"
+                      value={
+                        feedback.browseSelectEase
+                          ? QUALITY_LABEL[feedback.browseSelectEase] || feedback.browseSelectEase
+                          : null
+                      }
+                    />
+                    <Field
+                      label="Did all offers redeem as described?"
+                      value={<YesNoBadge value={feedback.allOffersRedeemedAsDescribed} />}
+                    />
+                    {feedback.allOffersRedeemedAsDescribed === "no" && (
+                      <Field label="Explanation (if issues)" value={feedback.offersIssueExplanation} />
+                    )}
+                    <Field label="Suggestions for improving QL Rewards" value={feedback.improvementSuggestions} />
+                  </dl>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="bg-primary/5">
+                  <CardTitle className="text-base">Final Comments</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <dl>
+                    <Field label="What did you enjoy most about using QL Rewards?" value={feedback.enjoyedMost} />
+                  </dl>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
 
         {/* Comments thread */}

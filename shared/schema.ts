@@ -375,15 +375,16 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 
 export const feedbacks = pgTable("feedbacks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  feedbackType: text("feedback_type").notNull(), // 'mystery_shopper' | 'code_training'
+  feedbackType: text("feedback_type").notNull(), // 'mystery_shopper' | 'merchant_referral'
   status: text("status").notNull().default("new"), // 'new' | 'reviewed' | 'archived'
 
-  // Shopper Information
+  // Shopper Information (Mystery Shopper) / Your Name (Merchant Referral)
   shopperName: text("shopper_name"),
   visitDates: text("visit_dates"),
   totalBudgetQar: text("total_budget_qar"),
 
   // Merchant Experience Summary (single merchant per submission)
+  // Shared with Merchant Referral: merchantName=Merchant Name, merchantLocation=Branch Name, visitDate=Date
   merchantId: text("merchant_id"), // optional ES merchant id if picked from dropdown
   merchantName: text("merchant_name"),
   merchantLocation: text("merchant_location"),
@@ -396,17 +397,26 @@ export const feedbacks = pgTable("feedbacks", {
   productServiceQuality: text("product_service_quality"), // 'poor'|'fair'|'good'|'very_good'|'excellent'
   merchantComments: text("merchant_comments"),
 
-  // QL Rewards Platform Feedback
+  // QL Rewards Platform Feedback (Mystery Shopper)
   browseSelectEase: text("browse_select_ease"),
   allOffersRedeemedAsDescribed: text("all_offers_redeemed_as_described"),
   offersIssueExplanation: text("offers_issue_explanation"),
   improvementSuggestions: text("improvement_suggestions"),
 
-  // Final Comments
+  // Final Comments (Mystery Shopper)
   enjoyedMost: text("enjoyed_most"),
 
-  // Code Training (placeholder for future fields, stored as JSON string)
-  codeTrainingPayload: text("code_training_payload"),
+  // Merchant Referral - Living Deals Staff Interaction
+  referralVisitTime: text("referral_visit_time"), // free text "HH:MM"
+  referralIntroducedDeals: text("referral_introduced_deals"), // 'yes' | 'no'
+  referralEncouragedAppDownload: text("referral_encouraged_app_download"), // 'yes' | 'no'
+  referralExplainedOffer: text("referral_explained_offer"), // 'yes' | 'no'
+  referralProvidedPromoCode: text("referral_provided_promo_code"), // 'yes' | 'no'
+  referralSubscriptionSmoothness: text("referral_subscription_smoothness"), // 'very_easy'|'easy'|'difficult'|'very_difficult'
+  referralStaffKnowledge: text("referral_staff_knowledge"), // 'poor'|'fair'|'good'|'excellent'
+  referralOverallSatisfaction: text("referral_overall_satisfaction"), // 'very_unsatisfied'|'unsatisfied'|'neutral'|'satisfied'|'very_satisfied'
+  referralLikedMost: text("referral_liked_most"),
+  referralCouldImprove: text("referral_could_improve"),
 
   // metadata
   ipAddress: text("ip_address"),

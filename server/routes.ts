@@ -290,7 +290,7 @@ export async function registerRoutes(
   app.post("/api/feedbacks", feedbackSubmitRateLimit, async (req, res) => {
     try {
       const data = insertFeedbackSchema.parse(req.body);
-      if (!data.feedbackType || !["mystery_shopper", "code_training"].includes(data.feedbackType)) {
+      if (!data.feedbackType || !["mystery_shopper", "merchant_referral"].includes(data.feedbackType)) {
         return res.status(400).json({ error: "Invalid feedbackType" });
       }
       const ipAddress =

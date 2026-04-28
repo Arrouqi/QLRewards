@@ -287,10 +287,402 @@ function QualityField({
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Merchant Referral Form (Living Deals Staff Interaction)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SMOOTHNESS_OPTIONS = ["Very Easy", "Easy", "Difficult", "Very Difficult"] as const;
+const SMOOTHNESS_VALUES = ["very_easy", "easy", "difficult", "very_difficult"] as const;
+const KNOWLEDGE_OPTIONS = ["Poor", "Fair", "Good", "Excellent"] as const;
+const KNOWLEDGE_VALUES = ["poor", "fair", "good", "excellent"] as const;
+const SATISFACTION_OPTIONS = [
+  "Very Unsatisfied",
+  "Unsatisfied",
+  "Neutral",
+  "Satisfied",
+  "Very Satisfied",
+] as const;
+const SATISFACTION_VALUES = [
+  "very_unsatisfied",
+  "unsatisfied",
+  "neutral",
+  "satisfied",
+  "very_satisfied",
+] as const;
+
+const referralSchema = z.object({
+  merchantName: z.string().min(1, "Merchant name is required"),
+  merchantId: z.string().optional(),
+  merchantLocation: z.string().min(1, "Branch name is required"),
+  visitDate: z.string().min(1, "Date is required"),
+  referralVisitTime: z.string().min(1, "Time is required"),
+  shopperName: z.string().min(1, "Your name is required"),
+
+  referralIntroducedDeals: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  referralEncouragedAppDownload: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  referralExplainedOffer: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  referralProvidedPromoCode: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+
+  referralSubscriptionSmoothness: z.enum(SMOOTHNESS_VALUES, { required_error: "Please select an option" }),
+  referralStaffKnowledge: z.enum(KNOWLEDGE_VALUES, { required_error: "Please select an option" }),
+  referralOverallSatisfaction: z.enum(SATISFACTION_VALUES, { required_error: "Please select an option" }),
+
+  referralLikedMost: z.string().optional(),
+  referralCouldImprove: z.string().optional(),
+});
+
+type ReferralFormValues = z.infer<typeof referralSchema>;
+
+function OptionsField({
+  control,
+  name,
+  label,
+  options,
+  values,
+  cols,
+}: {
+  control: any;
+  name: keyof ReferralFormValues;
+  label: string;
+  options: readonly string[];
+  values: readonly string[];
+  cols: 4 | 5;
+}) {
+  const colClass = cols === 5 ? "sm:grid-cols-5" : "sm:grid-cols-4";
+  return (
+    <FormField
+      control={control}
+      name={name as any}
+      render={({ field }) => (
+        <FormItem className="rounded-md border p-4">
+          <FormLabel className="text-sm font-semibold">{label}</FormLabel>
+          <FormControl>
+            <RadioGroup
+              onValueChange={field.onChange}
+              value={field.value}
+              className={cn("mt-2 grid grid-cols-2 gap-2", colClass)}
+            >
+              {options.map((opt, idx) => {
+                const val = values[idx];
+                return (
+                  <Label
+                    key={val}
+                    className={cn(
+                      "flex cursor-pointer items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm",
+                      field.value === val && "border-primary bg-primary/10 font-semibold",
+                    )}
+                  >
+                    <RadioGroupItem value={val} data-testid={`radio-${name}-${val}`} />
+                    {opt}
+                  </Label>
+                );
+              })}
+            </RadioGroup>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function ReferralYesNoField({
+  control,
+  name,
+  label,
+}: {
+  control: any;
+  name: keyof ReferralFormValues;
+  label: string;
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name as any}
+      render={({ field }) => (
+        <FormItem className="rounded-md border p-4">
+          <FormLabel className="text-sm font-semibold">{label}</FormLabel>
+          <FormControl>
+            <RadioGroup
+              onValueChange={field.onChange}
+              value={field.value}
+              className="mt-2 flex gap-4"
+            >
+              <Label
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2",
+                  field.value === "yes" && "border-primary bg-primary/10 font-semibold",
+                )}
+              >
+                <RadioGroupItem value="yes" data-testid={`radio-${name}-yes`} />
+                Yes
+              </Label>
+              <Label
+                className={cn(
+                  "flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2",
+                  field.value === "no" && "border-primary bg-primary/10 font-semibold",
+                )}
+              >
+                <RadioGroupItem value="no" data-testid={`radio-${name}-no`} />
+                No
+              </Label>
+            </RadioGroup>
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
+  const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
+
+  const form = useForm<ReferralFormValues>({
+    resolver: zodResolver(referralSchema),
+    defaultValues: {
+      merchantName: "",
+      merchantId: undefined,
+      merchantLocation: "",
+      visitDate: "",
+      referralVisitTime: "",
+      shopperName: "",
+      referralLikedMost: "",
+      referralCouldImprove: "",
+    },
+  });
+
+  const onSubmit = async (values: ReferralFormValues) => {
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/feedbacks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...values, feedbackType: "merchant_referral" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to submit feedback");
+      }
+      onSuccess();
+    } catch (err: any) {
+      toast({ title: "Submission failed", description: err.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <p className="rounded-md bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          Living Deals Staff Interaction — Referral Feedback Form. Please share your honest experience with the
+          merchant's staff.
+        </p>
+
+        {/* Visit details */}
+        <Card>
+          <CardHeader className="bg-primary/5">
+            <CardTitle className="text-lg">Visit Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            <FormField
+              control={form.control}
+              name="merchantName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Merchant Name *</FormLabel>
+                  <FormControl>
+                    <MerchantPicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      onMerchantId={(id) => form.setValue("merchantId", id)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="merchantLocation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Branch Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Branch / area" {...field} data-testid="input-referral-branch" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="visitDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date *</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} data-testid="input-referral-date" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="referralVisitTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time *</FormLabel>
+                    <FormControl>
+                      <Input type="time" {...field} data-testid="input-referral-time" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="shopperName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Your Name *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your full name" {...field} data-testid="input-referral-name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Staff interaction */}
+        <Card>
+          <CardHeader className="bg-primary/5">
+            <CardTitle className="text-lg">Staff Interaction</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-6">
+            <ReferralYesNoField
+              control={form.control}
+              name="referralIntroducedDeals"
+              label="Did the staff introduce Qatar Living Deals to you?"
+            />
+            <ReferralYesNoField
+              control={form.control}
+              name="referralEncouragedAppDownload"
+              label="Did the staff ask or encourage you to download the Qatar Living app?"
+            />
+            <ReferralYesNoField
+              control={form.control}
+              name="referralExplainedOffer"
+              label="Did the staff clearly explain the offer (discount, conditions, how to use it)?"
+            />
+            <ReferralYesNoField
+              control={form.control}
+              name="referralProvidedPromoCode"
+              label="Did the staff provide the correct promo code or guide you on how to scan/redeem the offer?"
+            />
+            <OptionsField
+              control={form.control}
+              name="referralSubscriptionSmoothness"
+              label="How smooth was the subscription process?"
+              options={SMOOTHNESS_OPTIONS}
+              values={SMOOTHNESS_VALUES}
+              cols={4}
+            />
+            <OptionsField
+              control={form.control}
+              name="referralStaffKnowledge"
+              label="How would you rate the staff's knowledge about Qatar Living Deals?"
+              options={KNOWLEDGE_OPTIONS}
+              values={KNOWLEDGE_VALUES}
+              cols={4}
+            />
+            <OptionsField
+              control={form.control}
+              name="referralOverallSatisfaction"
+              label="Overall, how satisfied are you with your experience?"
+              options={SATISFACTION_OPTIONS}
+              values={SATISFACTION_VALUES}
+              cols={5}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Additional Feedback */}
+        <Card>
+          <CardHeader className="bg-primary/5">
+            <CardTitle className="text-lg">Additional Feedback (Optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            <FormField
+              control={form.control}
+              name="referralLikedMost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What did you like most about your experience?</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={4}
+                      placeholder="Share what went well..."
+                      {...field}
+                      data-testid="textarea-referral-liked-most"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="referralCouldImprove"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What can be improved?</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={4}
+                      placeholder="Share what could be better..."
+                      {...field}
+                      data-testid="textarea-referral-could-improve"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => form.reset()}
+            disabled={submitting}
+            data-testid="button-referral-reset"
+          >
+            Reset
+          </Button>
+          <Button type="submit" size="lg" disabled={submitting} data-testid="button-referral-submit">
+            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Submit Feedback
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
 export default function FeedbackForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"mystery_shopper" | "code_training">("mystery_shopper");
+  const [activeTab, setActiveTab] = useState<"mystery_shopper" | "merchant_referral">("mystery_shopper");
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -413,32 +805,28 @@ export default function FeedbackForm() {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("code_training")}
+            onClick={() => setActiveTab("merchant_referral")}
             className={cn(
               "flex items-center justify-center gap-2 rounded-lg border-2 p-4 text-sm font-semibold transition",
-              activeTab === "code_training"
+              activeTab === "merchant_referral"
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-muted bg-white hover:border-primary/50",
             )}
-            data-testid="tab-code-training"
+            data-testid="tab-merchant-referral"
           >
             <Sparkles className="h-5 w-5" />
-            Code Training
+            Merchant Referral
           </button>
         </div>
 
-        {activeTab === "code_training" ? (
-          <Card>
-            <CardContent className="py-16 text-center">
-              <Sparkles className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-              <h2 className="text-xl font-semibold" data-testid="text-coming-soon">
-                Coming Soon
-              </h2>
-              <p className="mt-2 text-muted-foreground">
-                The Code Training feedback form is being prepared and will be available shortly.
-              </p>
-            </CardContent>
-          </Card>
+        {activeTab === "merchant_referral" ? (
+          <MerchantReferralForm
+            onSuccess={() => {
+              setSuccess(true);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              toast({ title: "Thank you!", description: "Your feedback has been submitted." });
+            }}
+          />
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">

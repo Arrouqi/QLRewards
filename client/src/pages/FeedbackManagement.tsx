@@ -38,7 +38,7 @@ interface Feedback {
 
 const TYPE_LABEL: Record<string, string> = {
   mystery_shopper: "Mystery Shopper",
-  code_training: "Code Training",
+  merchant_referral: "Merchant Referral",
 };
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
@@ -139,7 +139,7 @@ export default function FeedbackManagement() {
                 <SelectContent>
                   <SelectItem value="all">All types</SelectItem>
                   <SelectItem value="mystery_shopper">Mystery Shopper</SelectItem>
-                  <SelectItem value="code_training">Code Training</SelectItem>
+                  <SelectItem value="merchant_referral">Merchant Referral</SelectItem>
                 </SelectContent>
               </Select>
             </div>
