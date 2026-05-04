@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Search, Eye, MessageSquare, Loader2, Filter, ExternalLink, BarChart3, ListOrdered, Trash2 } from "lucide-react";
+import { Search, Eye, MessageSquare, Loader2, Filter, ExternalLink, BarChart3, ListOrdered, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import FeedbackOverview from "@/components/FeedbackOverview";
 import { Button } from "@/components/ui/button";
@@ -102,14 +102,27 @@ export default function FeedbackManagement() {
   });
 
   const { data: session } = useQuery<{ role?: string }>({
-    queryKey: ["/api/auth/me"],
+    queryKey: ["/api/auth/session"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
+      const res = await fetch("/api/auth/session", { credentials: "include" });
       if (!res.ok) return {};
       return res.json();
     },
   });
   const isAdmin = session?.role === "admin";
+
+  type SortKey = "feedbackType" | "shopperName" | "merchantName" | "merchantLocation" | "visitDate" | "status" | "createdAt";
+  const [sortKey, setSortKey] = useState<SortKey>("createdAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const handleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -291,18 +304,47 @@ export default function FeedbackManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Shopper</TableHead>
-                    <TableHead>Merchant</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Visit Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Submitted</TableHead>
+                    {(
+                      [
+                        { key: "feedbackType", label: "Type" },
+                        { key: "shopperName", label: "Shopper" },
+                        { key: "merchantName", label: "Merchant" },
+                        { key: "merchantLocation", label: "Location" },
+                        { key: "visitDate", label: "Visit Date" },
+                        { key: "status", label: "Status" },
+                        { key: "createdAt", label: "Submitted" },
+                      ] as { key: SortKey; label: string }[]
+                    ).map(({ key, label }) => (
+                      <TableHead
+                        key={key}
+                        className="cursor-pointer select-none hover:text-foreground"
+                        onClick={() => handleSort(key)}
+                        data-testid={`th-sort-${key}`}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {label}
+                          {sortKey === key ? (
+                            sortDir === "asc" ? (
+                              <ArrowUp className="h-3.5 w-3.5 text-primary" />
+                            ) : (
+                              <ArrowDown className="h-3.5 w-3.5 text-primary" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/40" />
+                          )}
+                        </span>
+                      </TableHead>
+                    ))}
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {feedbacks.map((f) => (
+                  {[...(feedbacks || [])].sort((a, b) => {
+                    const av = (a[sortKey] ?? "") as string;
+                    const bv = (b[sortKey] ?? "") as string;
+                    const cmp = av.localeCompare(bv);
+                    return sortDir === "asc" ? cmp : -cmp;
+                  }).map((f) => (
                     <TableRow key={f.id} data-testid={`row-feedback-${f.id}`}>
                       <TableCell>
                         <Badge variant="outline">{TYPE_LABEL[f.feedbackType] || f.feedbackType}</Badge>

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
@@ -15,7 +14,6 @@ import {
   Send,
   BarChart3,
   Globe,
-  CalendarDays,
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,8 +61,6 @@ interface OverviewStats {
 
 export default function Overview() {
   const [, setLocation] = useLocation();
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
 
   const { data: authData } = useQuery<{ role: string }>({
     queryKey: ["/api/auth/session"],
@@ -76,15 +72,10 @@ export default function Overview() {
   });
   const isAdmin = authData?.role === "admin";
 
-  const queryParams = new URLSearchParams();
-  if (dateFrom) queryParams.set("from", dateFrom);
-  if (dateTo) queryParams.set("to", dateTo);
-  const queryString = queryParams.toString();
-
   const { data: stats, isLoading } = useQuery<OverviewStats>({
-    queryKey: ["overview-stats", dateFrom, dateTo],
+    queryKey: ["overview-stats"],
     queryFn: async () => {
-      const res = await fetch(`/api/stats/overview${queryString ? `?${queryString}` : ""}`, {
+      const res = await fetch(`/api/stats/overview`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to fetch stats");
@@ -131,44 +122,12 @@ export default function Overview() {
     );
   };
 
-  const clearDates = () => {
-    setDateFrom("");
-    setDateTo("");
-  };
-
   return (
     <AdminLayout>
       <div className="p-6">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900" data-testid="text-page-title">Overview</h1>
-            <p className="text-slate-500">Platform statistics and activity summary</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-slate-400" />
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-40 text-sm"
-                data-testid="input-date-from"
-              />
-              <span className="text-slate-400 text-sm">to</span>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-40 text-sm"
-                data-testid="input-date-to"
-              />
-            </div>
-            {(dateFrom || dateTo) && (
-              <Button variant="outline" size="sm" onClick={clearDates} data-testid="button-clear-dates">
-                Clear
-              </Button>
-            )}
-          </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900" data-testid="text-page-title">Overview</h1>
+          <p className="text-slate-500">Platform statistics and activity summary</p>
         </div>
 
         {isLoading ? (
