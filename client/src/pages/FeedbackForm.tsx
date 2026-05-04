@@ -833,7 +833,7 @@ export default function FeedbackForm() {
             <MessageSquare className="h-6 w-6 text-primary" />
           </div>
           <h1 className="text-xl font-bold tracking-tight sm:text-3xl" data-testid="text-page-title">
-            Qatar Living Rewards — Feedback
+            Qatar Living Deals — Feedback
           </h1>
           <p className="mt-2 text-muted-foreground">
             Share your experience to help us improve.
@@ -1007,7 +1007,7 @@ export default function FeedbackForm() {
                     <YesNoField
                       control={form.control}
                       name="staffFamiliarWithOffers"
-                      label="Are staff familiar with their own offers?"
+                      label="Are staff familiar with the offers available at their branch?"
                     />
                     <YesNoField
                       control={form.control}
@@ -1017,7 +1017,7 @@ export default function FeedbackForm() {
                     <YesNoField
                       control={form.control}
                       name="staffScansQr"
-                      label="Do staff know how to process a claimed reward?"
+                      label="Do staff know how to scan the QR code?"
                     />
                     {staffScansQrValue === "no" && (
                       <div className="ml-1 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
@@ -1095,7 +1095,7 @@ export default function FeedbackForm() {
                     <YesNoField
                       control={form.control}
                       name="rewardApprovedImmediately"
-                      label="Is the reward approved immediately by the staff?"
+                      label="Is the offer approved immediately by the staff?"
                     />
                     <YesNoField
                       control={form.control}

@@ -476,7 +476,7 @@ export default function FeedbackView() {
                       value={<YesNoBadge value={feedback.staffAwareOfQld} />}
                     />
                     <Field
-                      label="Are staff familiar with their own offers?"
+                      label="Are staff familiar with the offers available at their branch?"
                       value={<YesNoBadge value={feedback.staffFamiliarWithOffers} />}
                     />
                     <Field
@@ -484,13 +484,13 @@ export default function FeedbackView() {
                       value={<YesNoBadge value={feedback.staffKnowsRedeem} />}
                     />
                     <Field
-                      label="Do staff know how to process a claimed reward?"
+                      label="Do staff know how to scan the QR code?"
                       value={<YesNoBadge value={feedback.staffScansQr} />}
                     />
                     {feedback.staffScansQr === "no" && (
                       <>
                         {feedback.processRewardComment && (
-                          <Field label="Process Reward Comment" value={feedback.processRewardComment} />
+                          <Field label="QR Scan Comment" value={feedback.processRewardComment} />
                         )}
                         {feedback.processRewardFiles && feedback.processRewardFiles.length > 0 && (
                           <div className="py-2">
@@ -513,7 +513,7 @@ export default function FeedbackView() {
                       </>
                     )}
                     <Field
-                      label="Is the reward approved immediately by the staff?"
+                      label="Is the offer approved immediately by the staff?"
                       value={<YesNoBadge value={feedback.rewardApprovedImmediately} />}
                     />
                     <Field
