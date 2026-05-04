@@ -38,14 +38,15 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Data Models
 - **deals**: Merchant deal submissions, including category, pricing, discount, rules, and approval status.
-- **merchants**: Merchant onboarding applications with company info, documents, `companyType` (individual/group), and a status flow (`pending` → `moderation` → `created` → `licensing` → `licensed` → `trained`; archivable at any point). Only Sales/admin can move `licensed` → `trained`; moderation cannot. Group merchants have specific handling for `crNumber`, `brandName`, and other details managed per-brand.
+- **merchants**: Merchant onboarding applications with company info, documents, `companyType` (individual/group), and a status flow (`pending` → `moderation` → `created` → `licensing` → `licensed` → `trained`; archivable at any point). Moving to `trained` is done via the training endpoint (not direct status change); both sales and moderation can add trainings (permission: `merchants.training`). Group merchants have specific handling for `crNumber`, `brandName`, and other details managed per-brand.
 - **merchantBrands**: Stores brand-specific details for `companyType='group'` merchants, including name, address, contact, documents, and categories.
 - **merchantDeals**: Deal offers per merchant, with optional `brandId`.
 - **merchantNotes**: Internal, add-only comments on merchant applications.
+- **merchantTrainings**: Training session logs per merchant. Fields: `trainingDate`, `trainingTime`, `trainerName`, `comment` (optional), `createdBy` (admin username). Adding a training to a `licensed` merchant automatically transitions it to `trained`. Multiple trainings can be added to `trained` merchants. Full history shown in merchant detail view.
 - **adminUsers**: Admin credentials with roles (`sales`, `moderation`, `admin`) and specific permissions.
 - **activityLogs**: Tracks user actions for auditing.
 - **submissionLogs**: Records form submissions for debugging and monitoring.
-- **systemSettings**: Key-value store for system configuration. Includes `role_permissions` key storing JSON map of `{ moderation: [...], sales: [...] }` permission arrays.
+- **systemSettings**: Key-value store for system configuration. Includes `role_permissions` key storing JSON map of `{ moderation: [...], sales: [...] }` permission arrays. Permission `merchants.training` controls training access (default: ON for both roles).
 - **feedbacks**: Public feedback submissions. Two types: Mystery Shopper (full multi-section form) and Merchant Referral (Living Deals Staff Interaction form). Shared columns (`merchantName`, `merchantLocation`, `visitDate`, `shopperName`) are reused across both types; merchant referral has its own `referral_*` columns. Status: new/reviewed/archived.
 - **feedbackComments**: Internal comments on feedback entries.
 - **redirectLogs**: Tracks deep-link landing page hits, recording visitor info, platform, outcome, and device details for analytics.

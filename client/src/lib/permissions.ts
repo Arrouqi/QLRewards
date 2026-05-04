@@ -3,6 +3,7 @@ export const ALL_PERMISSIONS = [
   { key: "merchants.view", label: "View Merchant Requests", group: "Merchants" },
   { key: "merchants.edit", label: "Edit Merchant Applications", group: "Merchants" },
   { key: "merchants.approve", label: "Approve / Reject Merchants", group: "Merchants" },
+  { key: "merchants.training", label: "Add / View Training Records", group: "Merchants" },
   { key: "deals.view", label: "View Deal Requests", group: "Deals" },
   { key: "deals.edit", label: "Edit Deal Submissions", group: "Deals" },
   { key: "deals.approve", label: "Approve / Reject Deals", group: "Deals" },
@@ -29,6 +30,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<ConfigurableRole, Permission[]> = 
     "merchants.view",
     "merchants.edit",
     "merchants.approve",
+    "merchants.training",
     "deals.view",
     "deals.edit",
     "deals.approve",
@@ -38,6 +40,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<ConfigurableRole, Permission[]> = 
   sales: [
     "overview.view",
     "merchants.view",
+    "merchants.training",
     "deals.view",
     "live_data.view",
     "feedbacks.view",

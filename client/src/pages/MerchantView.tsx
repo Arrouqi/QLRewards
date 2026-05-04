@@ -23,12 +23,15 @@ import {
   Loader2,
   Undo2,
   AlertTriangle,
-  GraduationCap
+  GraduationCap,
+  Plus,
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -40,6 +43,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import AdminLayout from "@/components/AdminLayout";
 import jsPDF from "jspdf";
 
@@ -104,8 +108,20 @@ interface MerchantNote {
   createdAt: string;
 }
 
+interface MerchantTraining {
+  id: string;
+  merchantId: string;
+  trainingDate: string;
+  trainingTime: string;
+  trainerName: string;
+  comment: string | null;
+  createdBy: string;
+  createdAt: string;
+}
+
 export default function MerchantView() {
   const { toast } = useToast();
+  const { can } = usePermissions();
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/admin/merchants/:id");
   
@@ -138,6 +154,10 @@ export default function MerchantView() {
     description: string;
   } | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [trainings, setTrainings] = useState<MerchantTraining[]>([]);
+  const [trainingDialogOpen, setTrainingDialogOpen] = useState(false);
+  const [isSubmittingTraining, setIsSubmittingTraining] = useState(false);
+  const [trainingForm, setTrainingForm] = useState({ date: "", time: "", trainerName: "", comment: "" });
 
   useEffect(() => {
     fetchMerchant();
@@ -158,6 +178,7 @@ export default function MerchantView() {
       const data = await res.json();
       setMerchant(data);
       fetchNotes(params.id);
+      fetchTrainings(params.id);
     } catch (error) {
       toast({ title: "Error loading merchant", variant: "destructive" });
       setLocation("/admin/merchants");
@@ -174,6 +195,50 @@ export default function MerchantView() {
         setNotes(data);
       }
     } catch {
+    }
+  };
+
+  const fetchTrainings = async (merchantId: string) => {
+    try {
+      const res = await fetch(`/api/merchants/${merchantId}/trainings`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setTrainings(data);
+      }
+    } catch {
+    }
+  };
+
+  const submitTraining = async () => {
+    if (!merchant) return;
+    if (!trainingForm.date || !trainingForm.time || !trainingForm.trainerName.trim()) return;
+    setIsSubmittingTraining(true);
+    try {
+      const res = await fetch(`/api/merchants/${merchant.id}/trainings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          trainingDate: trainingForm.date,
+          trainingTime: trainingForm.time,
+          trainerName: trainingForm.trainerName.trim(),
+          comment: trainingForm.comment.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        toast({ title: "Error", description: err.error, variant: "destructive" });
+        return;
+      }
+      const { statusChanged } = await res.json();
+      toast({ title: statusChanged ? "Training added & merchant marked as Trained" : "Training added" });
+      setTrainingDialogOpen(false);
+      setTrainingForm({ date: "", time: "", trainerName: "", comment: "" });
+      await fetchMerchant();
+    } catch {
+      toast({ title: "Error adding training", variant: "destructive" });
+    } finally {
+      setIsSubmittingTraining(false);
     }
   };
 
@@ -1423,6 +1488,71 @@ export default function MerchantView() {
           </CardContent>
         </Card>
 
+        {(merchant.status === "licensed" || merchant.status === "trained" || trainings.length > 0) && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <GraduationCap className="h-5 w-5 text-teal-600" />
+                  Training History
+                  {trainings.length > 0 && (
+                    <Badge className="bg-teal-100 text-teal-700 border-teal-200 ml-1">{trainings.length}</Badge>
+                  )}
+                </CardTitle>
+                {can("merchants.training" as any) && (merchant.status === "licensed" || merchant.status === "trained") && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-teal-600 border-teal-300 hover:bg-teal-50"
+                    onClick={() => { setTrainingForm({ date: "", time: "", trainerName: "", comment: "" }); setTrainingDialogOpen(true); }}
+                    data-testid="button-add-training-card"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Training
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {trainings.length === 0 ? (
+                <p className="text-sm text-slate-500 text-center py-4">
+                  {merchant.status === "licensed" ? "No training sessions yet. Add the first training to move this merchant to Trained status." : "No training records yet."}
+                </p>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {trainings.map((t, idx) => (
+                    <div key={t.id} className="bg-teal-50 rounded-lg p-3 border border-teal-100" data-testid={`training-${t.id}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs text-teal-700 border-teal-300">
+                            #{trainings.length - idx}
+                          </Badge>
+                          <span className="font-medium text-sm">{t.trainerName}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-slate-500 shrink-0">
+                          <Calendar className="h-3 w-3" />
+                          <span>{t.trainingDate}</span>
+                          <Clock className="h-3 w-3 ml-1" />
+                          <span>{t.trainingTime}</span>
+                        </div>
+                      </div>
+                      {t.comment && (
+                        <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap">{t.comment}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2 text-xs text-slate-400">
+                        <User className="h-3 w-3" />
+                        <span>Added by <span className="font-medium">{t.createdBy}</span></span>
+                        <span>•</span>
+                        <span>{format(new Date(t.createdAt), "dd MMM yyyy, HH:mm")}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -1640,14 +1770,14 @@ export default function MerchantView() {
                     Move back to Licensing
                   </Button>
                 )}
-                {merchant.status === "licensed" && (isSales || isAdmin) && (
+                {(merchant.status === "licensed" || merchant.status === "trained") && can("merchants.training" as any) && (
                   <Button
-                    onClick={() => confirmStatusChange("trained")}
+                    onClick={() => { setTrainingForm({ date: "", time: "", trainerName: "", comment: "" }); setTrainingDialogOpen(true); }}
                     className="bg-teal-600 hover:bg-teal-700"
-                    data-testid="button-trained"
+                    data-testid="button-add-training"
                   >
-                    <GraduationCap className="h-4 w-4 mr-2" />
-                    Mark as Trained
+                    <Plus className="h-4 w-4 mr-2" />
+                    {merchant.status === "licensed" ? "Add Training & Mark as Trained" : "Add Training"}
                   </Button>
                 )}
                 {merchant.status === "trained" && !isSales && (
@@ -1666,6 +1796,81 @@ export default function MerchantView() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={trainingDialogOpen} onOpenChange={(open) => { if (!open) setTrainingDialogOpen(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-700">
+              <GraduationCap className="h-5 w-5" />
+              Add Training Record
+            </DialogTitle>
+            <DialogDescription>
+              {merchant?.status === "licensed"
+                ? "This will record a training session and move the merchant to Trained status."
+                : "Record an additional training session for this merchant."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="training-date">Training Date *</Label>
+                <Input
+                  id="training-date"
+                  type="date"
+                  value={trainingForm.date}
+                  onChange={(e) => setTrainingForm((f) => ({ ...f, date: e.target.value }))}
+                  data-testid="input-training-date"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="training-time">Training Time *</Label>
+                <Input
+                  id="training-time"
+                  type="time"
+                  value={trainingForm.time}
+                  onChange={(e) => setTrainingForm((f) => ({ ...f, time: e.target.value }))}
+                  data-testid="input-training-time"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="trainer-name">Trained By *</Label>
+              <Input
+                id="trainer-name"
+                value={trainingForm.trainerName}
+                onChange={(e) => setTrainingForm((f) => ({ ...f, trainerName: e.target.value }))}
+                placeholder="Name of the trainer"
+                data-testid="input-trainer-name"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="training-comment">Comment (optional)</Label>
+              <Textarea
+                id="training-comment"
+                value={trainingForm.comment}
+                onChange={(e) => setTrainingForm((f) => ({ ...f, comment: e.target.value }))}
+                placeholder="Any notes about this training session..."
+                rows={3}
+                data-testid="input-training-comment"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setTrainingDialogOpen(false)} data-testid="button-cancel-training">
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={submitTraining}
+              disabled={isSubmittingTraining || !trainingForm.date || !trainingForm.time || !trainingForm.trainerName.trim()}
+              data-testid="button-confirm-training"
+            >
+              {isSubmittingTraining ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <GraduationCap className="h-4 w-4 mr-2" />}
+              {merchant?.status === "licensed" ? "Add Training & Mark as Trained" : "Add Training"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!statusConfirmDialog} onOpenChange={(open) => { if (!open) setStatusConfirmDialog(null); }}>
         <DialogContent>

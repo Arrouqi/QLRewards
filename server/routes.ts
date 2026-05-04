@@ -1877,6 +1877,62 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/merchants/:id/trainings", requireAuth, async (req, res) => {
+    try {
+      const trainings = await storage.getMerchantTrainings(req.params.id);
+      res.json(trainings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/merchants/:id/trainings", requireAuth, async (req, res) => {
+    try {
+      const userRole = (req.session as any).role;
+      if (!["admin", "moderation", "sales"].includes(userRole)) {
+        return res.status(403).json({ error: "Insufficient permissions" });
+      }
+      const { trainingDate, trainingTime, trainerName, comment } = req.body;
+      if (!trainingDate || !trainingTime || !trainerName) {
+        return res.status(400).json({ error: "trainingDate, trainingTime, and trainerName are required" });
+      }
+      const existingMerchant = await storage.getMerchantById(req.params.id);
+      if (!existingMerchant) return res.status(404).json({ error: "Merchant not found" });
+      if (!["licensed", "trained"].includes(existingMerchant.status)) {
+        return res.status(400).json({ error: "Training can only be added to Licensed or Trained merchants" });
+      }
+      const username = (req.session as any).username || "unknown";
+      const training = await storage.createMerchantTraining({
+        merchantId: req.params.id,
+        trainingDate,
+        trainingTime,
+        trainerName,
+        comment: comment || null,
+        createdBy: username,
+      });
+      if (existingMerchant.status === "licensed") {
+        await storage.updateMerchantStatus(req.params.id, "trained");
+        await storage.createActivityLog({
+          username,
+          action: "status_change",
+          merchantId: req.params.id,
+          merchantName: existingMerchant.companyName,
+          details: `Status changed from licensed to trained (first training added)`,
+        });
+      }
+      await storage.createActivityLog({
+        username,
+        action: "training_added",
+        merchantId: req.params.id,
+        merchantName: existingMerchant.companyName,
+        details: `Training added: ${trainerName} on ${trainingDate} at ${trainingTime}`,
+      });
+      res.json({ training, statusChanged: existingMerchant.status === "licensed" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/merchants/:id/upload-signed", requireAuth, async (req, res) => {
     try {
       if (!(await checkMerchantRoleAccess(req, res, req.params.id))) return;
@@ -2285,12 +2341,13 @@ export async function registerRoutes(
         const defaults = {
           moderation: [
             "overview.view", "merchants.view", "merchants.edit", "merchants.approve",
+            "merchants.training",
             "deals.view", "deals.edit", "deals.approve",
             "feedbacks.view", "feedbacks.manage",
           ],
           sales: [
-            "overview.view", "merchants.view", "deals.view",
-            "live_data.view", "feedbacks.view",
+            "overview.view", "merchants.view", "merchants.training",
+            "deals.view", "live_data.view", "feedbacks.view",
           ],
         };
         return res.json(defaults);

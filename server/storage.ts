@@ -16,8 +16,9 @@ import {
   type RedirectLog, type InsertRedirectLog,
   type Feedback, type InsertFeedback,
   type FeedbackComment, type InsertFeedbackComment,
+  type MerchantTraining, type InsertMerchantTraining,
   deals, adminUsers, categories, subCategories, terms, emailRecipients, emailSettings, merchants, merchantBrands, merchantDeals, merchantNotes,
-  submissionLogs, systemSettings, activityLogs, redirectLogs, feedbacks, feedbackComments
+  submissionLogs, systemSettings, activityLogs, redirectLogs, feedbacks, feedbackComments, merchantTrainings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, inArray, and, desc, sql, gte } from "drizzle-orm";
@@ -113,6 +114,8 @@ export interface IStorage {
   deleteFeedback(id: string): Promise<void>;
   getFeedbackComments(feedbackId: string): Promise<FeedbackComment[]>;
   createFeedbackComment(comment: InsertFeedbackComment): Promise<FeedbackComment>;
+  getMerchantTrainings(merchantId: string): Promise<MerchantTraining[]>;
+  createMerchantTraining(data: InsertMerchantTraining): Promise<MerchantTraining>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -661,6 +664,17 @@ export class DatabaseStorage implements IStorage {
 
   async createFeedbackComment(comment: InsertFeedbackComment): Promise<FeedbackComment> {
     const [row] = await db.insert(feedbackComments).values(comment).returning();
+    return row;
+  }
+
+  async getMerchantTrainings(merchantId: string): Promise<MerchantTraining[]> {
+    return await db.select().from(merchantTrainings)
+      .where(eq(merchantTrainings.merchantId, merchantId))
+      .orderBy(desc(merchantTrainings.createdAt));
+  }
+
+  async createMerchantTraining(data: InsertMerchantTraining): Promise<MerchantTraining> {
+    const [row] = await db.insert(merchantTrainings).values(data).returning();
     return row;
   }
 }

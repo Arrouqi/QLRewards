@@ -473,3 +473,22 @@ export const insertRedirectLogSchema = createInsertSchema(redirectLogs).omit({
 
 export type InsertRedirectLog = z.infer<typeof insertRedirectLogSchema>;
 export type RedirectLog = typeof redirectLogs.$inferSelect;
+
+export const merchantTrainings = pgTable("merchant_trainings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  merchantId: varchar("merchant_id").notNull().references(() => merchants.id, { onDelete: "cascade" }),
+  trainingDate: text("training_date").notNull(),
+  trainingTime: text("training_time").notNull(),
+  trainerName: text("trainer_name").notNull(),
+  comment: text("comment"),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertMerchantTrainingSchema = createInsertSchema(merchantTrainings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMerchantTraining = z.infer<typeof insertMerchantTrainingSchema>;
+export type MerchantTraining = typeof merchantTrainings.$inferSelect;

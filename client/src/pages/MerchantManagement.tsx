@@ -20,11 +20,16 @@ import {
   AlertTriangle,
   ExternalLink,
   Hash,
-  GraduationCap
+  GraduationCap,
+  Plus,
+  Clock,
+  Loader2
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -51,6 +56,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Merchant {
   id: string;
@@ -99,6 +105,8 @@ export default function MerchantManagement() {
     title: string;
     description: string;
   } | null>(null);
+  const [trainingDialogMerchant, setTrainingDialogMerchant] = useState<Merchant | null>(null);
+  const [trainingForm, setTrainingForm] = useState({ date: "", time: "", trainerName: "", comment: "" });
 
   const handleSalesOrderUpload = async (merchantId: string, file: File) => {
     setUploadingMerchantId(merchantId);
@@ -157,6 +165,9 @@ export default function MerchantManagement() {
   const isSales = userRole === "sales";
   const isModeration = userRole === "moderation";
 
+  const { can } = usePermissions();
+  const canAddTraining = can("merchants.training" as any);
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const res = await fetch(`/api/merchants/${id}/status`, {
@@ -213,6 +224,33 @@ export default function MerchantManagement() {
         : `Are you sure you want to move "${merchant.companyName}" (${merchant.brandName}) from "${currentLabel}" to "${targetLabel}"?`,
     });
   };
+
+  const trainingMutation = useMutation({
+    mutationFn: async ({ merchantId, trainingDate, trainingTime, trainerName, comment }: {
+      merchantId: string; trainingDate: string; trainingTime: string; trainerName: string; comment?: string;
+    }) => {
+      const res = await fetch(`/api/merchants/${merchantId}/trainings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ trainingDate, trainingTime, trainerName, comment }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to add training");
+      }
+      return res.json();
+    },
+    onSuccess: ({ statusChanged }) => {
+      queryClient.invalidateQueries({ queryKey: ["merchants"] });
+      setTrainingDialogMerchant(null);
+      setTrainingForm({ date: "", time: "", trainerName: "", comment: "" });
+      toast({ title: statusChanged ? "Training added & merchant marked as Trained" : "Training added" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   const deleteMerchantMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -596,14 +634,14 @@ export default function MerchantManagement() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {merchant.status === "licensed" && (isSales || isAdmin) && (
+                          {(merchant.status === "licensed" || merchant.status === "trained") && canAddTraining && (
                             <DropdownMenuItem
-                              onClick={() => confirmStatusChange(merchant, "trained")}
+                              onClick={() => { setTrainingDialogMerchant(merchant); setTrainingForm({ date: "", time: "", trainerName: "", comment: "" }); }}
                               className="text-teal-600"
-                              data-testid={`menu-trained-${merchant.id}`}
+                              data-testid={`menu-add-training-${merchant.id}`}
                             >
                               <GraduationCap className="h-4 w-4 mr-2" />
-                              Mark as Trained
+                              Add Training
                             </DropdownMenuItem>
                           )}
                           {merchant.status === "licensed" && !isSales && (
@@ -791,6 +829,89 @@ export default function MerchantManagement() {
               data-testid="button-save-offers"
             >
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!trainingDialogMerchant} onOpenChange={(open) => { if (!open) setTrainingDialogMerchant(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-teal-700">
+              <GraduationCap className="h-5 w-5" />
+              Add Training Record
+            </DialogTitle>
+            <DialogDescription>
+              {trainingDialogMerchant?.status === "licensed"
+                ? `Recording this training will move "${trainingDialogMerchant?.companyName}" to Trained status.`
+                : `Add a training session for "${trainingDialogMerchant?.companyName}".`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="mgmt-training-date">Training Date *</Label>
+                <Input
+                  id="mgmt-training-date"
+                  type="date"
+                  value={trainingForm.date}
+                  onChange={(e) => setTrainingForm((f) => ({ ...f, date: e.target.value }))}
+                  data-testid="input-mgmt-training-date"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="mgmt-training-time">Training Time *</Label>
+                <Input
+                  id="mgmt-training-time"
+                  type="time"
+                  value={trainingForm.time}
+                  onChange={(e) => setTrainingForm((f) => ({ ...f, time: e.target.value }))}
+                  data-testid="input-mgmt-training-time"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="mgmt-trainer-name">Trained By *</Label>
+              <Input
+                id="mgmt-trainer-name"
+                value={trainingForm.trainerName}
+                onChange={(e) => setTrainingForm((f) => ({ ...f, trainerName: e.target.value }))}
+                placeholder="Name of the trainer"
+                data-testid="input-mgmt-trainer-name"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="mgmt-training-comment">Comment (optional)</Label>
+              <Textarea
+                id="mgmt-training-comment"
+                value={trainingForm.comment}
+                onChange={(e) => setTrainingForm((f) => ({ ...f, comment: e.target.value }))}
+                placeholder="Any notes about this training session..."
+                rows={3}
+                data-testid="input-mgmt-training-comment"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setTrainingDialogMerchant(null)} data-testid="button-cancel-mgmt-training">
+              Cancel
+            </Button>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700"
+              onClick={() => {
+                if (!trainingDialogMerchant || !trainingForm.date || !trainingForm.time || !trainingForm.trainerName.trim()) return;
+                trainingMutation.mutate({
+                  merchantId: trainingDialogMerchant.id,
+                  trainingDate: trainingForm.date,
+                  trainingTime: trainingForm.time,
+                  trainerName: trainingForm.trainerName.trim(),
+                  comment: trainingForm.comment.trim() || undefined,
+                });
+              }}
+              disabled={trainingMutation.isPending || !trainingForm.date || !trainingForm.time || !trainingForm.trainerName.trim()}
+              data-testid="button-confirm-mgmt-training"
+            >
+              {trainingMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <GraduationCap className="h-4 w-4 mr-2" />}
+              {trainingDialogMerchant?.status === "licensed" ? "Add Training & Mark as Trained" : "Add Training"}
             </Button>
           </DialogFooter>
         </DialogContent>
