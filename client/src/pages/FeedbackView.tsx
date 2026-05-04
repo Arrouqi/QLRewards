@@ -58,8 +58,12 @@ interface FeedbackDetail {
   merchantLocation: string | null;
   visitDate: string | null;
   visitTime: string | null;
+  staffAwareOfQld: string | null;
+  staffFamiliarWithOffers: string | null;
   staffKnowsRedeem: string | null;
   staffScansQr: string | null;
+  processRewardComment: string | null;
+  processRewardFiles: string[] | null;
   rewardApprovedImmediately: string | null;
   redemptionSmooth: string | null;
   staffAwareOfOffer: string | null;
@@ -467,13 +471,46 @@ export default function FeedbackView() {
                     <Field label="Date" value={feedback.visitDate} />
                     <Field label="Time" value={feedback.visitTime} />
                     <Field
+                      label="Are staff members aware of Qatar Living Deals?"
+                      value={<YesNoBadge value={feedback.staffAwareOfQld} />}
+                    />
+                    <Field
+                      label="Are staff familiar with their own offers?"
+                      value={<YesNoBadge value={feedback.staffFamiliarWithOffers} />}
+                    />
+                    <Field
                       label="Does the staff know how to redeem the offer?"
                       value={<YesNoBadge value={feedback.staffKnowsRedeem} />}
                     />
                     <Field
-                      label="When a reward is claimed, does the staff scan QR code?"
+                      label="Do staff know how to process a claimed reward?"
                       value={<YesNoBadge value={feedback.staffScansQr} />}
                     />
+                    {feedback.staffScansQr === "no" && (
+                      <>
+                        {feedback.processRewardComment && (
+                          <Field label="Process Reward Comment" value={feedback.processRewardComment} />
+                        )}
+                        {feedback.processRewardFiles && feedback.processRewardFiles.length > 0 && (
+                          <div className="py-2">
+                            <dt className="text-sm font-medium text-muted-foreground mb-1">Evidence Files</dt>
+                            <dd className="flex flex-wrap gap-2">
+                              {feedback.processRewardFiles.map((url, i) => (
+                                <a
+                                  key={i}
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  File {i + 1}
+                                </a>
+                              ))}
+                            </dd>
+                          </div>
+                        )}
+                      </>
+                    )}
                     <Field
                       label="Is the reward approved immediately by the staff?"
                       value={<YesNoBadge value={feedback.rewardApprovedImmediately} />}
@@ -483,14 +520,12 @@ export default function FeedbackView() {
                       value={<YesNoBadge value={feedback.redemptionSmooth} />}
                     />
                     <Field label="Staff Aware of Offer?" value={<YesNoBadge value={feedback.staffAwareOfOffer} />} />
-                    <Field
-                      label="Product / Service Quality"
-                      value={
-                        feedback.productServiceQuality
-                          ? QUALITY_LABEL[feedback.productServiceQuality] || feedback.productServiceQuality
-                          : null
-                      }
-                    />
+                    {feedback.productServiceQuality && (
+                      <Field
+                        label="Product / Service Quality"
+                        value={QUALITY_LABEL[feedback.productServiceQuality] || feedback.productServiceQuality}
+                      />
+                    )}
                     <Field label="Comments" value={feedback.merchantComments} />
                   </dl>
                 </CardContent>

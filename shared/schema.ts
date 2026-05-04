@@ -390,12 +390,16 @@ export const feedbacks = pgTable("feedbacks", {
   merchantLocation: text("merchant_location"),
   visitDate: text("visit_date"),
   visitTime: text("visit_time"),
+  staffAwareOfQld: text("staff_aware_of_qld"),
+  staffFamiliarWithOffers: text("staff_familiar_with_offers"),
   staffKnowsRedeem: text("staff_knows_redeem"), // 'yes' | 'no'
   staffScansQr: text("staff_scans_qr"),
+  processRewardComment: text("process_reward_comment"),
+  processRewardFiles: text("process_reward_files").array(),
   rewardApprovedImmediately: text("reward_approved_immediately"),
   redemptionSmooth: text("redemption_smooth"),
   staffAwareOfOffer: text("staff_aware_of_offer"),
-  productServiceQuality: text("product_service_quality"), // 'poor'|'fair'|'good'|'very_good'|'excellent'
+  productServiceQuality: text("product_service_quality"), // 'poor'|'fair'|'good'|'very_good'|'excellent' — kept for legacy data
   merchantComments: text("merchant_comments"),
 
   // QL Rewards Platform Feedback (Mystery Shopper)

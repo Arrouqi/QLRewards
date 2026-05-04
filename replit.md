@@ -94,6 +94,13 @@ ALTER TABLE feedbacks
   ADD COLUMN IF NOT EXISTS referral_overall_satisfaction text,
   ADD COLUMN IF NOT EXISTS referral_liked_most text,
   ADD COLUMN IF NOT EXISTS referral_could_improve text;
+
+-- Mystery Shopper form updates: 2 new questions, process reward comment+files
+ALTER TABLE feedbacks
+  ADD COLUMN IF NOT EXISTS staff_aware_of_qld text,
+  ADD COLUMN IF NOT EXISTS staff_familiar_with_offers text,
+  ADD COLUMN IF NOT EXISTS process_reward_comment text,
+  ADD COLUMN IF NOT EXISTS process_reward_files text[];
 ```
 
 #### Pending Production Migrations (Group Merchant feature)

@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useSearch } from "wouter";
-import { Loader2, MessageSquare, ShieldCheck, Sparkles, Search, Check } from "lucide-react";
+import { Loader2, MessageSquare, ShieldCheck, Sparkles, Search, Check, Paperclip, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,12 +49,14 @@ const feedbackSchema = z.object({
   visitDate: z.string().min(1, "Date of visit is required"),
   visitTime: z.string().min(1, "Time is required"),
 
+  staffAwareOfQld: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  staffFamiliarWithOffers: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   staffKnowsRedeem: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   staffScansQr: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  processRewardComment: z.string().optional(),
   rewardApprovedImmediately: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   redemptionSmooth: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   staffAwareOfOffer: z.enum(["yes", "no"], { required_error: "Please select an option" }),
-  productServiceQuality: z.enum(QUALITY_VALUES, { required_error: "Please select a quality rating" }),
   merchantComments: z.string().optional(),
 
   browseSelectEase: z.enum(QUALITY_VALUES, { required_error: "Please select a rating" }),
@@ -690,6 +692,8 @@ export default function FeedbackForm() {
   const [activeTab, setActiveTab] = useState<"mystery_shopper" | "merchant_referral">(initialTab);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [processRewardFiles, setProcessRewardFiles] = useState<File[]>([]);
+  const processRewardFileRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FeedbackFormValues>({
     resolver: zodResolver(feedbackSchema),
@@ -700,6 +704,7 @@ export default function FeedbackForm() {
       merchantId: undefined,
       merchantLocation: "",
       visitDate: "",
+      processRewardComment: "",
       merchantComments: "",
       offersIssueExplanation: "",
       improvementSuggestions: "",
@@ -708,14 +713,42 @@ export default function FeedbackForm() {
   });
 
   const allOffersRedeemed = form.watch("allOffersRedeemedAsDescribed");
+  const staffScansQrValue = form.watch("staffScansQr");
 
   const onSubmit = async (values: FeedbackFormValues) => {
     setSubmitting(true);
     try {
+      let processRewardFileUrls: string[] = [];
+      if (values.staffScansQr === "no" && processRewardFiles.length > 0) {
+        const base64Files = await Promise.all(
+          processRewardFiles.map(
+            (f) =>
+              new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(f);
+              })
+          )
+        );
+        const uploadRes = await fetch("/api/feedbacks/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: base64Files }),
+        });
+        if (uploadRes.ok) {
+          const { urls } = await uploadRes.json();
+          processRewardFileUrls = urls;
+        }
+      }
       const res = await fetch("/api/feedbacks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, feedbackType: "mystery_shopper" }),
+        body: JSON.stringify({
+          ...values,
+          feedbackType: "mystery_shopper",
+          processRewardFiles: processRewardFileUrls.length > 0 ? processRewardFileUrls : undefined,
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -952,14 +985,97 @@ export default function FeedbackForm() {
                   <div className="space-y-3 pt-2">
                     <YesNoField
                       control={form.control}
+                      name="staffAwareOfQld"
+                      label="Are staff members aware of Qatar Living Deals?"
+                    />
+                    <YesNoField
+                      control={form.control}
+                      name="staffFamiliarWithOffers"
+                      label="Are staff familiar with their own offers?"
+                    />
+                    <YesNoField
+                      control={form.control}
                       name="staffKnowsRedeem"
                       label="Does the staff know how to redeem the offer?"
                     />
                     <YesNoField
                       control={form.control}
                       name="staffScansQr"
-                      label="When a reward is claimed, does the staff scan QR code?"
+                      label="Do staff know how to process a claimed reward?"
                     />
+                    {staffScansQrValue === "no" && (
+                      <div className="ml-1 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                        <p className="text-xs font-medium text-amber-800">Optional: add more details</p>
+                        <FormField
+                          control={form.control}
+                          name="processRewardComment"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm">Comments</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  rows={3}
+                                  placeholder="Describe what happened..."
+                                  {...field}
+                                  data-testid="textarea-process-reward-comment"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div>
+                          <p className="mb-2 text-sm font-medium text-slate-700">Attach files (optional, max 3)</p>
+                          <input
+                            ref={processRewardFileRef}
+                            type="file"
+                            accept="image/*,application/pdf"
+                            multiple
+                            className="hidden"
+                            data-testid="input-process-reward-files"
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.files || []);
+                              setProcessRewardFiles((prev) => {
+                                const combined = [...prev, ...selected];
+                                return combined.slice(0, 3);
+                              });
+                              e.target.value = "";
+                            }}
+                          />
+                          {processRewardFiles.length < 3 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                              onClick={() => processRewardFileRef.current?.click()}
+                              data-testid="button-attach-process-reward"
+                            >
+                              <Paperclip className="h-4 w-4 mr-2" />
+                              Attach file
+                            </Button>
+                          )}
+                          {processRewardFiles.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {processRewardFiles.map((f, i) => (
+                                <div key={i} className="flex items-center gap-2 rounded bg-white border border-amber-200 px-3 py-1.5 text-sm">
+                                  <Paperclip className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                  <span className="flex-1 truncate text-slate-700">{f.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setProcessRewardFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                                    className="text-slate-400 hover:text-red-500"
+                                    data-testid={`button-remove-file-${i}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <YesNoField
                       control={form.control}
                       name="rewardApprovedImmediately"
@@ -974,11 +1090,6 @@ export default function FeedbackForm() {
                       control={form.control}
                       name="staffAwareOfOffer"
                       label="Staff Aware of Offer?"
-                    />
-                    <QualityField
-                      control={form.control}
-                      name="productServiceQuality"
-                      label="Product / Service Quality"
                     />
                   </div>
 
