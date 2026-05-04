@@ -851,6 +851,17 @@ export default function MerchantView() {
           
           <div className="flex items-center gap-3">
             {getStatusBadge(merchant.status)}
+
+            {can("merchants.training" as any) && (merchant.status === "licensed" || merchant.status === "trained") && (
+              <Button
+                onClick={() => { setTrainingForm({ date: "", time: "", trainerName: "", comment: "" }); setTrainingDialogOpen(true); }}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+                data-testid="button-add-training-top"
+              >
+                <GraduationCap className="h-4 w-4 mr-2" />
+                {merchant.status === "licensed" ? "Add Training & Mark as Trained" : "Add Training"}
+              </Button>
+            )}
             
             <Button
               variant="outline"

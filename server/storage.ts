@@ -65,7 +65,7 @@ export interface IStorage {
   getEmailSettings(): Promise<EmailSettings | undefined>;
   upsertEmailSettings(settings: Partial<InsertEmailSettings>): Promise<EmailSettings>;
   createMerchant(merchant: InsertMerchant): Promise<Merchant>;
-  getAllMerchants(): Promise<Merchant[]>;
+  getAllMerchants(): Promise<Array<Merchant & { trainingCount: number }>>;
   getMerchantById(id: string): Promise<Merchant | undefined>;
   updateMerchant(id: string, data: Partial<InsertMerchant>): Promise<Merchant | undefined>;
   updateMerchantStatus(id: string, status: string): Promise<Merchant | undefined>;
@@ -403,8 +403,14 @@ export class DatabaseStorage implements IStorage {
     return newMerchant;
   }
 
-  async getAllMerchants(): Promise<Merchant[]> {
-    return await db.select().from(merchants);
+  async getAllMerchants(): Promise<Array<Merchant & { trainingCount: number }>> {
+    const rows = await db
+      .select({
+        merchant: merchants,
+        trainingCount: sql<number>`(SELECT COUNT(*) FROM merchant_trainings WHERE merchant_id = ${merchants.id})`.mapWith(Number),
+      })
+      .from(merchants);
+    return rows.map((r) => ({ ...r.merchant, trainingCount: r.trainingCount }));
   }
 
   async getMerchantById(id: string): Promise<Merchant | undefined> {

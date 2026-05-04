@@ -466,7 +466,16 @@ export default function MerchantManagement() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(merchant.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {getStatusBadge(merchant.status)}
+                        {merchant.status === "trained" && (
+                          <span className="inline-flex items-center rounded-full bg-teal-100 text-teal-700 text-xs font-medium px-1.5 py-0.5" data-testid={`training-count-${merchant.id}`}>
+                            ×{(merchant as any).trainingCount > 0 ? (merchant as any).trainingCount : 1}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <span className="text-sm font-medium text-slate-600" data-testid={`text-offers-${merchant.id}`}>
                         {merchant.offersCreated || merchant.dealCount || 0}
