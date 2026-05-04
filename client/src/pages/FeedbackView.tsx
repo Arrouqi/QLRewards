@@ -61,6 +61,7 @@ interface FeedbackDetail {
   staffAwareOfQld: string | null;
   staffFamiliarWithOffers: string | null;
   staffKnowsRedeem: string | null;
+  staffKnowsRedeemComment: string | null;
   staffScansQr: string | null;
   processRewardComment: string | null;
   processRewardFiles: string[] | null;
@@ -480,9 +481,12 @@ export default function FeedbackView() {
                       value={<YesNoBadge value={feedback.staffFamiliarWithOffers} />}
                     />
                     <Field
-                      label="Does the staff know how to redeem the offer?"
+                      label="Did the staff know how to process the claimed offer?"
                       value={<YesNoBadge value={feedback.staffKnowsRedeem} />}
                     />
+                    {feedback.staffKnowsRedeem === "no" && feedback.staffKnowsRedeemComment && (
+                      <Field label="Additional info" value={feedback.staffKnowsRedeemComment} />
+                    )}
                     <Field
                       label="Is the offer approved immediately by the staff?"
                       value={<YesNoBadge value={feedback.rewardApprovedImmediately} />}

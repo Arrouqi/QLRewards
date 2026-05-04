@@ -52,6 +52,7 @@ const feedbackSchema = z.object({
   staffAwareOfQld: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   staffFamiliarWithOffers: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   staffKnowsRedeem: z.enum(["yes", "no"], { required_error: "Please select an option" }),
+  staffKnowsRedeemComment: z.string().optional(),
   processRewardComment: z.string().optional(),
   rewardApprovedImmediately: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   merchantComments: z.string().optional(),
@@ -697,11 +698,13 @@ export default function FeedbackForm() {
       merchantId: undefined,
       merchantLocation: "",
       visitDate: "",
+      staffKnowsRedeemComment: "",
       processRewardComment: "",
       merchantComments: "",
     },
   });
 
+  const staffKnowsRedeemValue = form.watch("staffKnowsRedeem");
   const rewardApprovedValue = form.watch("rewardApprovedImmediately");
 
   const onSubmit = async (values: FeedbackFormValues) => {
@@ -1009,8 +1012,30 @@ export default function FeedbackForm() {
                     <YesNoField
                       control={form.control}
                       name="staffKnowsRedeem"
-                      label="Does the staff know how to redeem the offer?"
+                      label="Did the staff know how to process the claimed offer?"
                     />
+                    {staffKnowsRedeemValue === "no" && (
+                      <div className="ml-1 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                        <p className="text-xs font-medium text-amber-800">Additional info</p>
+                        <FormField
+                          control={form.control}
+                          name="staffKnowsRedeemComment"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Textarea
+                                  rows={3}
+                                  placeholder="Describe what happened..."
+                                  {...field}
+                                  data-testid="textarea-staff-knows-redeem-comment"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
                     <YesNoField
                       control={form.control}
                       name="rewardApprovedImmediately"
@@ -1018,7 +1043,7 @@ export default function FeedbackForm() {
                     />
                     {rewardApprovedValue === "no" && (
                       <div className="ml-1 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-                        <p className="text-xs font-medium text-amber-800">Optional: add more details</p>
+                        <p className="text-xs font-medium text-amber-800">Additional info</p>
                         <FormField
                           control={form.control}
                           name="processRewardComment"

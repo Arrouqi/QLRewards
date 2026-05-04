@@ -105,6 +105,10 @@ ALTER TABLE feedbacks
 -- Comments file attachments (up to 5 files, uploaded to Azure)
 ALTER TABLE feedbacks
   ADD COLUMN IF NOT EXISTS merchant_comment_files text[];
+
+-- staffKnowsRedeem expand panel comment
+ALTER TABLE feedbacks
+  ADD COLUMN IF NOT EXISTS staff_knows_redeem_comment text;
 ```
 
 #### Pending Production Migrations (Group Merchant feature)
