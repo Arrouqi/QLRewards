@@ -303,12 +303,12 @@ export async function registerRoutes(
   });
 
   // ===== Feedbacks =====
-  // Public: upload evidence files for mystery shopper (rate-limited, max 3)
+  // Public: upload evidence files for feedback forms (rate-limited, max 6)
   app.post("/api/feedbacks/upload", feedbackSubmitRateLimit, async (req, res) => {
     try {
       const { files } = req.body as { files: string[] };
-      if (!Array.isArray(files) || files.length === 0 || files.length > 3) {
-        return res.status(400).json({ error: "Provide 1–3 files as base64 data URLs" });
+      if (!Array.isArray(files) || files.length === 0 || files.length > 6) {
+        return res.status(400).json({ error: "Provide 1–6 files as base64 data URLs" });
       }
       const urls = await uploadMultipleImages(files, `feedback-evidence/${Date.now()}`);
       res.json({ urls });

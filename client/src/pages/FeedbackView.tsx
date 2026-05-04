@@ -457,6 +457,30 @@ export default function FeedbackView() {
                   <dl>
                     <Field label="What did you like most about your experience?" value={feedback.referralLikedMost} />
                     <Field label="What can be improved?" value={feedback.referralCouldImprove} />
+                    <Field label="Comments" value={feedback.merchantComments} />
+                    {Array.isArray(feedback.merchantCommentFiles) && feedback.merchantCommentFiles.length > 0 && (
+                      <div className="py-2">
+                        <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Comment Attachments</dt>
+                        <dd className="flex flex-wrap gap-2">
+                          {feedback.merchantCommentFiles.map((url, i) => {
+                            const name = url.split("/").pop()?.split("?")[0] || `File ${i + 1}`;
+                            return (
+                              <a
+                                key={i}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-primary underline hover:no-underline"
+                                data-testid={`link-referral-comment-file-${i}`}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                                {name}
+                              </a>
+                            );
+                          })}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                 </CardContent>
               </Card>

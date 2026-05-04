@@ -323,6 +323,7 @@ const referralSchema = z.object({
 
   referralLikedMost: z.string().optional(),
   referralCouldImprove: z.string().optional(),
+  merchantComments: z.string().optional(),
 });
 
 type ReferralFormValues = z.infer<typeof referralSchema>;
@@ -432,6 +433,8 @@ function ReferralYesNoField({
 function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [merchantCommentFiles, setMerchantCommentFiles] = useState<File[]>([]);
+  const merchantCommentFileRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ReferralFormValues>({
     resolver: zodResolver(referralSchema),
@@ -444,16 +447,44 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
       shopperName: "",
       referralLikedMost: "",
       referralCouldImprove: "",
+      merchantComments: "",
     },
   });
 
   const onSubmit = async (values: ReferralFormValues) => {
     setSubmitting(true);
     try {
+      let merchantCommentFileUrls: string[] = [];
+      if (merchantCommentFiles.length > 0) {
+        const base64Files = await Promise.all(
+          merchantCommentFiles.map(
+            (f) =>
+              new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(f);
+              })
+          )
+        );
+        const uploadRes = await fetch("/api/feedbacks/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: base64Files }),
+        });
+        if (uploadRes.ok) {
+          const { urls } = await uploadRes.json();
+          merchantCommentFileUrls = urls;
+        }
+      }
       const res = await fetch("/api/feedbacks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, feedbackType: "merchant_referral" }),
+        body: JSON.stringify({
+          ...values,
+          feedbackType: "merchant_referral",
+          merchantCommentFiles: merchantCommentFileUrls.length > 0 ? merchantCommentFileUrls : undefined,
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -650,6 +681,72 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="merchantComments"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Comments (optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={4}
+                      placeholder="Any additional comments about this merchant..."
+                      {...field}
+                      data-testid="textarea-referral-merchant-comments"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700">Attach files (optional, max 6)</p>
+              <input
+                ref={merchantCommentFileRef}
+                type="file"
+                accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx"
+                multiple
+                className="hidden"
+                data-testid="input-referral-merchant-comment-files"
+                onChange={(e) => {
+                  const selected = Array.from(e.target.files || []);
+                  setMerchantCommentFiles((prev) => [...prev, ...selected].slice(0, 6));
+                  e.target.value = "";
+                }}
+              />
+              {merchantCommentFiles.length < 6 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => merchantCommentFileRef.current?.click()}
+                  data-testid="button-referral-attach-comment"
+                >
+                  <Paperclip className="h-4 w-4 mr-2" />
+                  Attach file
+                </Button>
+              )}
+              {merchantCommentFiles.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {merchantCommentFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 rounded border px-3 py-1.5 text-sm bg-slate-50">
+                      <Paperclip className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                      <span className="flex-1 truncate text-slate-700">{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setMerchantCommentFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                        className="text-slate-400 hover:text-red-500"
+                        data-testid={`button-referral-remove-comment-file-${i}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -657,7 +754,10 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => form.reset()}
+            onClick={() => {
+              form.reset();
+              setMerchantCommentFiles([]);
+            }}
             disabled={submitting}
             className="w-full sm:w-auto"
             data-testid="button-referral-reset"
@@ -1061,21 +1161,21 @@ export default function FeedbackForm() {
                           )}
                         />
                         <div>
-                          <p className="mb-2 text-sm font-medium text-slate-700">Attach files (optional, max 3)</p>
+                          <p className="mb-2 text-sm font-medium text-slate-700">Attach files (optional, max 6)</p>
                           <input
                             ref={staffKnowsRedeemFileRef}
                             type="file"
-                            accept="image/*,application/pdf"
+                            accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx"
                             multiple
                             className="hidden"
                             data-testid="input-staff-knows-redeem-files"
                             onChange={(e) => {
                               const selected = Array.from(e.target.files || []);
-                              setStaffKnowsRedeemFiles((prev) => [...prev, ...selected].slice(0, 3));
+                              setStaffKnowsRedeemFiles((prev) => [...prev, ...selected].slice(0, 6));
                               e.target.value = "";
                             }}
                           />
-                          {staffKnowsRedeemFiles.length < 3 && (
+                          {staffKnowsRedeemFiles.length < 6 && (
                             <Button
                               type="button"
                               variant="outline"
@@ -1135,11 +1235,11 @@ export default function FeedbackForm() {
                           )}
                         />
                         <div>
-                          <p className="mb-2 text-sm font-medium text-slate-700">Attach files (optional, max 3)</p>
+                          <p className="mb-2 text-sm font-medium text-slate-700">Attach files (optional, max 6)</p>
                           <input
                             ref={processRewardFileRef}
                             type="file"
-                            accept="image/*,application/pdf"
+                            accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx"
                             multiple
                             className="hidden"
                             data-testid="input-process-reward-files"
@@ -1147,12 +1247,12 @@ export default function FeedbackForm() {
                               const selected = Array.from(e.target.files || []);
                               setProcessRewardFiles((prev) => {
                                 const combined = [...prev, ...selected];
-                                return combined.slice(0, 3);
+                                return combined.slice(0, 6);
                               });
                               e.target.value = "";
                             }}
                           />
-                          {processRewardFiles.length < 3 && (
+                          {processRewardFiles.length < 6 && (
                             <Button
                               type="button"
                               variant="outline"
@@ -1208,11 +1308,11 @@ export default function FeedbackForm() {
                   />
 
                   <div>
-                    <p className="mb-2 text-sm font-medium text-slate-700">Attach screenshots (optional, max 5)</p>
+                    <p className="mb-2 text-sm font-medium text-slate-700">Attach files (optional, max 6)</p>
                     <input
                       ref={merchantCommentFileRef}
                       type="file"
-                      accept="image/*,application/pdf,.pdf,.doc,.docx"
+                      accept="image/*,application/pdf,.pdf,.doc,.docx,.xls,.xlsx"
                       multiple
                       className="hidden"
                       data-testid="input-merchant-comment-files"
@@ -1220,12 +1320,12 @@ export default function FeedbackForm() {
                         const selected = Array.from(e.target.files || []);
                         setMerchantCommentFiles((prev) => {
                           const combined = [...prev, ...selected];
-                          return combined.slice(0, 5);
+                          return combined.slice(0, 6);
                         });
                         e.target.value = "";
                       }}
                     />
-                    {merchantCommentFiles.length < 5 && (
+                    {merchantCommentFiles.length < 6 && (
                       <Button
                         type="button"
                         variant="outline"
