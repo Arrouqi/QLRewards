@@ -243,7 +243,7 @@ export default function MerchantView() {
         pending: "Moved back to With Sales",
         archived: "Archived",
         licensing: "Moved to Licensing",
-        licensed: "Marked as Licensed",
+        licensed: "Status updated to Licensed",
         trained: "Marked as Trained",
       };
       toast({ title: messages[status] || "Status updated" });
@@ -1648,6 +1648,17 @@ export default function MerchantView() {
                   >
                     <GraduationCap className="h-4 w-4 mr-2" />
                     Mark as Trained
+                  </Button>
+                )}
+                {merchant.status === "trained" && !isSales && (
+                  <Button
+                    variant="outline"
+                    onClick={() => confirmStatusChange("licensed")}
+                    className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                    data-testid="button-back-licensed"
+                  >
+                    <Undo2 className="h-4 w-4 mr-2" />
+                    Move back to Licensed
                   </Button>
                 )}
               </div>

@@ -1704,7 +1704,7 @@ export async function registerRoutes(
       }
       
       if (userRole === "moderation") {
-        const allowedFromStatuses = ["moderation", "created", "licensing", "licensed"];
+        const allowedFromStatuses = ["moderation", "created", "licensing", "licensed", "trained"];
         if (!allowedFromStatuses.includes(existingMerchant.status)) {
           return res.status(403).json({ error: "Moderation team can only manage merchants from In Moderation onwards" });
         }
@@ -1721,8 +1721,8 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Can only move to Licensing from Created or Licensed status" });
       }
       
-      if (status === "licensed" && existingMerchant.status !== "licensing") {
-        return res.status(400).json({ error: "Can only mark as Licensed from Licensing status" });
+      if (status === "licensed" && existingMerchant.status !== "licensing" && existingMerchant.status !== "trained") {
+        return res.status(400).json({ error: "Can only mark as Licensed from Licensing or Trained status" });
       }
 
       if (status === "trained" && existingMerchant.status !== "licensed") {
@@ -2055,6 +2055,7 @@ export async function registerRoutes(
         created: allMerchants.filter(m => m.status === "created").length,
         licensing: allMerchants.filter(m => m.status === "licensing").length,
         licensed: allMerchants.filter(m => m.status === "licensed").length,
+        trained: allMerchants.filter(m => m.status === "trained").length,
         archived: allMerchants.filter(m => m.status === "archived").length,
       };
 

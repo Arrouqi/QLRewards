@@ -180,7 +180,7 @@ export default function MerchantManagement() {
         pending: "Moved back to With Sales",
         archived: "Archived",
         licensing: "Moved to Licensing",
-        licensed: "Marked as Licensed",
+        licensed: "Status updated to Licensed",
         trained: "Marked as Trained",
       };
       toast({ title: messages[variables.status] || "Status updated" });
@@ -614,6 +614,16 @@ export default function MerchantManagement() {
                             >
                               <Undo2 className="h-4 w-4 mr-2" />
                               Move back to Licensing
+                            </DropdownMenuItem>
+                          )}
+                          {merchant.status === "trained" && !isSales && (
+                            <DropdownMenuItem
+                              onClick={() => confirmStatusChange(merchant, "licensed")}
+                              className="text-emerald-600"
+                              data-testid={`menu-back-licensed-${merchant.id}`}
+                            >
+                              <Undo2 className="h-4 w-4 mr-2" />
+                              Move back to Licensed
                             </DropdownMenuItem>
                           )}
                           {merchant.status === "archived" && (
