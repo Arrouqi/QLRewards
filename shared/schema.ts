@@ -401,8 +401,9 @@ export const feedbacks = pgTable("feedbacks", {
   staffAwareOfOffer: text("staff_aware_of_offer"),
   productServiceQuality: text("product_service_quality"), // 'poor'|'fair'|'good'|'very_good'|'excellent' — kept for legacy data
   merchantComments: text("merchant_comments"),
+  merchantCommentFiles: text("merchant_comment_files").array(),
 
-  // QL Rewards Platform Feedback (Mystery Shopper)
+  // QL Deals Platform Feedback (Mystery Shopper) — legacy columns, no longer collected in new submissions
   browseSelectEase: text("browse_select_ease"),
   allOffersRedeemedAsDescribed: text("all_offers_redeemed_as_described"),
   offersIssueExplanation: text("offers_issue_explanation"),

@@ -59,12 +59,6 @@ const feedbackSchema = z.object({
   staffAwareOfOffer: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   merchantComments: z.string().optional(),
 
-  browseSelectEase: z.enum(QUALITY_VALUES, { required_error: "Please select a rating" }),
-  allOffersRedeemedAsDescribed: z.enum(["yes", "no"], { required_error: "Please select an option" }),
-  offersIssueExplanation: z.string().optional(),
-  improvementSuggestions: z.string().optional(),
-
-  enjoyedMost: z.string().optional(),
 });
 
 type FeedbackFormValues = z.infer<typeof feedbackSchema>;
@@ -694,6 +688,8 @@ export default function FeedbackForm() {
   const [success, setSuccess] = useState(false);
   const [processRewardFiles, setProcessRewardFiles] = useState<File[]>([]);
   const processRewardFileRef = useRef<HTMLInputElement>(null);
+  const [merchantCommentFiles, setMerchantCommentFiles] = useState<File[]>([]);
+  const merchantCommentFileRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FeedbackFormValues>({
     resolver: zodResolver(feedbackSchema),
@@ -706,13 +702,9 @@ export default function FeedbackForm() {
       visitDate: "",
       processRewardComment: "",
       merchantComments: "",
-      offersIssueExplanation: "",
-      improvementSuggestions: "",
-      enjoyedMost: "",
     },
   });
 
-  const allOffersRedeemed = form.watch("allOffersRedeemedAsDescribed");
   const staffScansQrValue = form.watch("staffScansQr");
 
   const onSubmit = async (values: FeedbackFormValues) => {
@@ -741,6 +733,29 @@ export default function FeedbackForm() {
           processRewardFileUrls = urls;
         }
       }
+      let merchantCommentFileUrls: string[] = [];
+      if (merchantCommentFiles.length > 0) {
+        const base64Files = await Promise.all(
+          merchantCommentFiles.map(
+            (f) =>
+              new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(f);
+              })
+          )
+        );
+        const uploadRes = await fetch("/api/feedbacks/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: base64Files }),
+        });
+        if (uploadRes.ok) {
+          const { urls } = await uploadRes.json();
+          merchantCommentFileUrls = urls;
+        }
+      }
       const res = await fetch("/api/feedbacks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -748,6 +763,7 @@ export default function FeedbackForm() {
           ...values,
           feedbackType: "mystery_shopper",
           processRewardFiles: processRewardFileUrls.length > 0 ? processRewardFileUrls : undefined,
+          merchantCommentFiles: merchantCommentFileUrls.length > 0 ? merchantCommentFileUrls : undefined,
         }),
       });
       if (!res.ok) {
@@ -1098,7 +1114,7 @@ export default function FeedbackForm() {
                     name="merchantComments"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Comments</FormLabel>
+                        <FormLabel>Comments (optional)</FormLabel>
                         <FormControl>
                           <Textarea
                             rows={4}
@@ -1111,90 +1127,56 @@ export default function FeedbackForm() {
                       </FormItem>
                     )}
                   />
-                </CardContent>
-              </Card>
 
-              {/* QL Rewards Platform Feedback */}
-              <Card>
-                <CardHeader className="bg-primary/5">
-                  <CardTitle className="text-lg">QL Rewards Platform Feedback</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-6">
-                  <QualityField
-                    control={form.control}
-                    name="browseSelectEase"
-                    label="1. How easy was it to browse and select offers?"
-                  />
-                  <YesNoField
-                    control={form.control}
-                    name="allOffersRedeemedAsDescribed"
-                    label="2. Did all offers redeem as described on the app/website?"
-                  />
-                  {allOffersRedeemed === "no" && (
-                    <FormField
-                      control={form.control}
-                      name="offersIssueExplanation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Explanation (if issues)</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              rows={3}
-                              placeholder="Tell us what didn't work..."
-                              {...field}
-                              data-testid="textarea-offers-explanation"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-slate-700">Attach screenshots (optional, max 5)</p>
+                    <input
+                      ref={merchantCommentFileRef}
+                      type="file"
+                      accept="image/*,application/pdf,.pdf,.doc,.docx"
+                      multiple
+                      className="hidden"
+                      data-testid="input-merchant-comment-files"
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.files || []);
+                        setMerchantCommentFiles((prev) => {
+                          const combined = [...prev, ...selected];
+                          return combined.slice(0, 5);
+                        });
+                        e.target.value = "";
+                      }}
                     />
-                  )}
-                  <FormField
-                    control={form.control}
-                    name="improvementSuggestions"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>3. Suggestions for improving QL Rewards (app, offers, user experience)</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            rows={4}
-                            placeholder="Your suggestions help us improve..."
-                            {...field}
-                            data-testid="textarea-suggestions"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {merchantCommentFiles.length < 5 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => merchantCommentFileRef.current?.click()}
+                        data-testid="button-attach-comment"
+                      >
+                        <Paperclip className="h-4 w-4 mr-2" />
+                        Attach file
+                      </Button>
                     )}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Final Comments */}
-              <Card>
-                <CardHeader className="bg-primary/5">
-                  <CardTitle className="text-lg">Final Comments</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <FormField
-                    control={form.control}
-                    name="enjoyedMost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>What did you enjoy most about using QL Rewards?</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            rows={5}
-                            placeholder="We'd love to hear what you loved..."
-                            {...field}
-                            data-testid="textarea-enjoyed-most"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {merchantCommentFiles.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {merchantCommentFiles.map((f, i) => (
+                          <div key={i} className="flex items-center gap-2 rounded border px-3 py-1.5 text-sm bg-slate-50">
+                            <Paperclip className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+                            <span className="flex-1 truncate text-slate-700">{f.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setMerchantCommentFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                              className="text-slate-400 hover:text-red-500"
+                              data-testid={`button-remove-comment-file-${i}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                  />
+                  </div>
                 </CardContent>
               </Card>
 

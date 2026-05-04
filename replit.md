@@ -101,6 +101,10 @@ ALTER TABLE feedbacks
   ADD COLUMN IF NOT EXISTS staff_familiar_with_offers text,
   ADD COLUMN IF NOT EXISTS process_reward_comment text,
   ADD COLUMN IF NOT EXISTS process_reward_files text[];
+
+-- Comments file attachments (up to 5 files, uploaded to Azure)
+ALTER TABLE feedbacks
+  ADD COLUMN IF NOT EXISTS merchant_comment_files text[];
 ```
 
 #### Pending Production Migrations (Group Merchant feature)

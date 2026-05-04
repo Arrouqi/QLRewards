@@ -69,6 +69,7 @@ interface FeedbackDetail {
   staffAwareOfOffer: string | null;
   productServiceQuality: string | null;
   merchantComments: string | null;
+  merchantCommentFiles: string[] | null;
   browseSelectEase: string | null;
   allOffersRedeemedAsDescribed: string | null;
   offersIssueExplanation: string | null;
@@ -527,46 +528,66 @@ export default function FeedbackView() {
                       />
                     )}
                     <Field label="Comments" value={feedback.merchantComments} />
-                  </dl>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="bg-primary/5">
-                  <CardTitle className="text-base">QL Rewards Platform Feedback</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <dl>
-                    <Field
-                      label="How easy was it to browse and select offers?"
-                      value={
-                        feedback.browseSelectEase
-                          ? QUALITY_LABEL[feedback.browseSelectEase] || feedback.browseSelectEase
-                          : null
-                      }
-                    />
-                    <Field
-                      label="Did all offers redeem as described?"
-                      value={<YesNoBadge value={feedback.allOffersRedeemedAsDescribed} />}
-                    />
-                    {feedback.allOffersRedeemedAsDescribed === "no" && (
-                      <Field label="Explanation (if issues)" value={feedback.offersIssueExplanation} />
+                    {Array.isArray(feedback.merchantCommentFiles) && feedback.merchantCommentFiles.length > 0 && (
+                      <div className="py-2">
+                        <dt className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Comment Attachments</dt>
+                        <dd className="flex flex-wrap gap-2">
+                          {feedback.merchantCommentFiles.map((url, i) => {
+                            const name = url.split("/").pop()?.split("?")[0] || `File ${i + 1}`;
+                            return (
+                              <a
+                                key={i}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-primary underline hover:no-underline"
+                                data-testid={`link-comment-file-${i}`}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                                {name}
+                              </a>
+                            );
+                          })}
+                        </dd>
+                      </div>
                     )}
-                    <Field label="Suggestions for improving QL Rewards" value={feedback.improvementSuggestions} />
                   </dl>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="bg-primary/5">
-                  <CardTitle className="text-base">Final Comments</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <dl>
-                    <Field label="What did you enjoy most about using QL Rewards?" value={feedback.enjoyedMost} />
-                  </dl>
-                </CardContent>
-              </Card>
+              {/* Legacy QL Deals Platform Feedback — shown only if old data exists */}
+              {(feedback.browseSelectEase || feedback.allOffersRedeemedAsDescribed || feedback.improvementSuggestions || feedback.enjoyedMost) && (
+                <Card>
+                  <CardHeader className="bg-primary/5">
+                    <CardTitle className="text-base">QL Deals Platform Feedback (legacy)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <dl>
+                      {feedback.browseSelectEase && (
+                        <Field
+                          label="How easy was it to browse and select offers?"
+                          value={QUALITY_LABEL[feedback.browseSelectEase] || feedback.browseSelectEase}
+                        />
+                      )}
+                      {feedback.allOffersRedeemedAsDescribed && (
+                        <Field
+                          label="Did all offers redeem as described?"
+                          value={<YesNoBadge value={feedback.allOffersRedeemedAsDescribed} />}
+                        />
+                      )}
+                      {feedback.offersIssueExplanation && (
+                        <Field label="Explanation (if issues)" value={feedback.offersIssueExplanation} />
+                      )}
+                      {feedback.improvementSuggestions && (
+                        <Field label="Suggestions for improving QL Deals" value={feedback.improvementSuggestions} />
+                      )}
+                      {feedback.enjoyedMost && (
+                        <Field label="What did you enjoy most about using QL Deals?" value={feedback.enjoyedMost} />
+                      )}
+                    </dl>
+                  </CardContent>
+                </Card>
+              )}
             </>
           )}
         </div>
