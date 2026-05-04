@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Loader2, MessageSquare, ShieldCheck, Sparkles, Search, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -683,7 +683,11 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
 export default function FeedbackForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"mystery_shopper" | "merchant_referral">("mystery_shopper");
+  const searchString = useSearch();
+  const tabParam = new URLSearchParams(searchString).get("tab");
+  const initialTab: "mystery_shopper" | "merchant_referral" =
+    tabParam === "referral" || tabParam === "merchant_referral" ? "merchant_referral" : "mystery_shopper";
+  const [activeTab, setActiveTab] = useState<"mystery_shopper" | "merchant_referral">(initialTab);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
