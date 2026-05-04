@@ -52,11 +52,8 @@ const feedbackSchema = z.object({
   staffAwareOfQld: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   staffFamiliarWithOffers: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   staffKnowsRedeem: z.enum(["yes", "no"], { required_error: "Please select an option" }),
-  staffScansQr: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   processRewardComment: z.string().optional(),
   rewardApprovedImmediately: z.enum(["yes", "no"], { required_error: "Please select an option" }),
-  redemptionSmooth: z.enum(["yes", "no"], { required_error: "Please select an option" }),
-  staffAwareOfOffer: z.enum(["yes", "no"], { required_error: "Please select an option" }),
   merchantComments: z.string().optional(),
 
 });
@@ -705,13 +702,13 @@ export default function FeedbackForm() {
     },
   });
 
-  const staffScansQrValue = form.watch("staffScansQr");
+  const rewardApprovedValue = form.watch("rewardApprovedImmediately");
 
   const onSubmit = async (values: FeedbackFormValues) => {
     setSubmitting(true);
     try {
       let processRewardFileUrls: string[] = [];
-      if (values.staffScansQr === "no" && processRewardFiles.length > 0) {
+      if (values.rewardApprovedImmediately === "no" && processRewardFiles.length > 0) {
         const base64Files = await Promise.all(
           processRewardFiles.map(
             (f) =>
@@ -1016,10 +1013,10 @@ export default function FeedbackForm() {
                     />
                     <YesNoField
                       control={form.control}
-                      name="staffScansQr"
-                      label="Do staff know how to scan the QR code?"
+                      name="rewardApprovedImmediately"
+                      label="Is the offer approved immediately by the staff?"
                     />
-                    {staffScansQrValue === "no" && (
+                    {rewardApprovedValue === "no" && (
                       <div className="ml-1 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
                         <p className="text-xs font-medium text-amber-800">Optional: add more details</p>
                         <FormField
@@ -1092,21 +1089,6 @@ export default function FeedbackForm() {
                         </div>
                       </div>
                     )}
-                    <YesNoField
-                      control={form.control}
-                      name="rewardApprovedImmediately"
-                      label="Is the offer approved immediately by the staff?"
-                    />
-                    <YesNoField
-                      control={form.control}
-                      name="redemptionSmooth"
-                      label="Offer Redemption Smooth?"
-                    />
-                    <YesNoField
-                      control={form.control}
-                      name="staffAwareOfOffer"
-                      label="Staff Aware of Offer?"
-                    />
                   </div>
 
                   <FormField
