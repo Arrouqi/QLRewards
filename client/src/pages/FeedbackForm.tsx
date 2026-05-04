@@ -684,6 +684,8 @@ export default function FeedbackForm() {
   const [activeTab, setActiveTab] = useState<"mystery_shopper" | "merchant_referral">(initialTab);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [staffKnowsRedeemFiles, setStaffKnowsRedeemFiles] = useState<File[]>([]);
+  const staffKnowsRedeemFileRef = useRef<HTMLInputElement>(null);
   const [processRewardFiles, setProcessRewardFiles] = useState<File[]>([]);
   const processRewardFileRef = useRef<HTMLInputElement>(null);
   const [merchantCommentFiles, setMerchantCommentFiles] = useState<File[]>([]);
@@ -710,6 +712,29 @@ export default function FeedbackForm() {
   const onSubmit = async (values: FeedbackFormValues) => {
     setSubmitting(true);
     try {
+      let staffKnowsRedeemFileUrls: string[] = [];
+      if (values.staffKnowsRedeem === "no" && staffKnowsRedeemFiles.length > 0) {
+        const base64Files = await Promise.all(
+          staffKnowsRedeemFiles.map(
+            (f) =>
+              new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(f);
+              })
+          )
+        );
+        const uploadRes = await fetch("/api/feedbacks/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: base64Files }),
+        });
+        if (uploadRes.ok) {
+          const { urls } = await uploadRes.json();
+          staffKnowsRedeemFileUrls = urls;
+        }
+      }
       let processRewardFileUrls: string[] = [];
       if (values.rewardApprovedImmediately === "no" && processRewardFiles.length > 0) {
         const base64Files = await Promise.all(
@@ -762,6 +787,7 @@ export default function FeedbackForm() {
         body: JSON.stringify({
           ...values,
           feedbackType: "mystery_shopper",
+          staffKnowsRedeemFiles: staffKnowsRedeemFileUrls.length > 0 ? staffKnowsRedeemFileUrls : undefined,
           processRewardFiles: processRewardFileUrls.length > 0 ? processRewardFileUrls : undefined,
           merchantCommentFiles: merchantCommentFileUrls.length > 0 ? merchantCommentFileUrls : undefined,
         }),
@@ -1025,7 +1051,7 @@ export default function FeedbackForm() {
                               <FormControl>
                                 <Textarea
                                   rows={3}
-                                  placeholder="Describe what happened..."
+                                  placeholder="e.g. What did the staff do instead? Did they need to call a manager?"
                                   {...field}
                                   data-testid="textarea-staff-knows-redeem-comment"
                                 />
@@ -1034,6 +1060,53 @@ export default function FeedbackForm() {
                             </FormItem>
                           )}
                         />
+                        <div>
+                          <p className="mb-2 text-sm font-medium text-slate-700">Attach files (optional, max 3)</p>
+                          <input
+                            ref={staffKnowsRedeemFileRef}
+                            type="file"
+                            accept="image/*,application/pdf"
+                            multiple
+                            className="hidden"
+                            data-testid="input-staff-knows-redeem-files"
+                            onChange={(e) => {
+                              const selected = Array.from(e.target.files || []);
+                              setStaffKnowsRedeemFiles((prev) => [...prev, ...selected].slice(0, 3));
+                              e.target.value = "";
+                            }}
+                          />
+                          {staffKnowsRedeemFiles.length < 3 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="text-amber-700 border-amber-300 hover:bg-amber-100"
+                              onClick={() => staffKnowsRedeemFileRef.current?.click()}
+                              data-testid="button-attach-staff-knows-redeem"
+                            >
+                              <Paperclip className="h-4 w-4 mr-2" />
+                              Attach file
+                            </Button>
+                          )}
+                          {staffKnowsRedeemFiles.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {staffKnowsRedeemFiles.map((f, i) => (
+                                <div key={i} className="flex items-center gap-2 rounded bg-white border border-amber-200 px-3 py-1.5 text-sm">
+                                  <Paperclip className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                  <span className="flex-1 truncate text-slate-700">{f.name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setStaffKnowsRedeemFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                                    className="text-slate-400 hover:text-red-500"
+                                    data-testid={`button-remove-redeem-file-${i}`}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                     <YesNoField
@@ -1049,11 +1122,10 @@ export default function FeedbackForm() {
                           name="processRewardComment"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm">Comments</FormLabel>
-                              <FormControl>
+                                  <FormControl>
                                 <Textarea
                                   rows={3}
-                                  placeholder="Describe what happened..."
+                                  placeholder="e.g. How long did it take? Did they escalate to a manager?"
                                   {...field}
                                   data-testid="textarea-process-reward-comment"
                                 />

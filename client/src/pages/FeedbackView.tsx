@@ -62,6 +62,7 @@ interface FeedbackDetail {
   staffFamiliarWithOffers: string | null;
   staffKnowsRedeem: string | null;
   staffKnowsRedeemComment: string | null;
+  staffKnowsRedeemFiles: string[] | null;
   staffScansQr: string | null;
   processRewardComment: string | null;
   processRewardFiles: string[] | null;
@@ -484,8 +485,24 @@ export default function FeedbackView() {
                       label="Did the staff know how to process the claimed offer?"
                       value={<YesNoBadge value={feedback.staffKnowsRedeem} />}
                     />
-                    {feedback.staffKnowsRedeem === "no" && feedback.staffKnowsRedeemComment && (
-                      <Field label="Additional info" value={feedback.staffKnowsRedeemComment} />
+                    {feedback.staffKnowsRedeem === "no" && (
+                      <>
+                        {feedback.staffKnowsRedeemComment && (
+                          <Field label="Additional info" value={feedback.staffKnowsRedeemComment} />
+                        )}
+                        {Array.isArray(feedback.staffKnowsRedeemFiles) && feedback.staffKnowsRedeemFiles.length > 0 && (
+                          <div className="py-2">
+                            <dt className="text-sm font-medium text-muted-foreground mb-1">Evidence Files</dt>
+                            <dd className="flex flex-wrap gap-2">
+                              {feedback.staffKnowsRedeemFiles.map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                                  File {i + 1}
+                                </a>
+                              ))}
+                            </dd>
+                          </div>
+                        )}
+                      </>
                     )}
                     <Field
                       label="Is the offer approved immediately by the staff?"

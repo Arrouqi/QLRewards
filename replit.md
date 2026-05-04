@@ -106,9 +106,10 @@ ALTER TABLE feedbacks
 ALTER TABLE feedbacks
   ADD COLUMN IF NOT EXISTS merchant_comment_files text[];
 
--- staffKnowsRedeem expand panel comment
+-- staffKnowsRedeem expand panel comment + files
 ALTER TABLE feedbacks
-  ADD COLUMN IF NOT EXISTS staff_knows_redeem_comment text;
+  ADD COLUMN IF NOT EXISTS staff_knows_redeem_comment text,
+  ADD COLUMN IF NOT EXISTS staff_knows_redeem_files text[];
 ```
 
 #### Pending Production Migrations (Group Merchant feature)

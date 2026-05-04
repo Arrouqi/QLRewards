@@ -394,6 +394,7 @@ export const feedbacks = pgTable("feedbacks", {
   staffFamiliarWithOffers: text("staff_familiar_with_offers"),
   staffKnowsRedeem: text("staff_knows_redeem"), // 'yes' | 'no'
   staffKnowsRedeemComment: text("staff_knows_redeem_comment"),
+  staffKnowsRedeemFiles: text("staff_knows_redeem_files").array(),
   staffScansQr: text("staff_scans_qr"),
   processRewardComment: text("process_reward_comment"),
   processRewardFiles: text("process_reward_files").array(),
