@@ -22,7 +22,8 @@ import {
   X,
   Loader2,
   Undo2,
-  AlertTriangle
+  AlertTriangle,
+  GraduationCap
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -206,6 +207,7 @@ export default function MerchantView() {
       created: "Created",
       licensing: "Licensing",
       licensed: "Licensed",
+      trained: "Trained",
       archived: "Archived",
     };
     const currentLabel = statusLabels[merchant.status] || merchant.status;
@@ -242,6 +244,7 @@ export default function MerchantView() {
         archived: "Archived",
         licensing: "Moved to Licensing",
         licensed: "Marked as Licensed",
+        trained: "Marked as Trained",
       };
       toast({ title: messages[status] || "Status updated" });
       setStatusConfirmDialog(null);
@@ -738,6 +741,8 @@ export default function MerchantView() {
         return <Badge className="bg-purple-100 text-purple-700 border-purple-200">Licensing</Badge>;
       case "licensed":
         return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Licensed</Badge>;
+      case "trained":
+        return <Badge className="bg-teal-100 text-teal-700 border-teal-200">Trained</Badge>;
       case "archived":
         return <Badge className="bg-slate-100 text-slate-700 border-slate-200">Archived</Badge>;
       default:
@@ -1633,6 +1638,16 @@ export default function MerchantView() {
                   >
                     <Undo2 className="h-4 w-4 mr-2" />
                     Move back to Licensing
+                  </Button>
+                )}
+                {merchant.status === "licensed" && (isSales || isAdmin) && (
+                  <Button
+                    onClick={() => confirmStatusChange("trained")}
+                    className="bg-teal-600 hover:bg-teal-700"
+                    data-testid="button-trained"
+                  >
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    Mark as Trained
                   </Button>
                 )}
               </div>

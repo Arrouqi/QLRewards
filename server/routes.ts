@@ -1677,7 +1677,7 @@ export async function registerRoutes(
   app.patch("/api/merchants/:id/status", requireAuth, async (req, res) => {
     try {
       const { status } = req.body;
-      if (!["pending", "moderation", "archived", "created", "licensing", "licensed"].includes(status)) {
+      if (!["pending", "moderation", "archived", "created", "licensing", "licensed", "trained"].includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
       
@@ -1691,12 +1691,15 @@ export async function registerRoutes(
       
       const statusLabels: Record<string, string> = {
         pending: "With Sales", moderation: "In Moderation", created: "Created",
-        licensing: "Licensing", licensed: "Licensed", archived: "Archived"
+        licensing: "Licensing", licensed: "Licensed", trained: "Trained", archived: "Archived"
       };
 
       if (userRole === "sales") {
-        if (!(existingMerchant.status === "pending" && status === "moderation")) {
-          return res.status(403).json({ error: "Sales team can only forward merchants from With Sales to Moderation" });
+        const salesAllowed =
+          (existingMerchant.status === "pending" && status === "moderation") ||
+          (existingMerchant.status === "licensed" && status === "trained");
+        if (!salesAllowed) {
+          return res.status(403).json({ error: "Sales team can only forward merchants from With Sales to Moderation, or from Licensed to Trained" });
         }
       }
       
@@ -1704,6 +1707,9 @@ export async function registerRoutes(
         const allowedFromStatuses = ["moderation", "created", "licensing", "licensed"];
         if (!allowedFromStatuses.includes(existingMerchant.status)) {
           return res.status(403).json({ error: "Moderation team can only manage merchants from In Moderation onwards" });
+        }
+        if (status === "trained") {
+          return res.status(403).json({ error: "Only the Sales team can mark a merchant as Trained" });
         }
       }
       
@@ -1717,6 +1723,10 @@ export async function registerRoutes(
       
       if (status === "licensed" && existingMerchant.status !== "licensing") {
         return res.status(400).json({ error: "Can only mark as Licensed from Licensing status" });
+      }
+
+      if (status === "trained" && existingMerchant.status !== "licensed") {
+        return res.status(400).json({ error: "Can only mark as Trained from Licensed status" });
       }
       
       if (status === "pending" && existingMerchant.status !== "moderation" && existingMerchant.status !== "archived") {

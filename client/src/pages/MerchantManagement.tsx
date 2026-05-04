@@ -19,7 +19,8 @@ import {
   Trash2,
   AlertTriangle,
   ExternalLink,
-  Hash
+  Hash,
+  GraduationCap
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -180,6 +181,7 @@ export default function MerchantManagement() {
         archived: "Archived",
         licensing: "Moved to Licensing",
         licensed: "Marked as Licensed",
+        trained: "Marked as Trained",
       };
       toast({ title: messages[variables.status] || "Status updated" });
     },
@@ -196,6 +198,7 @@ export default function MerchantManagement() {
       created: "Created",
       licensing: "Licensing",
       licensed: "Licensed",
+      trained: "Trained",
       archived: "Archived",
     };
     const currentLabel = statusLabels[merchant.status] || merchant.status;
@@ -264,6 +267,8 @@ export default function MerchantManagement() {
         return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Licensing</Badge>;
       case "licensed":
         return <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">Licensed</Badge>;
+      case "trained":
+        return <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">Trained</Badge>;
       case "archived":
         return <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">Archived</Badge>;
       default:
@@ -278,6 +283,7 @@ export default function MerchantManagement() {
     created: merchants.filter((m) => m.status === "created").length,
     licensing: merchants.filter((m) => m.status === "licensing").length,
     licensed: merchants.filter((m) => m.status === "licensed").length,
+    trained: merchants.filter((m) => m.status === "trained").length,
     archived: merchants.filter((m) => m.status === "archived").length,
   };
 
@@ -321,6 +327,7 @@ export default function MerchantManagement() {
             { label: "Created", value: statusCounts.created, filter: "created" },
             { label: "Licensing", value: statusCounts.licensing, filter: "licensing" },
             { label: "Licensed", value: statusCounts.licensed, filter: "licensed" },
+            { label: "Trained", value: statusCounts.trained, filter: "trained" },
           ].map((stat) => (
             <Card
               key={stat.filter}
@@ -588,6 +595,16 @@ export default function MerchantManagement() {
                                 Move back to Created
                               </DropdownMenuItem>
                             </>
+                          )}
+                          {merchant.status === "licensed" && (isSales || isAdmin) && (
+                            <DropdownMenuItem
+                              onClick={() => confirmStatusChange(merchant, "trained")}
+                              className="text-teal-600"
+                              data-testid={`menu-trained-${merchant.id}`}
+                            >
+                              <GraduationCap className="h-4 w-4 mr-2" />
+                              Mark as Trained
+                            </DropdownMenuItem>
                           )}
                           {merchant.status === "licensed" && !isSales && (
                             <DropdownMenuItem

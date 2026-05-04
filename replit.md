@@ -38,7 +38,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Data Models
 - **deals**: Merchant deal submissions, including category, pricing, discount, rules, and approval status.
-- **merchants**: Merchant onboarding applications with company info, documents, `companyType` (individual/group), and a status flow. Group merchants have specific handling for `crNumber`, `brandName`, and other details managed per-brand.
+- **merchants**: Merchant onboarding applications with company info, documents, `companyType` (individual/group), and a status flow (`pending` → `moderation` → `created` → `licensing` → `licensed` → `trained`; archivable at any point). Only Sales/admin can move `licensed` → `trained`; moderation cannot. Group merchants have specific handling for `crNumber`, `brandName`, and other details managed per-brand.
 - **merchantBrands**: Stores brand-specific details for `companyType='group'` merchants, including name, address, contact, documents, and categories.
 - **merchantDeals**: Deal offers per merchant, with optional `brandId`.
 - **merchantNotes**: Internal, add-only comments on merchant applications.
