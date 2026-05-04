@@ -25,18 +25,12 @@ type FeedbackRow = {
   merchantLocation: string | null;
   visitDate: string | null;
   visitTime: string | null;
+  staffAwareOfQld: string | null;
+  staffFamiliarWithOffers: string | null;
   staffKnowsRedeem: string | null;
-  staffScansQr: string | null;
   rewardApprovedImmediately: string | null;
-  redemptionSmooth: string | null;
-  staffAwareOfOffer: string | null;
   productServiceQuality: string | null;
   merchantComments: string | null;
-  browseSelectEase: string | null;
-  allOffersRedeemedAsDescribed: string | null;
-  offersIssueExplanation: string | null;
-  improvementSuggestions: string | null;
-  enjoyedMost: string | null;
   referralIntroducedDeals: string | null;
   referralEncouragedAppDownload: string | null;
   referralExplainedOffer: string | null;
@@ -44,8 +38,6 @@ type FeedbackRow = {
   referralSubscriptionSmoothness: string | null;
   referralStaffKnowledge: string | null;
   referralOverallSatisfaction: string | null;
-  referralLikedMost: string | null;
-  referralCouldImprove: string | null;
   createdAt: string;
 };
 
@@ -235,36 +227,30 @@ export default function FeedbackOverview({ type }: Props) {
 
 function MysteryShopperCharts({ rows }: { rows: FeedbackRow[] }) {
   const yesNoQuestions: Array<{ key: keyof FeedbackRow; label: string }> = [
-    { key: "staffKnowsRedeem", label: "Staff knows how to redeem the offer" },
-    { key: "staffScansQr", label: "Staff scans QR when reward is claimed" },
-    { key: "rewardApprovedImmediately", label: "Reward approved immediately" },
-    { key: "redemptionSmooth", label: "Redemption process was smooth" },
-    { key: "staffAwareOfOffer", label: "Staff aware of the offer" },
-    { key: "allOffersRedeemedAsDescribed", label: "All offers redeemed as described" },
+    { key: "staffAwareOfQld", label: "Staff aware of Qatar Living Deals" },
+    { key: "staffFamiliarWithOffers", label: "Staff familiar with offers at their branch" },
+    { key: "staffKnowsRedeem", label: "Staff knew how to process the claimed offer" },
+    { key: "rewardApprovedImmediately", label: "Offer approved immediately by staff" },
   ];
 
   const ratingQuestions: Array<{ key: keyof FeedbackRow; label: string }> = [
     { key: "productServiceQuality", label: "Product / Service Quality" },
-    { key: "browseSelectEase", label: "Ease of Browsing & Selecting Offers" },
   ];
 
   const textRates: Array<{ key: keyof FeedbackRow; label: string }> = [
-    { key: "merchantComments", label: "Merchant Comments" },
-    { key: "offersIssueExplanation", label: "Offer Issue Explanation" },
-    { key: "improvementSuggestions", label: "Improvement Suggestions" },
-    { key: "enjoyedMost", label: "Enjoyed Most" },
+    { key: "merchantComments", label: "Comments" },
   ];
 
   return (
     <>
       <SectionTitle>Staff & Service — Yes / No</SectionTitle>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {yesNoQuestions.map((q) => (
           <YesNoCard key={String(q.key)} rows={rows} qKey={q.key} label={q.label} />
         ))}
       </div>
 
-      <SectionTitle>Quality Ratings</SectionTitle>
+      <SectionTitle>Quality Rating</SectionTitle>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {ratingQuestions.map((q) => (
           <RatingBarCard
@@ -297,8 +283,7 @@ function MerchantReferralCharts({ rows }: { rows: FeedbackRow[] }) {
   ];
 
   const textRates: Array<{ key: keyof FeedbackRow; label: string }> = [
-    { key: "referralLikedMost", label: "Liked Most" },
-    { key: "referralCouldImprove", label: "Could Improve" },
+    { key: "merchantComments", label: "Comments" },
   ];
 
   return (
