@@ -403,7 +403,7 @@ function ReferralYesNoField({
             >
               <Label
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2",
+                  "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm",
                   field.value === "yes" && "border-primary bg-primary/10 font-semibold",
                 )}
               >
@@ -412,7 +412,7 @@ function ReferralYesNoField({
               </Label>
               <Label
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2",
+                  "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm",
                   field.value === "no" && "border-primary bg-primary/10 font-semibold",
                 )}
               >
@@ -759,6 +759,7 @@ export default function FeedbackForm() {
       merchantId: undefined,
       merchantLocation: "",
       visitDate: "",
+      visitTime: "",
       staffKnowsRedeemComment: "",
       processRewardComment: "",
       merchantComments: "",
@@ -892,6 +893,9 @@ export default function FeedbackForm() {
                   variant="outline"
                   onClick={() => {
                     form.reset();
+                    setStaffKnowsRedeemFiles([]);
+                    setProcessRewardFiles([]);
+                    setMerchantCommentFiles([]);
                     setSuccess(false);
                   }}
                   data-testid="button-submit-another"
@@ -1181,7 +1185,7 @@ export default function FeedbackForm() {
                           name="processRewardComment"
                           render={({ field }) => (
                             <FormItem>
-                                  <FormControl>
+                              <FormControl>
                                 <Textarea
                                   rows={3}
                                   placeholder="e.g. How long did it take? Did they escalate to a manager?"
@@ -1322,7 +1326,12 @@ export default function FeedbackForm() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => form.reset()}
+                  onClick={() => {
+                    form.reset();
+                    setStaffKnowsRedeemFiles([]);
+                    setProcessRewardFiles([]);
+                    setMerchantCommentFiles([]);
+                  }}
                   disabled={submitting}
                   className="w-full sm:w-auto"
                   data-testid="button-reset"
