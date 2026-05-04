@@ -321,8 +321,6 @@ const referralSchema = z.object({
   referralStaffKnowledge: z.enum(KNOWLEDGE_VALUES, { required_error: "Please select an option" }),
   referralOverallSatisfaction: z.enum(SATISFACTION_VALUES, { required_error: "Please select an option" }),
 
-  referralLikedMost: z.string().optional(),
-  referralCouldImprove: z.string().optional(),
   merchantComments: z.string().optional(),
 });
 
@@ -445,8 +443,6 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
       visitDate: "",
       visitTime: "",
       shopperName: "",
-      referralLikedMost: "",
-      referralCouldImprove: "",
       merchantComments: "",
     },
   });
@@ -645,43 +641,6 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
             <CardTitle className="text-lg">Additional Feedback (Optional)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
-            <FormField
-              control={form.control}
-              name="referralLikedMost"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>What did you like most about your experience?</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={4}
-                      placeholder="Share what went well..."
-                      {...field}
-                      data-testid="textarea-referral-liked-most"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="referralCouldImprove"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>What can be improved?</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={4}
-                      placeholder="Share what could be better..."
-                      {...field}
-                      data-testid="textarea-referral-could-improve"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="merchantComments"
