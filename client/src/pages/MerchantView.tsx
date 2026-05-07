@@ -6,6 +6,7 @@ import {
   ArrowLeft, 
   Building2, 
   FileDown, 
+  FileSpreadsheet,
   Pencil,
   Send,
   Archive,
@@ -46,6 +47,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import AdminLayout from "@/components/AdminLayout";
 import jsPDF from "jspdf";
+import * as XLSX from "xlsx";
 
 interface Merchant {
   id: string;
@@ -793,6 +795,146 @@ export default function MerchantView() {
     toast({ title: "PDF Downloaded", description: "Agreement PDF has been downloaded." });
   };
 
+  const exportToExcel = () => {
+    if (!merchant) return;
+    const wb = XLSX.utils.book_new();
+
+    // ── Sheet 1: Merchant Info ──────────────────────────────────────────────
+    const parseBranches = (branches: any[]): string => {
+      if (!branches?.length) return "";
+      return branches.map((b: any, i: number) => {
+        try {
+          const parsed = typeof b === "string" ? JSON.parse(b) : b;
+          const parts = [parsed.name, parsed.address, parsed.phone].filter(Boolean);
+          return `Branch ${i + 1}: ${parts.join(" | ")}`;
+        } catch {
+          return String(b);
+        }
+      }).join("\n");
+    };
+
+    const infoRows: [string, string][] = [
+      ["Field", "Value"],
+      ["Application ID", merchant.id],
+      ["Submitted At", merchant.createdAt ? format(new Date(merchant.createdAt), "dd MMM yyyy HH:mm") : ""],
+      ["Status", merchant.status],
+      ["Submitted By", merchant.submittedBy || ""],
+      ["Company Type", (merchant as any).companyType === "group" ? "Group" : "Individual"],
+      ["Company Name", merchant.companyName],
+      ["Brand Name", merchant.brandName || ""],
+      ["CR Number", merchant.crNumber || ""],
+      ["Address", merchant.address || ""],
+      ["Contact Person", merchant.contactPerson || ""],
+      ["Email", merchant.email || ""],
+      ["Phone", merchant.phone || ""],
+      ["WhatsApp", merchant.whatsapp || ""],
+      ["Business Categories", (merchant.businessCategories || []).join(", ")],
+      ["Products / Services", (merchant.products || []).join(", ")],
+      ["Subscription Fee", merchant.subscriptionFee || ""],
+      ["Transaction Fee", merchant.transactionFee ? `${merchant.transactionFee} QAR` : ""],
+      ["Commencement Date", merchant.commencementDate ? format(new Date(merchant.commencementDate), "dd MMM yyyy") : ""],
+      ["Signatory Name", merchant.merchantSignatoryName || ""],
+      ["Branches", parseBranches(merchant.branches || [])],
+      ["CR Document", merchant.crDocument || ""],
+      ["Trade License", merchant.tradeLicense || ""],
+      ["Establishment Card", merchant.establishmentCard || ""],
+      ["Tax Card", merchant.taxCardDocument || ""],
+      ["Menu / Price List", merchant.menuPriceList || ""],
+      ["Logo", merchant.logo || ""],
+      ["Cover Image", merchant.coverImage || ""],
+      ["Sales Order", merchant.salesOrder || ""],
+      ["Signed Contract", merchant.signedContractUpload || ""],
+      ["Live Offers Count", String(merchant.offersCreated ?? "")],
+    ];
+
+    const ws1 = XLSX.utils.aoa_to_sheet(infoRows);
+    ws1["!cols"] = [{ wch: 28 }, { wch: 70 }];
+    // Bold the header row
+    const headerCell1 = ws1["A1"];
+    if (headerCell1) headerCell1.s = { font: { bold: true } };
+    XLSX.utils.book_append_sheet(wb, ws1, "Merchant Info");
+
+    // ── Sheet 2: Group Brands (only for group merchants) ───────────────────
+    const brands = (merchant as any).brands as any[] | undefined;
+    if ((merchant as any).companyType === "group" && brands?.length) {
+      const brandHeaders = [
+        "Brand Name", "CR Number", "Address", "Contact Person",
+        "Email", "Phone", "WhatsApp", "Business Categories",
+        "CR Document", "Trade License", "Establishment Card", "Tax Card", "Menu / Price List",
+      ];
+      const brandRows = brands.map((b: any) => [
+        b.brandName || "",
+        b.crNumber || "",
+        b.address || "",
+        b.contactPerson || "",
+        b.email || "",
+        b.phone || "",
+        b.whatsapp || "",
+        (b.businessCategories || []).join(", "),
+        b.crDocument || "",
+        b.tradeLicense || "",
+        b.establishmentCard || "",
+        b.taxCardDocument || "",
+        b.menuPriceList || "",
+      ]);
+      const ws2 = XLSX.utils.aoa_to_sheet([brandHeaders, ...brandRows]);
+      ws2["!cols"] = brandHeaders.map((_, i) => ({ wch: i < 7 ? 24 : 40 }));
+      XLSX.utils.book_append_sheet(wb, ws2, "Brands");
+    }
+
+    // ── Sheet 3: Deals ──────────────────────────────────────────────────────
+    const deals: any[] = merchant.deals || [];
+    if (deals.length > 0) {
+      const dealHeaders = [
+        "Deal #", "Title", "Category", "Sub-Category", "Deal Type",
+        "Duration", "Original Price (QAR)", "Discounted Price (QAR)", "Discount %",
+        "Redemption", "Limit Per User", "Two Tranches", "Tranche Validity (weeks)",
+        "Multiple Items", "Specific Days", "Valid Days",
+        "Description", "Claim Rules", "General Rules", "Other Rules",
+        "Branches", "Image URLs", "Status",
+      ];
+      const dealRows = deals.map((d: any, idx: number) => {
+        const deal = typeof d === "string" ? JSON.parse(d) : d;
+        return [
+          idx + 1,
+          deal.title || "",
+          deal.category || "",
+          deal.subCategory || "",
+          deal.dealType || "",
+          deal.duration || "",
+          deal.originalPrice || "",
+          deal.discountedPrice || "",
+          deal.discountPercentage || "",
+          deal.redemption === "limited"
+            ? `Limited`
+            : deal.redemption || "",
+          deal.limitPerUser || "",
+          deal.isTwoTranches ? "Yes" : "No",
+          deal.trancheValidity || "",
+          deal.isMultipleItems ? "Yes" : "No",
+          deal.specificDays ? "Yes" : "No",
+          (deal.days || []).join(", "),
+          deal.description || "",
+          (deal.claimRules || []).join("; "),
+          (deal.generalRules || []).join("; "),
+          deal.otherRules || "",
+          (deal.branches || []).join(", "),
+          (deal.images || []).join(", "),
+          deal.status || "",
+        ];
+      });
+      const ws3 = XLSX.utils.aoa_to_sheet([dealHeaders, ...dealRows]);
+      ws3["!cols"] = dealHeaders.map(() => ({ wch: 22 }));
+      XLSX.utils.book_append_sheet(wb, ws3, "Deals");
+    } else {
+      const ws3 = XLSX.utils.aoa_to_sheet([["No deals submitted for this merchant."]]);
+      XLSX.utils.book_append_sheet(wb, ws3, "Deals");
+    }
+
+    const fileName = `${merchant.companyName.replace(/\s+/g, "_")}_Export_${format(new Date(), "yyyyMMdd")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast({ title: "Excel Exported", description: `${fileName} downloaded.` });
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -863,6 +1005,15 @@ export default function MerchantView() {
               </Button>
             )}
             
+            <Button
+              variant="outline"
+              onClick={exportToExcel}
+              data-testid="button-export-excel"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export to Excel
+            </Button>
+
             <Button
               variant="outline"
               onClick={generatePDF}
