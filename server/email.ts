@@ -39,6 +39,32 @@ async function getEmailTransporter(ignoreEnabledCheck: boolean = false) {
     });
   }
 
+  if (settings.provider === "ql_api") {
+    const endpoint = (settings as any).apiUrl;
+    const apiKey = settings.apiKey;
+    if (!endpoint || !apiKey) return null;
+    return {
+      sendMail: async ({ to, subject, html }: { to: string; subject: string; html: string }) => {
+        const recipients = to.split(",").map((e: string) => e.trim()).filter(Boolean);
+        for (const recipient of recipients) {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "accept": "application/json",
+              "x-api-key": apiKey,
+            },
+            body: JSON.stringify({ to: recipient, subject, html }),
+          });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error((err as any).message || `HTTP ${response.status}: ${response.statusText}`);
+          }
+        }
+      },
+    } as any;
+  }
+
   return null;
 }
 

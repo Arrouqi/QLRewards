@@ -1208,9 +1208,9 @@ export async function registerRoutes(
       if (req.session.role !== "admin") {
         return res.status(403).json({ error: "Admin access required" });
       }
-      const { provider, apiKey, fromEmail, fromName, isEnabled } = req.body;
+      const { provider, apiKey, apiUrl, fromEmail, fromName, isEnabled } = req.body;
       
-      const updateData: any = { provider, fromEmail, fromName, isEnabled };
+      const updateData: any = { provider, apiUrl: apiUrl || null, fromEmail, fromName, isEnabled };
       if (apiKey && !apiKey.startsWith("••••")) {
         updateData.apiKey = apiKey;
       }

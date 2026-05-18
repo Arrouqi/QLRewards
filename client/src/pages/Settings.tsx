@@ -929,6 +929,7 @@ export default function Settings() {
   const [configForm, setConfigForm] = useState({
     provider: "mandrill",
     apiKey: "",
+    apiUrl: "",
     fromEmail: "",
     fromName: "Qatar Living Deals",
     isEnabled: false,
@@ -1001,6 +1002,7 @@ export default function Settings() {
           setConfigForm({
             provider: config.provider || "mandrill",
             apiKey: config.apiKey || "",
+            apiUrl: config.apiUrl || "",
             fromEmail: config.fromEmail || "",
             fromName: config.fromName || "Qatar Living Deals",
             isEnabled: config.isEnabled || false,
@@ -1021,12 +1023,12 @@ export default function Settings() {
   };
 
   const handleSaveConfig = async () => {
-    if (!configForm.fromEmail) {
-      toast({
-        title: "Error",
-        description: "Please enter a 'From' email address",
-        variant: "destructive",
-      });
+    if (configForm.provider === "ql_api" && !configForm.apiUrl) {
+      toast({ title: "Error", description: "Please enter the API endpoint URL", variant: "destructive" });
+      return;
+    }
+    if (configForm.provider !== "ql_api" && !configForm.fromEmail) {
+      toast({ title: "Error", description: "Please enter a 'From' email address", variant: "destructive" });
       return;
     }
 
@@ -1703,26 +1705,52 @@ export default function Settings() {
                         <SelectValue placeholder="Select provider" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="ql_api">Qatar Living API</SelectItem>
                         <SelectItem value="sendgrid">SendGrid</SelectItem>
                         <SelectItem value="mandrill">Mailchimp Transactional (Mandrill)</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-slate-500">
-                      {configForm.provider === "sendgrid"
+                      {configForm.provider === "ql_api"
+                        ? "Uses the Qatar Living internal email API. Enter the endpoint URL and API key below."
+                        : configForm.provider === "sendgrid"
                         ? "Uses SendGrid SMTP. Find your API key in SendGrid → Settings → API Keys."
                         : "Uses Mandrill SMTP. Find your API key in Mailchimp Transactional → Settings → SMTP & API Info."}
                     </p>
                   </div>
 
+                  {configForm.provider === "ql_api" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="apiUrl">API Endpoint URL *</Label>
+                      <Input
+                        id="apiUrl"
+                        type="url"
+                        placeholder="https://users-be.qatarliving.com/api/email/send"
+                        value={configForm.apiUrl}
+                        onChange={(e) => setConfigForm(prev => ({ ...prev, apiUrl: e.target.value }))}
+                        data-testid="input-api-url"
+                      />
+                      <p className="text-xs text-slate-500">
+                        Dev environment: https://users-be-dev.qatarliving.com/api/email/send
+                      </p>
+                    </div>
+                  )}
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="apiKey">
-                        {configForm.provider === "sendgrid" ? "SendGrid API Key" : "Mandrill API Key"}
+                        {configForm.provider === "ql_api" ? "x-api-key" : configForm.provider === "sendgrid" ? "SendGrid API Key" : "Mandrill API Key"}
                       </Label>
                       <Input
                         id="apiKey"
                         type="password"
-                        placeholder={configForm.provider === "sendgrid" ? "Enter your SendGrid API key" : "Enter your Mandrill API key"}
+                        placeholder={
+                          configForm.provider === "ql_api"
+                            ? "Enter your x-api-key"
+                            : configForm.provider === "sendgrid"
+                            ? "Enter your SendGrid API key"
+                            : "Enter your Mandrill API key"
+                        }
                         value={configForm.apiKey}
                         onChange={(e) => setConfigForm(prev => ({ ...prev, apiKey: e.target.value }))}
                         data-testid="input-api-key"

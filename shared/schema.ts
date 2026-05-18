@@ -136,6 +136,7 @@ export const emailSettings = pgTable("email_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   provider: text("provider").notNull().default("mandrill"),
   apiKey: text("api_key"),
+  apiUrl: text("api_url"),
   fromEmail: text("from_email"),
   fromName: text("from_name"),
   isEnabled: boolean("is_enabled").notNull().default(false),
