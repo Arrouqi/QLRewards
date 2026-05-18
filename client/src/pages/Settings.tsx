@@ -1676,7 +1676,7 @@ export default function Settings() {
                   Email Provider Configuration
                 </CardTitle>
                 <CardDescription>
-                  Configure Mailchimp Transactional (Mandrill) to send email notifications.
+                  Configure your email provider to send notifications for deals and merchant applications.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -1693,20 +1693,36 @@ export default function Settings() {
                     />
                   </div>
 
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-800">
-                      <strong>Mailchimp Transactional (Mandrill)</strong> - Enter your Mandrill API key below. 
-                      You can find this in your Mailchimp Transactional account under Settings → SMTP & API Info.
+                  <div className="space-y-2">
+                    <Label htmlFor="provider">Email Provider</Label>
+                    <Select
+                      value={configForm.provider}
+                      onValueChange={(value) => setConfigForm(prev => ({ ...prev, provider: value }))}
+                    >
+                      <SelectTrigger id="provider" data-testid="select-provider">
+                        <SelectValue placeholder="Select provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sendgrid">SendGrid</SelectItem>
+                        <SelectItem value="mandrill">Mailchimp Transactional (Mandrill)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-slate-500">
+                      {configForm.provider === "sendgrid"
+                        ? "Uses SendGrid SMTP. Find your API key in SendGrid → Settings → API Keys."
+                        : "Uses Mandrill SMTP. Find your API key in Mailchimp Transactional → Settings → SMTP & API Info."}
                     </p>
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="apiKey">Mandrill API Key</Label>
+                      <Label htmlFor="apiKey">
+                        {configForm.provider === "sendgrid" ? "SendGrid API Key" : "Mandrill API Key"}
+                      </Label>
                       <Input
                         id="apiKey"
                         type="password"
-                        placeholder="Enter your Mandrill API key"
+                        placeholder={configForm.provider === "sendgrid" ? "Enter your SendGrid API key" : "Enter your Mandrill API key"}
                         value={configForm.apiKey}
                         onChange={(e) => setConfigForm(prev => ({ ...prev, apiKey: e.target.value }))}
                         data-testid="input-api-key"

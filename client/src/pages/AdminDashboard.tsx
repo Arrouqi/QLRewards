@@ -1,41 +1,70 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import { Search, ChevronLeft, ChevronRight, Trash2, FileDown, Send, ArrowUpDown, ArrowUp, ArrowDown, Pencil, ExternalLink } from "lucide-react";
+import {
+  Search, ChevronLeft, ChevronRight, Trash2, FileDown, Send,
+  ArrowUpDown, ArrowUp, ArrowDown, Pencil, ExternalLink, Archive,
+  ChevronRight as ChevronRightIcon
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
+import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 import type { DealSummary } from "@shared/schema";
 
 const ITEMS_PER_PAGE = 10;
-type StatusFilter = "all" | "pending" | "approved" | "archived";
+
+type StatusFilter = "all" | "pending" | "approved" | "created" | "licensing" | "published" | "archived";
 type SortField = "title" | "merchantName" | "category" | "dealType" | "status" | "createdAt";
 type SortDirection = "asc" | "desc";
 
+const STATUS_PIPELINE = ["pending", "approved", "created", "licensing", "published"] as const;
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: "With Sales",
+  approved: "In Moderation",
+  created: "Created",
+  licensing: "Licensing",
+  published: "Published",
+  archived: "Archived",
+};
+
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700 border-amber-200",
+  approved: "bg-blue-100 text-blue-700 border-blue-200",
+  created: "bg-green-100 text-green-700 border-green-200",
+  licensing: "bg-purple-100 text-purple-700 border-purple-200",
+  published: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  archived: "bg-slate-100 text-slate-600 border-slate-200",
+};
+
+const ADVANCE_LABELS: Record<string, string> = {
+  approved: "Send to Moderation",
+  created: "Mark as Created",
+  licensing: "Send to Licensing",
+  published: "Mark as Published",
+};
+
+function getNextStatus(status: string): string | null {
+  const idx = STATUS_PIPELINE.indexOf(status as any);
+  if (idx >= 0 && idx < STATUS_PIPELINE.length - 1) return STATUS_PIPELINE[idx + 1];
+  return null;
+}
+
 export default function AdminDashboard() {
   const { toast } = useToast();
+  const { can } = usePermissions();
   const [, setLocation] = useLocation();
   const [deals, setDeals] = useState<DealSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,8 +75,8 @@ export default function AdminDashboard() {
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
-  const [dealToRemove, setDealToRemove] = useState<string | null>(null);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [dealToArchive, setDealToArchive] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dealToDelete, setDealToDelete] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>("");
@@ -67,13 +96,8 @@ export default function AdminDashboard() {
       setUserRole(session.role || "");
 
       const dealsResponse = await fetch("/api/deals/summary", { credentials: "include" });
-
-      if (!dealsResponse.ok) {
-        throw new Error("Failed to fetch deals");
-      }
-
-      const data = await dealsResponse.json();
-      setDeals(data);
+      if (!dealsResponse.ok) throw new Error("Failed to fetch deals");
+      setDeals(await dealsResponse.json());
     } catch (error) {
       toast({
         title: "Error",
@@ -95,18 +119,20 @@ export default function AdminDashboard() {
   };
 
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
-    }
-    return sortDirection === "asc" 
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 ml-1 opacity-50" />;
+    return sortDirection === "asc"
       ? <ArrowUp className="h-4 w-4 ml-1" />
       : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
+  const statusOrder: Record<string, number> = {
+    pending: 0, approved: 1, created: 2, licensing: 3, published: 4, archived: 5,
   };
 
   const filteredDeals = deals
     .filter((deal) => {
       const query = searchQuery.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch =
         deal.title.toLowerCase().includes(query) ||
         deal.category.toLowerCase().includes(query) ||
         deal.dealType.toLowerCase().includes(query) ||
@@ -116,62 +142,53 @@ export default function AdminDashboard() {
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      // Always put archived deals at the end
       if (a.status === "archived" && b.status !== "archived") return 1;
       if (a.status !== "archived" && b.status === "archived") return -1;
-      
       let comparison = 0;
-      
       switch (sortField) {
-        case "title":
-          comparison = a.title.localeCompare(b.title);
-          break;
-        case "merchantName":
-          comparison = (a.merchantName || "").localeCompare(b.merchantName || "");
-          break;
-        case "category":
-          comparison = a.category.localeCompare(b.category);
-          break;
-        case "dealType":
-          comparison = a.dealType.localeCompare(b.dealType);
-          break;
-        case "status":
-          const statusOrder: Record<string, number> = { pending: 0, approved: 1, archived: 2 };
-          comparison = (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3);
-          break;
-        case "createdAt":
-          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-          break;
+        case "title": comparison = a.title.localeCompare(b.title); break;
+        case "merchantName": comparison = (a.merchantName || "").localeCompare(b.merchantName || ""); break;
+        case "category": comparison = a.category.localeCompare(b.category); break;
+        case "dealType": comparison = a.dealType.localeCompare(b.dealType); break;
+        case "status": comparison = (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9); break;
+        case "createdAt": comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(); break;
       }
-      
       return sortDirection === "asc" ? comparison : -comparison;
     });
 
-  const statusCounts = {
+  const statusCounts: Record<StatusFilter, number> = {
     all: deals.length,
     pending: deals.filter(d => d.status === "pending").length,
     approved: deals.filter(d => d.status === "approved").length,
+    created: deals.filter(d => d.status === "created").length,
+    licensing: deals.filter(d => d.status === "licensing").length,
+    published: deals.filter(d => d.status === "published").length,
     archived: deals.filter(d => d.status === "archived").length,
   };
 
-  const handleRemoveClick = (dealId: string, e: React.MouseEvent) => {
+  const handleArchiveClick = (dealId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDealToRemove(dealId);
-    setRemoveDialogOpen(true);
+    setDealToArchive(dealId);
+    setArchiveDialogOpen(true);
   };
 
-  const handleRemoveConfirm = async () => {
-    if (!dealToRemove) return;
+  const handleArchiveConfirm = async () => {
+    if (!dealToArchive) return;
     try {
-      const response = await fetch(`/api/deals/${dealToRemove}/archive`, { method: "PATCH", credentials: "include" });
-      if (!response.ok) throw new Error("Failed to remove deal");
-      toast({ title: "Success", description: "Deal removed successfully" });
+      const response = await fetch(`/api/deals/${dealToArchive}/archive`, {
+        method: "PATCH", credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to archive deal");
+      }
+      toast({ title: "Archived", description: "Deal has been archived." });
       await checkAuthAndFetchDeals();
     } catch (error) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to remove deal", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to archive deal", variant: "destructive" });
     } finally {
-      setRemoveDialogOpen(false);
-      setDealToRemove(null);
+      setArchiveDialogOpen(false);
+      setDealToArchive(null);
     }
   };
 
@@ -184,18 +201,36 @@ export default function AdminDashboard() {
   const handleDeleteConfirm = async () => {
     if (!dealToDelete) return;
     try {
-      const response = await fetch(`/api/deals/${dealToDelete}`, { method: "DELETE", credentials: "include" });
+      const response = await fetch(`/api/deals/${dealToDelete}`, {
+        method: "DELETE", credentials: "include",
+      });
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || "Failed to delete deal");
       }
-      toast({ title: "Success", description: "Deal permanently deleted" });
+      toast({ title: "Deleted", description: "Deal permanently deleted." });
       await checkAuthAndFetchDeals();
     } catch (error) {
       toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to delete deal", variant: "destructive" });
     } finally {
       setDeleteDialogOpen(false);
       setDealToDelete(null);
+    }
+  };
+
+  const handleAdvance = async (dealId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch(`/api/deals/${dealId}/advance`, {
+        method: "PATCH", credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to advance deal");
+      }
+      await checkAuthAndFetchDeals();
+    } catch (error) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to advance deal", variant: "destructive" });
     }
   };
 
@@ -218,11 +253,8 @@ export default function AdminDashboard() {
 
   const toggleSelectDeal = (dealId: string, checked: boolean) => {
     const newSelected = new Set(selectedDeals);
-    if (checked) {
-      newSelected.add(dealId);
-    } else {
-      newSelected.delete(dealId);
-    }
+    if (checked) newSelected.add(dealId);
+    else newSelected.delete(dealId);
     setSelectedDeals(newSelected);
   };
 
@@ -252,6 +284,16 @@ export default function AdminDashboard() {
     setCurrentPage(1);
   }, [searchQuery, statusFilter]);
 
+  const filterTabs: { key: StatusFilter; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "pending", label: "With Sales" },
+    { key: "approved", label: "In Moderation" },
+    { key: "created", label: "Created" },
+    { key: "licensing", label: "Licensing" },
+    { key: "published", label: "Published" },
+    { key: "archived", label: "Archived" },
+  ];
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -261,6 +303,8 @@ export default function AdminDashboard() {
       </AdminLayout>
     );
   }
+
+  const canArchive = userRole === "admin" || userRole === "moderation" || can("deals.archive" as any);
 
   return (
     <AdminLayout>
@@ -283,24 +327,21 @@ export default function AdminDashboard() {
         </div>
 
         <div className="flex flex-wrap gap-2 mb-4">
-          {(["all", "pending", "approved", "archived"] as StatusFilter[]).map((status) => {
-            const displayLabel = status === "approved" ? "Sent to Moderation" : status.charAt(0).toUpperCase() + status.slice(1);
-            return (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={cn(
-                  "px-3 md:px-4 py-2 rounded-lg font-medium text-xs md:text-sm transition-colors",
-                  statusFilter === status
-                    ? "bg-[#00426D] text-white"
-                    : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
-                )}
-                data-testid={`filter-${status}`}
-              >
-                {displayLabel} ({statusCounts[status]})
-              </button>
-            );
-          })}
+          {filterTabs.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              className={cn(
+                "px-3 md:px-4 py-2 rounded-lg font-medium text-xs md:text-sm transition-colors",
+                statusFilter === key
+                  ? "bg-[#00426D] text-white"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              )}
+              data-testid={`filter-${key}`}
+            >
+              {label} ({statusCounts[key]})
+            </button>
+          ))}
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
@@ -333,188 +374,166 @@ export default function AdminDashboard() {
           </div>
 
           <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={allPendingSelected}
-                    onCheckedChange={toggleSelectAll}
-                    disabled={pendingDealsOnPage.length === 0}
-                    data-testid="checkbox-select-all"
-                  />
-                </TableHead>
-                <TableHead>
-                  <button
-                    onClick={() => handleSort("title")}
-                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
-                    data-testid="sort-title"
-                  >
-                    Title
-                    {getSortIcon("title")}
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    onClick={() => handleSort("merchantName")}
-                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
-                    data-testid="sort-merchant"
-                  >
-                    Merchant
-                    {getSortIcon("merchantName")}
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    onClick={() => handleSort("category")}
-                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
-                    data-testid="sort-category"
-                  >
-                    Category
-                    {getSortIcon("category")}
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    onClick={() => handleSort("dealType")}
-                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
-                    data-testid="sort-dealtype"
-                  >
-                    Deal Type
-                    {getSortIcon("dealType")}
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    onClick={() => handleSort("status")}
-                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
-                    data-testid="sort-status"
-                  >
-                    Status
-                    {getSortIcon("status")}
-                  </button>
-                </TableHead>
-                <TableHead>
-                  <button
-                    onClick={() => handleSort("createdAt")}
-                    className="flex items-center font-medium hover:text-[#00426D] transition-colors"
-                    data-testid="sort-created"
-                  >
-                    Created Date
-                    {getSortIcon("createdAt")}
-                  </button>
-                </TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedDeals.length === 0 ? (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-slate-500 py-8">
-                    {searchQuery || statusFilter !== "all" ? "No deals match your filters" : "No deals found"}
-                  </TableCell>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={allPendingSelected}
+                      onCheckedChange={toggleSelectAll}
+                      disabled={pendingDealsOnPage.length === 0}
+                      data-testid="checkbox-select-all"
+                    />
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => handleSort("title")} className="flex items-center font-medium hover:text-[#00426D] transition-colors" data-testid="sort-title">
+                      Title {getSortIcon("title")}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => handleSort("merchantName")} className="flex items-center font-medium hover:text-[#00426D] transition-colors" data-testid="sort-merchant">
+                      Merchant {getSortIcon("merchantName")}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => handleSort("category")} className="flex items-center font-medium hover:text-[#00426D] transition-colors" data-testid="sort-category">
+                      Category {getSortIcon("category")}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => handleSort("dealType")} className="flex items-center font-medium hover:text-[#00426D] transition-colors" data-testid="sort-dealtype">
+                      Deal Type {getSortIcon("dealType")}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => handleSort("status")} className="flex items-center font-medium hover:text-[#00426D] transition-colors" data-testid="sort-status">
+                      Status {getSortIcon("status")}
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button onClick={() => handleSort("createdAt")} className="flex items-center font-medium hover:text-[#00426D] transition-colors" data-testid="sort-created">
+                      Created Date {getSortIcon("createdAt")}
+                    </button>
+                  </TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : (
-                paginatedDeals.map((deal) => (
-                  <TableRow
-                    key={deal.id}
-                    className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => {
-                      if (deal.status === "pending" || deal.status === "approved") {
-                        window.open(`/admin/deals/${deal.id}/view`, '_blank');
-                      } else {
-                        window.open(`/admin/deals/${deal.id}`, '_blank');
-                      }
-                    }}
-                    data-testid={`row-deal-${deal.id}`}
-                  >
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      {deal.status === "pending" ? (
-                        <Checkbox
-                          checked={selectedDeals.has(deal.id)}
-                          onCheckedChange={(checked) => toggleSelectDeal(deal.id, !!checked)}
-                          data-testid={`checkbox-deal-${deal.id}`}
-                        />
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="font-medium">{deal.title}</TableCell>
-                    <TableCell>{deal.merchantName || "-"}</TableCell>
-                    <TableCell>{deal.category}</TableCell>
-                    <TableCell className="capitalize">{deal.dealType}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          deal.status === "approved" && "bg-green-100 text-green-800 hover:bg-green-100",
-                          deal.status === "pending" && "bg-blue-100 text-blue-800 hover:bg-blue-100",
-                          deal.status === "archived" && "bg-slate-100 text-slate-600 hover:bg-slate-100"
-                        )}
-                      >
-                        {deal.status === "approved" ? "Sent to Moderation" : deal.status === "pending" ? "Pending" : deal.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(deal.createdAt), "MMM dd, yyyy")}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(`/admin/deals/${deal.id}`, '_blank');
-                          }}
-                          className="text-slate-500 hover:text-slate-700"
-                          data-testid={`button-edit-${deal.id}`}
-                          title="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(`/admin/deals/${deal.id}/print`, '_blank');
-                          }}
-                          className="text-slate-500 hover:text-slate-700"
-                          data-testid={`button-pdf-${deal.id}`}
-                          title="Download PDF"
-                        >
-                          <FileDown className="h-4 w-4" />
-                        </Button>
-                        {deal.status !== "archived" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => handleRemoveClick(deal.id, e)}
-                            className="text-red-500 hover:text-red-700"
-                            data-testid={`button-remove-${deal.id}`}
-                            title="Remove"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {deal.status === "archived" && userRole === "admin" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => handleDeleteClick(deal.id, e)}
-                            className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                            data-testid={`button-delete-${deal.id}`}
-                            title="Permanently Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {paginatedDeals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-slate-500 py-8">
+                      {searchQuery || statusFilter !== "all" ? "No deals match your filters" : "No deals found"}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  paginatedDeals.map((deal) => {
+                    const nextStatus = getNextStatus(deal.status);
+                    return (
+                      <TableRow
+                        key={deal.id}
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => {
+                          if (deal.status === "pending" || deal.status === "approved") {
+                            window.open(`/admin/deals/${deal.id}/view`, "_blank");
+                          } else {
+                            window.open(`/admin/deals/${deal.id}`, "_blank");
+                          }
+                        }}
+                        data-testid={`row-deal-${deal.id}`}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          {deal.status === "pending" ? (
+                            <Checkbox
+                              checked={selectedDeals.has(deal.id)}
+                              onCheckedChange={(checked) => toggleSelectDeal(deal.id, !!checked)}
+                              data-testid={`checkbox-deal-${deal.id}`}
+                            />
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="font-medium">{deal.title}</TableCell>
+                        <TableCell>{deal.merchantName || "-"}</TableCell>
+                        <TableCell>{deal.category}</TableCell>
+                        <TableCell className="capitalize">{deal.dealType}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={cn("text-xs font-medium", STATUS_BADGE_CLASS[deal.status] || "bg-slate-100 text-slate-600")}
+                          >
+                            {STATUS_LABELS[deal.status] || deal.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(deal.createdAt), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); window.open(`/admin/deals/${deal.id}`, "_blank"); }}
+                              className="text-slate-500 hover:text-slate-700"
+                              data-testid={`button-edit-${deal.id}`}
+                              title="Edit"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); window.open(`/admin/deals/${deal.id}/print`, "_blank"); }}
+                              className="text-slate-500 hover:text-slate-700"
+                              data-testid={`button-pdf-${deal.id}`}
+                              title="Download PDF"
+                            >
+                              <FileDown className="h-4 w-4" />
+                            </Button>
+
+                            {nextStatus && can("deals.approve" as any) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => handleAdvance(deal.id, e)}
+                                className="text-[#00426D] hover:text-[#003152] hover:bg-blue-50"
+                                data-testid={`button-advance-${deal.id}`}
+                                title={ADVANCE_LABELS[nextStatus] || `Move to ${STATUS_LABELS[nextStatus]}`}
+                              >
+                                <ChevronRightIcon className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {deal.status !== "archived" && canArchive && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => handleArchiveClick(deal.id, e)}
+                                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                                data-testid={`button-archive-${deal.id}`}
+                                title="Archive"
+                              >
+                                <Archive className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {deal.status === "archived" && userRole === "admin" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => handleDeleteClick(deal.id, e)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`button-delete-${deal.id}`}
+                                title="Permanently Delete"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
 
           {totalPages > 1 && (
@@ -536,15 +555,10 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let page;
-                    if (totalPages <= 5) {
-                      page = i + 1;
-                    } else if (currentPage <= 3) {
-                      page = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      page = totalPages - 4 + i;
-                    } else {
-                      page = currentPage - 2 + i;
-                    }
+                    if (totalPages <= 5) page = i + 1;
+                    else if (currentPage <= 3) page = i + 1;
+                    else if (currentPage >= totalPages - 2) page = totalPages - 4 + i;
+                    else page = currentPage - 2 + i;
                     return (
                       <Button
                         key={page}
@@ -575,18 +589,18 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+      <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to remove this deal?</AlertDialogTitle>
+            <AlertDialogTitle>Archive this deal?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action will mark the deal as removed. It will no longer appear in the active deals list.
+              The deal will be moved to the archived list and removed from active pipelines. You can still view it under the Archived filter.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRemoveConfirm} className="bg-red-600 hover:bg-red-700">
-              Remove
+            <AlertDialogAction onClick={handleArchiveConfirm} className="bg-slate-600 hover:bg-slate-700">
+              Archive
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

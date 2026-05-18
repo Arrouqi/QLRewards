@@ -1820,7 +1820,7 @@ export default function MerchantView() {
                 <p className="text-sm text-slate-500">Review and take action on this application</p>
               </div>
               <div className="flex items-center gap-3">
-                {merchant.status !== "archived" && !isSales && (
+                {merchant.status !== "archived" && (isAdmin || isModeration || can("merchants.archive" as any)) && (
                   <Button
                     variant="ghost"
                     size="sm"

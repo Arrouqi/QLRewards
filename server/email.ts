@@ -27,6 +27,18 @@ async function getEmailTransporter(ignoreEnabledCheck: boolean = false) {
     });
   }
 
+  if (settings.provider === "sendgrid") {
+    return nodemailer.createTransport({
+      host: "smtp.sendgrid.net",
+      port: 587,
+      secure: false,
+      auth: {
+        user: "apikey",
+        pass: settings.apiKey,
+      },
+    });
+  }
+
   return null;
 }
 
