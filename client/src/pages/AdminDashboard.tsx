@@ -4,10 +4,12 @@ import { format } from "date-fns";
 import {
   Search, ChevronLeft, ChevronRight, Trash2, FileDown, Send,
   ArrowUpDown, ArrowUp, ArrowDown, Pencil, ExternalLink, Archive,
-  ChevronRight as ChevronRightIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -48,19 +50,6 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
   published: "bg-emerald-100 text-emerald-700 border-emerald-200",
   archived: "bg-slate-100 text-slate-600 border-slate-200",
 };
-
-const ADVANCE_LABELS: Record<string, string> = {
-  approved: "Send to Moderation",
-  created: "Mark as Created",
-  licensing: "Send to Licensing",
-  published: "Mark as Published",
-};
-
-function getNextStatus(status: string): string | null {
-  const idx = STATUS_PIPELINE.indexOf(status as any);
-  if (idx >= 0 && idx < STATUS_PIPELINE.length - 1) return STATUS_PIPELINE[idx + 1];
-  return null;
-}
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -218,19 +207,22 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleAdvance = async (dealId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleStatusChange = async (dealId: string, newStatus: string) => {
     try {
-      const response = await fetch(`/api/deals/${dealId}/advance`, {
-        method: "PATCH", credentials: "include",
+      const response = await fetch(`/api/deals/${dealId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: newStatus }),
       });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to advance deal");
+        throw new Error(data.error || "Failed to update status");
       }
       await checkAuthAndFetchDeals();
+      toast({ title: "Status updated", description: `Moved to ${STATUS_LABELS[newStatus] || newStatus}` });
     } catch (error) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to advance deal", variant: "destructive" });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to update status", variant: "destructive" });
     }
   };
 
@@ -427,7 +419,6 @@ export default function AdminDashboard() {
                   </TableRow>
                 ) : (
                   paginatedDeals.map((deal) => {
-                    const nextStatus = getNextStatus(deal.status);
                     return (
                       <TableRow
                         key={deal.id}
@@ -488,17 +479,26 @@ export default function AdminDashboard() {
                               <FileDown className="h-4 w-4" />
                             </Button>
 
-                            {nextStatus && can("deals.approve" as any) && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => handleAdvance(deal.id, e)}
-                                className="text-[#00426D] hover:text-[#003152] hover:bg-blue-50"
-                                data-testid={`button-advance-${deal.id}`}
-                                title={ADVANCE_LABELS[nextStatus] || `Move to ${STATUS_LABELS[nextStatus]}`}
+                            {deal.status !== "archived" && (
+                              <Select
+                                value={deal.status}
+                                onValueChange={(val) => handleStatusChange(deal.id, val)}
                               >
-                                <ChevronRightIcon className="h-4 w-4" />
-                              </Button>
+                                <SelectTrigger
+                                  className="h-7 w-[130px] text-xs border-slate-200 bg-white"
+                                  data-testid={`select-status-${deal.id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent onClick={(e) => e.stopPropagation()}>
+                                  {STATUS_PIPELINE.map((s) => (
+                                    <SelectItem key={s} value={s} className="text-xs">
+                                      {STATUS_LABELS[s]}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             )}
 
                             {deal.status !== "archived" && canArchive && (
