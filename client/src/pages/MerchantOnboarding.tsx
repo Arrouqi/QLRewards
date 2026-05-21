@@ -371,8 +371,23 @@ export default function MerchantOnboarding() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = () => {
-      form.setValue(field, reader.result as string);
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      try {
+        const res = await fetch("/api/merchants/upload-file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ file: base64, folder: "merchant-documents" }),
+        });
+        if (res.ok) {
+          const { url } = await res.json();
+          form.setValue(field, url);
+        } else {
+          form.setValue(field, base64);
+        }
+      } catch {
+        form.setValue(field, base64);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -1736,22 +1751,35 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
     if (!files || files.length === 0) return;
 
     setUploading(true);
-    const newImages: string[] = [];
+    const base64List: string[] = [];
 
     for (const file of Array.from(files)) {
       const reader = new FileReader();
       await new Promise<void>((resolve) => {
         reader.onload = () => {
-          if (reader.result) {
-            newImages.push(reader.result as string);
-          }
+          if (reader.result) base64List.push(reader.result as string);
           resolve();
         };
         reader.readAsDataURL(file);
       });
     }
 
-    form.setValue(`deals.${index}.images`, [...images, ...newImages]);
+    try {
+      const res = await fetch("/api/merchants/upload-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: base64List }),
+      });
+      if (res.ok) {
+        const { urls } = await res.json();
+        form.setValue(`deals.${index}.images`, [...images, ...urls]);
+      } else {
+        form.setValue(`deals.${index}.images`, [...images, ...base64List]);
+      }
+    } catch {
+      form.setValue(`deals.${index}.images`, [...images, ...base64List]);
+    }
+
     setUploading(false);
     if (inputRef.current) inputRef.current.value = "";
   };

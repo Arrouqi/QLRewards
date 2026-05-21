@@ -317,6 +317,35 @@ export async function registerRoutes(
     }
   });
 
+  // Public: upload merchant form files (documents + deal images) immediately to Azure
+  app.post("/api/merchants/upload-file", async (req, res) => {
+    try {
+      const { file, folder } = req.body as { file: string; folder?: string };
+      if (!file || typeof file !== "string") {
+        return res.status(400).json({ error: "Provide a base64 data URL in 'file'" });
+      }
+      const prefix = folder || "merchant-uploads";
+      const urls = await uploadMultipleImages([file], `${prefix}/${Date.now()}`);
+      res.json({ url: urls[0] });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Upload failed" });
+    }
+  });
+
+  // Public: bulk upload deal images immediately to Azure
+  app.post("/api/merchants/upload-images", async (req, res) => {
+    try {
+      const { files } = req.body as { files: string[] };
+      if (!Array.isArray(files) || files.length === 0 || files.length > 10) {
+        return res.status(400).json({ error: "Provide 1–10 files as base64 data URLs" });
+      }
+      const urls = await uploadMultipleImages(files, `merchant-deal-images/${Date.now()}`);
+      res.json({ urls });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Upload failed" });
+    }
+  });
+
   // Public: submit a feedback (rate-limited)
   app.post("/api/feedbacks", feedbackSubmitRateLimit, async (req, res) => {
     try {
