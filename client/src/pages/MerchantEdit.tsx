@@ -138,6 +138,8 @@ export default function MerchantEdit() {
   const [categories, setCategories] = useState<CategoryWithSubs[]>([]);
   const [claimTerms, setClaimTerms] = useState<Term[]>([]);
   const [generalTerms, setGeneralTerms] = useState<Term[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [dealErrors, setDealErrors] = useState<Record<number, string[]>>({});
 
   useEffect(() => {
     fetchMerchant();
@@ -264,16 +266,14 @@ export default function MerchantEdit() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (fieldErrors[name]) setFieldErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
   };
 
   const handleDealChange = (index: number, field: keyof Deal, value: any) => {
-    setDeals(prev => prev.map((deal, i) => 
-      i === index ? { ...deal, [field]: value } : deal
-    ));
+    setDeals(prev => prev.map((deal, i) => i === index ? { ...deal, [field]: value } : deal));
+    if (dealErrors[index]) setDealErrors(prev => { const n = { ...prev }; delete n[index]; return n; });
   };
 
   const toggleDealExpanded = (index: number) => {
@@ -468,43 +468,81 @@ export default function MerchantEdit() {
   const handleSave = async () => {
     if (!merchant) return;
 
-    const validationErrors: string[] = [];
-    if (!formData.companyName.trim()) validationErrors.push("Company name is required");
-    if (!isGroup) {
-      if (!formData.crNumber.trim()) validationErrors.push("CR number is required");
-      if (formData.crNumber && !/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber)) validationErrors.push("CR number must be 4-14 alphanumeric characters");
-      if (!formData.brandName.trim()) validationErrors.push("Brand name is required");
-    } else {
-      if (brands.length === 0) validationErrors.push("Group merchants must have at least one brand");
-      if (brands.length > 50) validationErrors.push("Maximum 50 brands per group");
-    }
-    if (!formData.contactPerson.trim()) validationErrors.push("Contact person is required");
-    if (!formData.email.trim()) validationErrors.push("Email is required");
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) validationErrors.push("Invalid email format");
-    if (!formData.phone.trim()) validationErrors.push("Phone is required");
+    const errors: Record<string, string> = {};
+    const dErrors: Record<number, string[]> = {};
 
-    if (validationErrors.length > 0) {
-      toast({
-        title: "Please fix the following errors",
-        description: validationErrors.join(". "),
-        variant: "destructive",
+    // Top-level field validation
+    if (!formData.companyName.trim()) errors.companyName = "Company name is required";
+    if (!isGroup) {
+      if (!formData.crNumber.trim()) errors.crNumber = "CR number is required";
+      else if (!/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber)) errors.crNumber = "Must be 4–14 alphanumeric characters";
+      if (!formData.brandName.trim()) errors.brandName = "Brand name is required";
+    } else {
+      if (brands.length === 0) errors.brands = "At least one brand is required";
+      if (brands.length > 50) errors.brands = "Maximum 50 brands allowed per group";
+    }
+    if (!formData.contactPerson.trim()) errors.contactPerson = "Contact person is required";
+    if (!formData.email.trim()) errors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = "Invalid email format";
+    if (!formData.phone.trim()) errors.phone = "Phone is required";
+    if (deals.length > dealCap) errors.dealCap = `Maximum ${dealCap} deals allowed`;
+
+    // Per-deal validation
+    deals.forEach((deal, i) => {
+      const de: string[] = [];
+      if (!deal.title?.trim()) de.push("Title is required");
+      if (!deal.category) de.push("Category is required");
+      if (!deal.dealType) de.push("Deal type is required");
+      if (!deal.duration?.trim()) de.push("Duration is required");
+      if (!deal.redemption) de.push("Redemption type is required");
+      if (deal.redemption === "limited" && !deal.limitPerUser?.trim()) de.push("Limit per user is required when redemption is Limited");
+      if (!deal.isMultipleItems && !deal.originalPrice?.trim()) de.push("Original price / voucher amount is required");
+      if ((deal.images || []).length < 4) de.push(`Only ${(deal.images || []).length}/4 images uploaded — need at least 4`);
+      if (de.length > 0) dErrors[i] = de;
+    });
+
+    const hasErrors = Object.keys(errors).length > 0 || Object.keys(dErrors).length > 0;
+
+    if (hasErrors) {
+      setFieldErrors(errors);
+      setDealErrors(dErrors);
+
+      // Auto-expand and open deals that have errors
+      const errorDealIndexes = Object.keys(dErrors).map(Number);
+      if (errorDealIndexes.length > 0) {
+        setDealsOpen(true);
+        setExpandedDeals(prev => [...new Set([...prev, ...errorDealIndexes])]);
+      }
+
+      // Build toast summary
+      const topMsgs = Object.entries(errors).map(([field, msg]) => {
+        const labels: Record<string, string> = {
+          companyName: "Company Name", crNumber: "CR Number", brandName: "Brand Name",
+          contactPerson: "Contact Person", email: "Email", phone: "Phone",
+          brands: "Brands", dealCap: "Deals",
+        };
+        return `${labels[field] || field}: ${msg}`;
       });
-      return;
-    }
-    
-    const dealsWithLowImages = deals.filter(d => (d.images || []).length < 4);
-    if (dealsWithLowImages.length > 0) {
+      const dealMsgs = Object.entries(dErrors).map(([i, errs]) =>
+        `Deal ${Number(i) + 1}: ${errs.join(", ")}`
+      );
       toast({
-        title: "Each deal requires at least 4 images",
-        description: `${dealsWithLowImages.length} deal(s) have fewer than 4 images.`,
+        title: "Please fix the errors below before saving",
+        description: [...topMsgs, ...dealMsgs].join(". "),
         variant: "destructive",
+        duration: 10000,
       });
+
+      // Scroll to first visible error
+      setTimeout(() => {
+        const first = document.querySelector("[data-field-error='true'], .deal-error-banner");
+        if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 150);
       return;
     }
-    if (deals.length > dealCap) {
-      toast({ title: `Maximum ${dealCap} deals exceeded`, variant: "destructive" });
-      return;
-    }
+
+    setFieldErrors({});
+    setDealErrors({});
     
     setIsSaving(true);
     try {
@@ -627,20 +665,23 @@ export default function MerchantEdit() {
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name</Label>
+                <Label htmlFor="companyName">Company Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="companyName"
                   name="companyName"
                   value={formData.companyName}
                   onChange={handleChange}
                   data-testid="input-company-name"
+                  data-field-error={!!fieldErrors.companyName || undefined}
+                  className={fieldErrors.companyName ? "border-red-500 focus-visible:ring-red-500" : ""}
                 />
+                {fieldErrors.companyName && <p className="text-sm text-red-500 mt-1">{fieldErrors.companyName}</p>}
               </div>
               
               {!isGroup && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="crNumber">CR Number</Label>
+                    <Label htmlFor="crNumber">CR Number <span className="text-red-500">*</span></Label>
                     <Input
                       id="crNumber"
                       name="crNumber"
@@ -649,38 +690,49 @@ export default function MerchantEdit() {
                       placeholder="e.g. 123456 or ABC1234"
                       maxLength={14}
                       data-testid="input-cr-number"
+                      data-field-error={!!fieldErrors.crNumber || undefined}
+                      className={fieldErrors.crNumber ? "border-red-500 focus-visible:ring-red-500" : ""}
                     />
-                    {formData.crNumber && !/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber) && (
-                      <p className="text-sm text-red-500">CR number must be 4-14 alphanumeric characters</p>
-                    )}
+                    {fieldErrors.crNumber
+                      ? <p className="text-sm text-red-500 mt-1">{fieldErrors.crNumber}</p>
+                      : formData.crNumber && !/^[a-zA-Z0-9]{4,14}$/.test(formData.crNumber) && (
+                          <p className="text-sm text-red-500">Must be 4–14 alphanumeric characters</p>
+                        )
+                    }
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="brandName">Brand Name</Label>
+                    <Label htmlFor="brandName">Brand Name <span className="text-red-500">*</span></Label>
                     <Input
                       id="brandName"
                       name="brandName"
                       value={formData.brandName}
                       onChange={handleChange}
                       data-testid="input-brand-name"
+                      data-field-error={!!fieldErrors.brandName || undefined}
+                      className={fieldErrors.brandName ? "border-red-500 focus-visible:ring-red-500" : ""}
                     />
+                    {fieldErrors.brandName && <p className="text-sm text-red-500 mt-1">{fieldErrors.brandName}</p>}
                   </div>
                 </>
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="contactPerson">Contact Person</Label>
+                <Label htmlFor="contactPerson">Contact Person <span className="text-red-500">*</span></Label>
                 <Input
                   id="contactPerson"
                   name="contactPerson"
                   value={formData.contactPerson}
                   onChange={handleChange}
                   data-testid="input-contact-person"
+                  data-field-error={!!fieldErrors.contactPerson || undefined}
+                  className={fieldErrors.contactPerson ? "border-red-500 focus-visible:ring-red-500" : ""}
                 />
+                {fieldErrors.contactPerson && <p className="text-sm text-red-500 mt-1">{fieldErrors.contactPerson}</p>}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                 <Input
                   id="email"
                   name="email"
@@ -688,18 +740,24 @@ export default function MerchantEdit() {
                   value={formData.email}
                   onChange={handleChange}
                   data-testid="input-email"
+                  data-field-error={!!fieldErrors.email || undefined}
+                  className={fieldErrors.email ? "border-red-500 focus-visible:ring-red-500" : ""}
                 />
+                {fieldErrors.email && <p className="text-sm text-red-500 mt-1">{fieldErrors.email}</p>}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">Phone <span className="text-red-500">*</span></Label>
                 <Input
                   id="phone"
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
                   data-testid="input-phone"
+                  data-field-error={!!fieldErrors.phone || undefined}
+                  className={fieldErrors.phone ? "border-red-500 focus-visible:ring-red-500" : ""}
                 />
+                {fieldErrors.phone && <p className="text-sm text-red-500 mt-1">{fieldErrors.phone}</p>}
               </div>
               
               <div className="space-y-2">
@@ -1284,11 +1342,16 @@ export default function MerchantEdit() {
                     className="flex items-center justify-between p-4 bg-slate-50 cursor-pointer"
                     onClick={() => toggleDealExpanded(index)}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <Badge variant="outline" className="bg-white">Deal {index + 1}</Badge>
                       <span className="font-medium">{deal.title || "Untitled Deal"}</span>
                       <span className="text-sm text-slate-500">{deal.category}</span>
-                      {(deal.images || []).length < 4 && (
+                      {dealErrors[index] && (
+                        <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
+                          {dealErrors[index].length} error{dealErrors[index].length > 1 ? "s" : ""}
+                        </Badge>
+                      )}
+                      {!dealErrors[index] && (deal.images || []).length < 4 && (
                         <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs">
                           {(deal.images || []).length}/4 images
                         </Badge>
@@ -1314,6 +1377,14 @@ export default function MerchantEdit() {
                   
                   {expandedDeals.includes(index) && (
                     <div className="p-4 space-y-4 border-t">
+                      {dealErrors[index] && dealErrors[index].length > 0 && (
+                        <div className="deal-error-banner p-3 bg-red-50 border border-red-200 rounded-lg" data-field-error="true">
+                          <p className="text-sm font-semibold text-red-700 mb-1">Fix these issues in Deal {index + 1}:</p>
+                          <ul className="text-sm text-red-600 list-disc list-inside space-y-0.5">
+                            {dealErrors[index].map((err, ei) => <li key={ei}>{err}</li>)}
+                          </ul>
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Title</Label>
