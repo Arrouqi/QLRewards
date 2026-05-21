@@ -475,13 +475,24 @@ export default function MerchantOnboarding() {
       const merchant = await response.json();
       setLocation(`/merchant-success/${merchant.id}`);
     } catch (error: any) {
-      const isNetworkError = error.message === "Failed to fetch" || error.name === "TypeError";
+      const msg: string = error?.message || "";
+      let description = msg;
+
+      if (error.name === "TypeError" && msg === "Failed to fetch") {
+        description = "Could not connect to the server. Please check your internet connection and try again.";
+      } else if (msg.toLowerCase().includes("invalid string length") || msg.toLowerCase().includes("string length")) {
+        description = "One or more uploaded images or documents are too large. Please re-upload your images — they will be compressed automatically. If the problem persists, try smaller files.";
+      } else if (msg.toLowerCase().includes("413") || msg.includes("too large") || msg.includes("payload")) {
+        description = "Total upload size is too large. Please use smaller images or documents and try again.";
+      } else if (!msg) {
+        description = "Something went wrong. Please try again or contact support if the issue continues.";
+      }
+
       toast({
         title: "Submission Failed",
-        description: isNetworkError 
-          ? "Could not connect to the server. Please check your internet connection and try again."
-          : error.message,
+        description,
         variant: "destructive",
+        duration: 8000,
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
