@@ -282,6 +282,43 @@ export default function DealDetail() {
     }
   };
 
+  const onFormError = (errors: any) => {
+    const fieldLabels: Record<string, string> = {
+      title: "Deal Title",
+      category: "Category",
+      subCategory: "Sub-Category",
+      dealType: "Deal Type",
+      duration: "Duration",
+      redemption: "Redemption",
+      limitPerUser: "Limit Per User",
+      originalPrice: "Original Price",
+      discountPercentage: "Discount %",
+      discountedPrice: "Discounted Price",
+      description: "Description",
+      claimRules: "Claim Rules",
+      generalRules: "General Rules",
+      otherRules: "Other Rules",
+      merchantName: "Merchant Name",
+      merchantEmail: "Merchant Email",
+      merchantPhone: "Merchant Phone",
+      branches: "Branches",
+    };
+    const messages = Object.entries(errors)
+      .map(([field, error]: [string, any]) => {
+        const label = fieldLabels[field] || field;
+        return `${label}: ${error?.message || "Required"}`;
+      })
+      .join(". ");
+    toast({
+      title: "Please fix the following errors",
+      description: messages,
+      variant: "destructive",
+      duration: 8000,
+    });
+    const firstError = document.querySelector(".text-destructive");
+    if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   const onUpdate = async (data: DealValues) => {
     if (!params?.id) return;
 
@@ -756,7 +793,7 @@ export default function DealDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onUpdate)} className="space-y-6">
+              <form onSubmit={form.handleSubmit(onUpdate, onFormError)} className="space-y-6">
                 
                 <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
                   <h2 className="text-lg font-bold text-[#00426D] mb-4">Deal Details</h2>

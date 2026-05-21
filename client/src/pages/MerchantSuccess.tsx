@@ -507,6 +507,18 @@ export default function MerchantSuccess() {
     const file = e.target.files?.[0];
     if (!file || !merchantId) return;
 
+    const MAX_BYTES = 25 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      toast({
+        title: "Signed Contract: File too large",
+        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum allowed is 25 MB. Please compress the PDF and try again.`,
+        variant: "destructive",
+        duration: 8000,
+      });
+      if (e.target) e.target.value = "";
+      return;
+    }
+
     setUploading(true);
     const reader = new FileReader();
     reader.onload = async () => {
@@ -521,12 +533,19 @@ export default function MerchantSuccess() {
           setUploadComplete(true);
           toast({ title: "Signed contract uploaded successfully!" });
         } else {
-          throw new Error("Upload failed");
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || "Upload failed");
         }
       } catch (error) {
-        toast({ title: "Upload failed", variant: "destructive" });
+        toast({
+          title: "Signed Contract: Upload failed",
+          description: error instanceof Error ? error.message : "Could not upload the contract. Please check your connection and try again.",
+          variant: "destructive",
+          duration: 8000,
+        });
       } finally {
         setUploading(false);
+        if (e.target) e.target.value = "";
       }
     };
     reader.readAsDataURL(file);

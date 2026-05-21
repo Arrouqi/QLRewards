@@ -284,6 +284,15 @@ export default function MerchantEdit() {
 
   const handleSalesOrderUpload = async (file: File) => {
     if (!merchant) return;
+    const MAX_BYTES = 25 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      toast({
+        title: "Sales Order: File too large",
+        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum allowed is 25 MB.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setIsUploadingSalesOrder(true);
     try {
       const reader = new FileReader();
@@ -300,7 +309,7 @@ export default function MerchantEdit() {
           setMerchant({ ...merchant, salesOrder: updated.salesOrder });
           toast({ title: "Sales order uploaded successfully" });
         } catch (error) {
-          toast({ title: "Error uploading sales order", variant: "destructive" });
+          toast({ title: "Sales Order: Upload failed", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
         } finally {
           setIsUploadingSalesOrder(false);
         }
@@ -308,7 +317,7 @@ export default function MerchantEdit() {
       reader.readAsDataURL(file);
     } catch {
       setIsUploadingSalesOrder(false);
-      toast({ title: "Error reading file", variant: "destructive" });
+      toast({ title: "Sales Order: Could not read file", description: "The file may be corrupted. Please try a different file.", variant: "destructive" });
     }
   };
 
@@ -351,15 +360,35 @@ export default function MerchantEdit() {
     setExpandedDeals(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
   };
 
-  const handleDealImageAdd = (index: number, file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setDeals(prev => prev.map((deal, i) => 
-        i === index ? { ...deal, images: [...(deal.images || []), base64] } : deal
+  const handleDealImageAdd = async (index: number, file: File) => {
+    const MAX_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      toast({
+        title: `Deal ${index + 1} Image: File too large`,
+        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum allowed is 10 MB per image.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/merchants/upload-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: [base64] }),
+      });
+      const url = res.ok ? (await res.json()).urls[0] : base64;
+      setDeals(prev => prev.map((deal, i) =>
+        i === index ? { ...deal, images: [...(deal.images || []), url] } : deal
       ));
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      toast({ title: `Deal ${index + 1} Image: Upload failed`, description: "Could not upload image. Please try again.", variant: "destructive" });
+    }
   };
 
   const handleDealImageRemove = (dealIndex: number, imageIndex: number) => {
@@ -368,21 +397,68 @@ export default function MerchantEdit() {
     ));
   };
 
-  const handleDocumentUpload = (field: string, file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      setMerchant(prev => prev ? { ...prev, [field]: reader.result as string } : prev);
-    };
-    reader.readAsDataURL(file);
+  const handleDocumentUpload = async (field: string, file: File) => {
+    const isImage = file.type.startsWith("image/");
+    const MAX_BYTES = isImage ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+    const limitLabel = isImage ? "10 MB" : "25 MB";
+    const fieldLabel = field.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
+    if (file.size > MAX_BYTES) {
+      toast({
+        title: `${fieldLabel}: File too large`,
+        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum is ${limitLabel}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/merchants/upload-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: base64, folder: "merchant-documents" }),
+      });
+      const url = res.ok ? (await res.json()).url : base64;
+      setMerchant(prev => prev ? { ...prev, [field]: url } : prev);
+    } catch {
+      toast({ title: `${fieldLabel}: Upload failed`, description: "Could not upload file. Please try again.", variant: "destructive" });
+    }
   };
 
-  const handleBrandDocUpload = (idx: number, field: string, file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setBrands(prev => prev.map((b, i) => i === idx ? { ...b, [field]: dataUrl } : b));
-    };
-    reader.readAsDataURL(file);
+  const handleBrandDocUpload = async (idx: number, field: string, file: File) => {
+    const isImage = file.type.startsWith("image/");
+    const MAX_BYTES = isImage ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+    const limitLabel = isImage ? "10 MB" : "25 MB";
+    const fieldLabel = field.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
+    if (file.size > MAX_BYTES) {
+      toast({
+        title: `Brand ${idx + 1} – ${fieldLabel}: File too large`,
+        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum is ${limitLabel}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/merchants/upload-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: base64, folder: "merchant-documents" }),
+      });
+      const url = res.ok ? (await res.json()).url : base64;
+      setBrands(prev => prev.map((b, i) => i === idx ? { ...b, [field]: url } : b));
+    } catch {
+      toast({ title: `Brand ${idx + 1} – ${fieldLabel}: Upload failed`, description: "Could not upload file. Please try again.", variant: "destructive" });
+    }
   };
 
   const updateBranch = (idx: number, patch: Record<string, any>) => {
