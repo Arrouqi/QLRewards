@@ -131,6 +131,7 @@ export default function DealDetail() {
   const [branchInput, setBranchInput] = useState("");
   
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [imageUploadErrors, setImageUploadErrors] = useState<string[]>([]);
   const [showCropper, setShowCropper] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>("");
   const [originalFile, setOriginalFile] = useState<File | null>(null);
@@ -506,46 +507,49 @@ export default function DealDetail() {
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
-      const remaining = MAX_PHOTOS - uploadedImages.length;
-      
-      if (remaining <= 0) {
-        toast({
-          title: "Maximum images reached",
-          description: `You can only upload up to ${MAX_PHOTOS} images`,
-          variant: "destructive",
-        });
-        return;
-      }
+    if (!e.target.files || e.target.files.length === 0) return;
 
-      const filesToUpload = files.slice(0, remaining);
-      
-      filesToUpload.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setUploadedImages(prev => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
+    const MAX_IMG_BYTES = 10 * 1024 * 1024;
+    const files = Array.from(e.target.files);
+    const errors: string[] = [];
+    const validFiles: File[] = [];
 
-      toast({
-        title: "Images uploaded",
-        description: `Successfully added ${filesToUpload.length} image(s)`,
-      });
-      
-      if (files.length > remaining) {
-        toast({
-          title: "Some images skipped",
-          description: `Only ${remaining} more image(s) allowed (max ${MAX_PHOTOS})`,
-          variant: "destructive",
-        });
-      }
-      
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+    for (const file of files) {
+      if (file.size > MAX_IMG_BYTES) {
+        errors.push(`"${file.name}" (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds the 10 MB limit.`);
+      } else {
+        validFiles.push(file);
       }
     }
+
+    setImageUploadErrors(errors);
+
+    if (validFiles.length === 0) {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    const remaining = MAX_PHOTOS - uploadedImages.length;
+    if (remaining <= 0) {
+      toast({ title: "Maximum images reached", description: `You can only upload up to ${MAX_PHOTOS} images`, variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    const filesToUpload = validFiles.slice(0, remaining);
+    filesToUpload.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setUploadedImages(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (validFiles.length > remaining) {
+      toast({ title: "Some images skipped", description: `Only ${remaining} more image(s) allowed (max ${MAX_PHOTOS})`, variant: "destructive" });
+    }
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleEditImage = (index: number) => {
@@ -1364,6 +1368,18 @@ export default function DealDetail() {
                     <div className="text-sm text-slate-600">
                       Upload {MIN_PHOTOS} to {MAX_PHOTOS} photos of your offer. Recommended size: 1280x800 pixels (16:10 aspect ratio).
                     </div>
+
+                    {imageUploadErrors.length > 0 && (
+                      <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 space-y-1" data-testid="deal-image-upload-errors">
+                        {imageUploadErrors.map((err, i) => (
+                          <p key={i} className="text-sm text-red-600 flex items-start gap-1">
+                            <span className="shrink-0 mt-0.5">⚠</span>
+                            <span><strong>Deal Photo:</strong> {err}</span>
+                          </p>
+                        ))}
+                        <p className="text-xs text-red-500 mt-1">Please use images under 10 MB. You can compress at <a href="https://squoosh.app" target="_blank" rel="noopener noreferrer" className="underline">squoosh.app</a>.</p>
+                      </div>
+                    )}
                     
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {uploadedImages.map((img, index) => (

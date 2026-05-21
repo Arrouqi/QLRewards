@@ -366,9 +366,23 @@ export default function MerchantOnboarding() {
     );
   };
 
-  const handleFileUpload = async (field: keyof MerchantFormValues, e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (field: keyof MerchantFormValues, e: ChangeEvent<HTMLInputElement>, onError?: (msg: string) => void) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const MAX_DOC_BYTES = 25 * 1024 * 1024;
+    const MAX_IMG_BYTES = 10 * 1024 * 1024;
+    const isImage = file.type.startsWith("image/");
+    const limit = isImage ? MAX_IMG_BYTES : MAX_DOC_BYTES;
+    const limitLabel = isImage ? "10 MB" : "25 MB";
+
+    if (file.size > limit) {
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      const msg = `"${file.name}" (${sizeMB} MB) exceeds the ${limitLabel} limit. Please use a smaller file.`;
+      if (onError) onError(msg);
+      if (e.target) e.target.value = "";
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = async () => {
@@ -1384,24 +1398,36 @@ function DocumentUpload({ label, field, form, onChange, accept }: {
   label: string;
   field: any;
   form: any;
-  onChange: (field: any, e: ChangeEvent<HTMLInputElement>) => void;
+  onChange: (field: any, e: ChangeEvent<HTMLInputElement>, onError?: (msg: string) => void) => void;
   accept?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [hasValue, setHasValue] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const currentValue = useWatch({ control: form.control, name: field });
+  const isUploaded = !!(currentValue && currentValue !== "");
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    onChange(field, e);
-    setHasValue(!!e.target.files?.[0]);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    setFileName(file.name);
+    onChange(field, e, (msg: string) => {
+      setUploadError(msg);
+      setFileName(null);
+      if (inputRef.current) inputRef.current.value = "";
+    });
   };
 
   const handleClear = () => {
     form.setValue(field, "");
-    setHasValue(false);
+    setFileName(null);
+    setUploadError(null);
     if (inputRef.current) inputRef.current.value = "";
   };
 
   const fieldError = form.formState.errors?.[field];
+  const isImage = accept === "image/*";
 
   return (
     <div className="space-y-2">
@@ -1413,32 +1439,61 @@ function DocumentUpload({ label, field, form, onChange, accept }: {
         className="hidden"
         onChange={handleChange}
       />
-      {hasValue ? (
+
+      {isUploaded ? (
         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <Check className="h-4 w-4 text-green-600" />
-          <span className="text-sm text-green-700">File uploaded</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleClear}
-            className="ml-auto text-red-500"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <Check className="h-4 w-4 text-green-600 shrink-0" />
+          <span className="text-sm text-green-700 truncate flex-1" title={fileName || undefined}>
+            {fileName || "File uploaded"}
+          </span>
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => { setUploadError(null); inputRef.current?.click(); }}
+              className="text-slate-500 hover:text-[#00426D] h-7 px-2 text-xs"
+              title={`Replace ${label}`}
+            >
+              <Pencil className="h-3 w-3 mr-1" />
+              Replace
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClear}
+              className="text-red-500 hover:text-red-700 h-7 px-2 text-xs"
+              title={`Remove ${label}`}
+            >
+              <X className="h-3 w-3 mr-1" />
+              Remove
+            </Button>
+          </div>
         </div>
       ) : (
         <div
-          onClick={() => inputRef.current?.click()}
+          onClick={() => { setUploadError(null); inputRef.current?.click(); }}
           className={`flex items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
-            fieldError ? 'border-red-300 bg-red-50/50 hover:border-red-500' : 'border-slate-300 hover:border-[#FF7F39] hover:bg-[#FF7F39]/5'
+            fieldError || uploadError
+              ? "border-red-300 bg-red-50/50 hover:border-red-500"
+              : "border-slate-300 hover:border-[#FF7F39] hover:bg-[#FF7F39]/5"
           }`}
         >
-          <Upload className={`h-5 w-5 ${fieldError ? 'text-red-400' : 'text-slate-400'}`} />
-          <span className={`text-sm ${fieldError ? 'text-red-500' : 'text-slate-500'}`}>Click to upload</span>
+          <Upload className={`h-5 w-5 ${fieldError || uploadError ? "text-red-400" : "text-slate-400"}`} />
+          <span className={`text-sm ${fieldError || uploadError ? "text-red-500" : "text-slate-500"}`}>
+            Click to upload{isImage ? " (max 10 MB)" : " (max 25 MB)"}
+          </span>
         </div>
       )}
-      {fieldError && (
+
+      {uploadError && (
+        <p className="text-sm text-red-600 flex items-start gap-1" data-testid={`text-size-error-${field}`}>
+          <span className="shrink-0 mt-0.5">⚠</span>
+          <span><strong>{label}:</strong> {uploadError}</span>
+        </p>
+      )}
+      {fieldError && !uploadError && (
         <p className="text-sm text-red-500" data-testid={`text-error-${field}`}>{fieldError.message as string}</p>
       )}
     </div>
@@ -1450,7 +1505,7 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
   form: any;
   categories: Category[];
   onRemove: () => void;
-  handleFileUpload: (field: any, e: ChangeEvent<HTMLInputElement>) => void;
+  handleFileUpload: (field: any, e: ChangeEvent<HTMLInputElement>, onError?: (msg: string) => void) => void;
 }) {
   const brandCats: string[] = (useWatch({ control: form.control, name: `brands.${index}.businessCategories` as any }) as string[]) || [];
 
