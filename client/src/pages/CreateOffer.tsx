@@ -191,6 +191,8 @@ export default function CreateOffer() {
   
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [replaceIndex, setReplaceIndex] = useState<number | null>(null);
+  const replaceFileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const MIN_PHOTOS = 4;
@@ -325,6 +327,29 @@ export default function CreateOffer() {
     }
 
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleReplaceImage = (index: number) => {
+    setReplaceIndex(index);
+    replaceFileInputRef.current?.click();
+  };
+
+  const handleReplaceFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || replaceIndex === null) { e.target.value = ""; return; }
+    const MAX_IMG_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_IMG_BYTES) {
+      setImageUploadErrors([`"${file.name}" (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds the 10 MB limit.`]);
+      e.target.value = "";
+      setReplaceIndex(null);
+      return;
+    }
+    setImageUploadErrors([]);
+    const idx = replaceIndex;
+    const preview = URL.createObjectURL(file);
+    setUploadedImages(prev => prev.map((img, i) => i === idx ? { file, preview } : img));
+    setReplaceIndex(null);
+    e.target.value = "";
   };
 
   const handleEditImage = (index: number) => {
@@ -1585,6 +1610,14 @@ export default function CreateOffer() {
                         onChange={handleFileChange}
                         data-testid="input-image-upload"
                       />
+                      <input
+                        type="file"
+                        ref={replaceFileInputRef}
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleReplaceFileChange}
+                        data-testid="input-image-replace"
+                      />
 
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {/* Render uploaded images */}
@@ -1619,6 +1652,15 @@ export default function CreateOffer() {
                               </div>
                             )}
                             <div className="absolute bottom-2 right-2 flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleReplaceImage(index)}
+                                className="bg-white/90 text-slate-700 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
+                                data-testid={`button-replace-image-${index}`}
+                                title="Replace photo"
+                              >
+                                <Upload className="h-4 w-4" />
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleEditImage(index)}

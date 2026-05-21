@@ -140,6 +140,10 @@ export default function MerchantEdit() {
   const [generalTerms, setGeneralTerms] = useState<Term[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [dealErrors, setDealErrors] = useState<Record<number, string[]>>({});
+  const [draggedDealImage, setDraggedDealImage] = useState<{ dealIndex: number; imgIndex: number } | null>(null);
+  const [dragOverDealImage, setDragOverDealImage] = useState<{ dealIndex: number; imgIndex: number } | null>(null);
+  const [replaceDealImage, setReplaceDealImage] = useState<{ dealIndex: number; imgIndex: number } | null>(null);
+  const replaceDealImageRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchMerchant();
@@ -358,6 +362,81 @@ export default function MerchantEdit() {
   const removeDeal = (index: number) => {
     setDeals(prev => prev.filter((_, i) => i !== index));
     setExpandedDeals(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
+  };
+
+  const handleDealImageDragStart = (e: React.DragEvent, dealIndex: number, imgIndex: number) => {
+    setDraggedDealImage({ dealIndex, imgIndex });
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const handleDealImageDragOver = (e: React.DragEvent, dealIndex: number, imgIndex: number) => {
+    e.preventDefault();
+    if (draggedDealImage?.dealIndex !== dealIndex) return;
+    setDragOverDealImage({ dealIndex, imgIndex });
+  };
+  const handleDealImageDrop = (e: React.DragEvent, dealIndex: number, dropIndex: number) => {
+    e.preventDefault();
+    if (!draggedDealImage || draggedDealImage.dealIndex !== dealIndex) return;
+    const from = draggedDealImage.imgIndex;
+    if (from === dropIndex) { setDraggedDealImage(null); setDragOverDealImage(null); return; }
+    setDeals(prev => prev.map((deal, i) => {
+      if (i !== dealIndex) return deal;
+      const imgs = [...(deal.images || [])];
+      const [moved] = imgs.splice(from, 1);
+      imgs.splice(dropIndex, 0, moved);
+      return { ...deal, images: imgs };
+    }));
+    setDraggedDealImage(null);
+    setDragOverDealImage(null);
+  };
+  const handleDealImageDragEnd = () => {
+    setDraggedDealImage(null);
+    setDragOverDealImage(null);
+  };
+
+  const handleDealImageReplace = (dealIndex: number, imgIndex: number) => {
+    setReplaceDealImage({ dealIndex, imgIndex });
+    replaceDealImageRef.current?.click();
+  };
+
+  const handleDealImageReplaceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !replaceDealImage) { e.target.value = ""; return; }
+    const MAX_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      toast({
+        title: `Deal ${replaceDealImage.dealIndex + 1} Image: File too large`,
+        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum is 10 MB.`,
+        variant: "destructive",
+      });
+      e.target.value = "";
+      setReplaceDealImage(null);
+      return;
+    }
+    const { dealIndex, imgIndex } = replaceDealImage;
+    setReplaceDealImage(null);
+    e.target.value = "";
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/merchants/upload-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: [base64] }),
+      });
+      const url = res.ok ? (await res.json()).urls[0] : base64;
+      setDeals(prev => prev.map((deal, i) => {
+        if (i !== dealIndex) return deal;
+        const imgs = [...(deal.images || [])];
+        imgs[imgIndex] = url;
+        return { ...deal, images: imgs };
+      }));
+    } catch {
+      toast({ title: `Deal ${dealIndex + 1} Image: Replace failed`, description: "Could not upload image. Please try again.", variant: "destructive" });
+    }
   };
 
   const handleDealImageAdd = async (index: number, file: File) => {
@@ -898,6 +977,14 @@ export default function MerchantEdit() {
                 e.target.value = "";
               }}
               data-testid="input-deal-image-file"
+            />
+            <input
+              type="file"
+              ref={replaceDealImageRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleDealImageReplaceFileChange}
+              data-testid="input-deal-image-replace"
             />
             {merchant.salesOrder ? (
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border">
@@ -1851,22 +1938,60 @@ export default function MerchantEdit() {
                         {(deal.images || []).length < 4 && (
                           <p className="text-xs text-red-500">At least 4 images required for moderation</p>
                         )}
-                        <div className="flex flex-wrap gap-2">
+                        <p className="text-xs text-slate-400">Hold and drag to reorder · First image is the cover photo</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                           {(deal.images || []).map((img, i) => (
-                            <div key={i} className="relative group">
+                            <div
+                              key={i}
+                              className={`relative rounded-lg overflow-hidden border-2 cursor-grab active:cursor-grabbing transition-all ${
+                                draggedDealImage?.dealIndex === index && draggedDealImage?.imgIndex === i
+                                  ? "opacity-50 scale-95 border-slate-300"
+                                  : "border-slate-200"
+                              } ${
+                                dragOverDealImage?.dealIndex === index && dragOverDealImage?.imgIndex === i
+                                  ? "ring-2 ring-[#FF7F39] ring-offset-2"
+                                  : ""
+                              }`}
+                              style={{ aspectRatio: "16/10" }}
+                              draggable
+                              onDragStart={(e) => handleDealImageDragStart(e, index, i)}
+                              onDragOver={(e) => handleDealImageDragOver(e, index, i)}
+                              onDragLeave={() => setDragOverDealImage(null)}
+                              onDrop={(e) => handleDealImageDrop(e, index, i)}
+                              onDragEnd={handleDealImageDragEnd}
+                              data-testid={`deal-image-card-${index}-${i}`}
+                            >
                               <img
                                 src={img}
-                                alt={`Deal image ${i + 1}`}
-                                className="h-20 w-20 object-cover rounded border"
+                                alt={`Deal ${index + 1} image ${i + 1}`}
+                                className="w-full h-full object-cover pointer-events-none"
                               />
-                              <button
-                                type="button"
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => handleDealImageRemove(index, i)}
-                                data-testid={`button-remove-deal-image-${index}-${i}`}
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
+                              {i === 0 && (
+                                <div className="absolute top-2 left-2 bg-[#FF7F39] text-white text-[10px] px-2 py-1 rounded font-medium">Cover</div>
+                              )}
+                              {i > 0 && (
+                                <div className="absolute top-2 left-2 bg-[#00426D] text-white text-[10px] px-2 py-1 rounded font-medium">{i + 1}</div>
+                              )}
+                              <div className="absolute bottom-2 right-2 flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDealImageReplace(index, i)}
+                                  className="bg-white/90 text-slate-700 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
+                                  data-testid={`button-replace-deal-image-${index}-${i}`}
+                                  title="Replace image"
+                                >
+                                  <Upload className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDealImageRemove(index, i)}
+                                  className="bg-white/90 text-red-500 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
+                                  data-testid={`button-remove-deal-image-${index}-${i}`}
+                                  title="Remove image"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>

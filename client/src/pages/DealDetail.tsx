@@ -144,6 +144,8 @@ export default function DealDetail() {
   
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [replaceIndex, setReplaceIndex] = useState<number | null>(null);
+  const replaceFileInputRef = useRef<HTMLInputElement>(null);
   const [discountType, setDiscountType] = useState<"percentage" | "price">("percentage");
   
   const MIN_PHOTOS = 4;
@@ -587,6 +589,32 @@ export default function DealDetail() {
     }
 
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleReplaceImage = (index: number) => {
+    setReplaceIndex(index);
+    replaceFileInputRef.current?.click();
+  };
+
+  const handleReplaceFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || replaceIndex === null) { e.target.value = ""; return; }
+    const MAX_IMG_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_IMG_BYTES) {
+      setImageUploadErrors([`"${file.name}" (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds the 10 MB limit.`]);
+      e.target.value = "";
+      setReplaceIndex(null);
+      return;
+    }
+    setImageUploadErrors([]);
+    const idx = replaceIndex;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setUploadedImages(prev => prev.map((img, i) => i === idx ? reader.result as string : img));
+    };
+    reader.readAsDataURL(file);
+    setReplaceIndex(null);
+    e.target.value = "";
   };
 
   const handleEditImage = (index: number) => {
@@ -1452,6 +1480,15 @@ export default function DealDetail() {
                           <div className="absolute bottom-2 right-2 flex gap-1">
                             <button
                               type="button"
+                              onClick={() => handleReplaceImage(index)}
+                              className="bg-white/90 text-slate-700 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
+                              data-testid={`button-replace-image-${index}`}
+                              title="Replace photo"
+                            >
+                              <Upload className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => handleEditImage(index)}
                               className="bg-white/90 text-slate-700 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
                               data-testid={`button-edit-image-${index}`}
@@ -1494,6 +1531,14 @@ export default function DealDetail() {
                       onChange={handleFileChange}
                       className="hidden"
                       data-testid="input-file-upload"
+                    />
+                    <input
+                      ref={replaceFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleReplaceFileChange}
+                      className="hidden"
+                      data-testid="input-file-replace"
                     />
                     
                     {uploadedImages.length < MIN_PHOTOS && (
