@@ -1752,52 +1752,80 @@ function OfferAvailabilityDays({ form, index }: { form: any; index: number }) {
   );
 }
 
+const MAX_IMAGE_MB = 10;
+const MAX_IMAGE_BYTES = MAX_IMAGE_MB * 1024 * 1024;
+
 function DealImageUpload({ form, index }: { form: any; index: number }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const addInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const images = useWatch({ control: form.control, name: `deals.${index}.images` }) || [];
 
-  const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const uploadFiles = async (files: File[]): Promise<string[]> => {
+    const oversized = files.filter(f => f.size > MAX_IMAGE_BYTES);
+    if (oversized.length > 0) {
+      const names = oversized.map(f => `"${f.name}" (${(f.size / 1024 / 1024).toFixed(1)} MB)`).join(", ");
+      throw new Error(`${oversized.length > 1 ? "These files exceed" : "This file exceeds"} the 10 MB limit: ${names}. Please use a smaller image.`);
+    }
 
-    setUploading(true);
     const base64List: string[] = [];
-
-    for (const file of Array.from(files)) {
+    for (const file of files) {
       const reader = new FileReader();
       await new Promise<void>((resolve) => {
-        reader.onload = () => {
-          if (reader.result) base64List.push(reader.result as string);
-          resolve();
-        };
+        reader.onload = () => { if (reader.result) base64List.push(reader.result as string); resolve(); };
         reader.readAsDataURL(file);
       });
     }
 
-    try {
-      const res = await fetch("/api/merchants/upload-images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ files: base64List }),
-      });
-      if (res.ok) {
-        const { urls } = await res.json();
-        form.setValue(`deals.${index}.images`, [...images, ...urls]);
-      } else {
-        form.setValue(`deals.${index}.images`, [...images, ...base64List]);
-      }
-    } catch {
-      form.setValue(`deals.${index}.images`, [...images, ...base64List]);
-    }
-
-    setUploading(false);
-    if (inputRef.current) inputRef.current.value = "";
+    const res = await fetch("/api/merchants/upload-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files: base64List }),
+    });
+    if (!res.ok) throw new Error("Upload failed. Please try again.");
+    const { urls } = await res.json();
+    return urls;
   };
 
-  const removeImage = (imageIndex: number) => {
-    const updated = images.filter((_: string, i: number) => i !== imageIndex);
-    form.setValue(`deals.${index}.images`, updated);
+  const handleAdd = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploadErrors([]);
+    setUploading(true);
+    try {
+      const urls = await uploadFiles(files);
+      form.setValue(`deals.${index}.images`, [...images, ...urls]);
+    } catch (err: any) {
+      setUploadErrors([err.message]);
+    } finally {
+      setUploading(false);
+      if (addInputRef.current) addInputRef.current.value = "";
+    }
+  };
+
+  const handleReplace = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || replacingIndex === null) return;
+    setUploadErrors([]);
+    setUploading(true);
+    try {
+      const urls = await uploadFiles([file]);
+      const updated = [...images];
+      updated[replacingIndex] = urls[0];
+      form.setValue(`deals.${index}.images`, updated);
+    } catch (err: any) {
+      setUploadErrors([err.message]);
+    } finally {
+      setUploading(false);
+      setReplacingIndex(null);
+      if (replaceInputRef.current) replaceInputRef.current.value = "";
+    }
+  };
+
+  const removeImage = (imgIndex: number) => {
+    form.setValue(`deals.${index}.images`, images.filter((_: string, i: number) => i !== imgIndex));
   };
 
   const imageError = form.formState.errors?.deals?.[index]?.images;
@@ -1805,31 +1833,65 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
   return (
     <div className="space-y-3">
       <Label>Deal Images ({images.length}/4 minimum) *</Label>
+
       {imageError && (
         <p className="text-sm text-red-500" data-testid={`text-deal-images-error-${index}`}>
           At least 4 images are required for this deal
         </p>
       )}
+
+      {uploadErrors.length > 0 && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 space-y-1" data-testid={`text-upload-error-${index}`}>
+          {uploadErrors.map((err, i) => (
+            <p key={i} className="text-sm text-red-600 flex items-start gap-1">
+              <span className="mt-0.5 shrink-0">⚠</span>
+              <span>{err}</span>
+            </p>
+          ))}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-3">
         {images.map((img: string, imgIndex: number) => (
-          <div key={imgIndex} className="relative group">
-            <img src={img} alt={`Deal image ${imgIndex + 1}`} className="w-24 h-24 object-cover rounded-lg border" />
-            <button
-              type="button"
-              onClick={() => removeImage(imgIndex)}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <X className="h-3 w-3" />
-            </button>
+          <div key={imgIndex} className="relative flex flex-col items-center gap-1">
+            <img
+              src={img}
+              alt={`Deal image ${imgIndex + 1}`}
+              className="w-24 h-24 object-cover rounded-lg border border-slate-200"
+            />
+            <div className="flex gap-1">
+              <button
+                type="button"
+                title="Replace image"
+                onClick={() => { setReplacingIndex(imgIndex); replaceInputRef.current?.click(); }}
+                className="flex items-center gap-0.5 text-xs text-slate-500 hover:text-[#00426D] bg-slate-100 hover:bg-slate-200 rounded px-1.5 py-0.5 transition-colors"
+                data-testid={`button-replace-image-${index}-${imgIndex}`}
+              >
+                <Pencil className="h-3 w-3" />
+                <span>Replace</span>
+              </button>
+              <button
+                type="button"
+                title="Remove image"
+                onClick={() => removeImage(imgIndex)}
+                className="flex items-center gap-0.5 text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded px-1.5 py-0.5 transition-colors"
+                data-testid={`button-remove-image-${index}-${imgIndex}`}
+              >
+                <X className="h-3 w-3" />
+                <span>Remove</span>
+              </button>
+            </div>
           </div>
         ))}
+
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => { setUploadErrors([]); addInputRef.current?.click(); }}
           disabled={uploading}
           className={`w-24 h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center transition-colors ${
-            imageError ? 'border-red-300 text-red-400 hover:border-red-500' : 'border-slate-300 text-slate-400 hover:border-[#FF7F39] hover:text-[#FF7F39]'
+            imageError ? "border-red-300 text-red-400 hover:border-red-500" : "border-slate-300 text-slate-400 hover:border-[#FF7F39] hover:text-[#FF7F39]"
           }`}
+          data-testid={`button-add-image-${index}`}
         >
           {uploading ? (
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -1841,14 +1903,9 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
           )}
         </button>
       </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={handleUpload}
-      />
+
+      <input ref={addInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleAdd} />
+      <input ref={replaceInputRef} type="file" accept="image/*" className="hidden" onChange={handleReplace} />
     </div>
   );
 }
