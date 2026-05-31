@@ -1,4 +1,5 @@
 import { useState, useRef, ChangeEvent, useCallback, useMemo, useEffect } from "react";
+import { compressImage, compressImages } from "@/lib/compressImage";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -370,17 +371,24 @@ export default function MerchantOnboarding() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const MAX_DOC_BYTES = 25 * 1024 * 1024;
-    const MAX_IMG_BYTES = 10 * 1024 * 1024;
     const isImage = file.type.startsWith("image/");
-    const limit = isImage ? MAX_IMG_BYTES : MAX_DOC_BYTES;
-    const limitLabel = isImage ? "10 MB" : "25 MB";
 
-    if (file.size > limit) {
+    if (!isImage && file.size > 25 * 1024 * 1024) {
       const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-      const msg = `"${file.name}" (${sizeMB} MB) exceeds the ${limitLabel} limit. Please use a smaller file.`;
+      const msg = `"${file.name}" (${sizeMB} MB) exceeds the 25 MB limit. Please use a smaller file.`;
       if (onError) onError(msg);
       if (e.target) e.target.value = "";
+      return;
+    }
+
+    if (e.target) e.target.value = "";
+
+    const { file: fileToUpload, error } = isImage
+      ? await compressImage(file, "merchant")
+      : { file, error: undefined, compressed: false };
+
+    if (error) {
+      if (onError) onError(error);
       return;
     }
 
@@ -403,7 +411,7 @@ export default function MerchantOnboarding() {
         form.setValue(field, base64);
       }
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileToUpload);
   };
 
   const onSubmit = async (data: MerchantFormValues) => {
@@ -1819,14 +1827,11 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
   const images = useWatch({ control: form.control, name: `deals.${index}.images` }) || [];
 
   const uploadFiles = async (files: File[]): Promise<string[]> => {
-    const oversized = files.filter(f => f.size > MAX_IMAGE_BYTES);
-    if (oversized.length > 0) {
-      const names = oversized.map(f => `"${f.name}" (${(f.size / 1024 / 1024).toFixed(1)} MB)`).join(", ");
-      throw new Error(`${oversized.length > 1 ? "These files exceed" : "This file exceeds"} the 10 MB limit: ${names}. Please use a smaller image.`);
-    }
+    const { files: compressed, errors } = await compressImages(files, "deal");
+    if (errors.length > 0) throw new Error(errors.join(", "));
 
     const base64List: string[] = [];
-    for (const file of files) {
+    for (const file of compressed) {
       const reader = new FileReader();
       await new Promise<void>((resolve) => {
         reader.onload = () => { if (reader.result) base64List.push(reader.result as string); resolve(); };

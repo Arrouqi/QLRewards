@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { compressImage } from "@/lib/compressImage";
 import { useLocation, useRoute } from "wouter";
 import { ArrowLeft, Save, Loader2, Plus, Trash2, ChevronDown, ChevronUp, Upload, Download, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -288,17 +289,18 @@ export default function MerchantEdit() {
 
   const handleSalesOrderUpload = async (file: File) => {
     if (!merchant) return;
-    const MAX_BYTES = 25 * 1024 * 1024;
-    if (file.size > MAX_BYTES) {
+    const isImage = file.type.startsWith("image/");
+    if (!isImage && file.size > 25 * 1024 * 1024) {
       toast({
         title: "Sales Order: File too large",
-        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum allowed is 25 MB.`,
+        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum allowed for documents is 25 MB.`,
         variant: "destructive",
       });
       return;
     }
     setIsUploadingSalesOrder(true);
     try {
+      const fileToUpload = isImage ? (await compressImage(file, "merchant")).file : file;
       const reader = new FileReader();
       reader.onload = async () => {
         try {
@@ -318,7 +320,7 @@ export default function MerchantEdit() {
           setIsUploadingSalesOrder(false);
         }
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(fileToUpload);
     } catch {
       setIsUploadingSalesOrder(false);
       toast({ title: "Sales Order: Could not read file", description: "The file may be corrupted. Please try a different file.", variant: "destructive" });
@@ -401,26 +403,20 @@ export default function MerchantEdit() {
   const handleDealImageReplaceFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !replaceDealImage) { e.target.value = ""; return; }
-    const MAX_BYTES = 10 * 1024 * 1024;
-    if (file.size > MAX_BYTES) {
-      toast({
-        title: `Deal ${replaceDealImage.dealIndex + 1} Image: File too large`,
-        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum is 10 MB.`,
-        variant: "destructive",
-      });
-      e.target.value = "";
-      setReplaceDealImage(null);
-      return;
-    }
     const { dealIndex, imgIndex } = replaceDealImage;
     setReplaceDealImage(null);
     e.target.value = "";
     try {
+      const { file: compressed, error } = await compressImage(file, "deal");
+      if (error) {
+        toast({ title: `Deal ${dealIndex + 1} Image: File too large`, description: error, variant: "destructive" });
+        return;
+      }
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(compressed);
       });
       const res = await fetch("/api/merchants/upload-images", {
         method: "POST",
@@ -440,21 +436,17 @@ export default function MerchantEdit() {
   };
 
   const handleDealImageAdd = async (index: number, file: File) => {
-    const MAX_BYTES = 10 * 1024 * 1024;
-    if (file.size > MAX_BYTES) {
-      toast({
-        title: `Deal ${index + 1} Image: File too large`,
-        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum allowed is 10 MB per image.`,
-        variant: "destructive",
-      });
-      return;
-    }
     try {
+      const { file: compressed, error } = await compressImage(file, "deal");
+      if (error) {
+        toast({ title: `Deal ${index + 1} Image: File too large`, description: error, variant: "destructive" });
+        return;
+      }
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(compressed);
       });
       const res = await fetch("/api/merchants/upload-images", {
         method: "POST",
@@ -478,23 +470,22 @@ export default function MerchantEdit() {
 
   const handleDocumentUpload = async (field: string, file: File) => {
     const isImage = file.type.startsWith("image/");
-    const MAX_BYTES = isImage ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
-    const limitLabel = isImage ? "10 MB" : "25 MB";
     const fieldLabel = field.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
-    if (file.size > MAX_BYTES) {
+    if (!isImage && file.size > 25 * 1024 * 1024) {
       toast({
         title: `${fieldLabel}: File too large`,
-        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum is ${limitLabel}.`,
+        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum for documents is 25 MB.`,
         variant: "destructive",
       });
       return;
     }
     try {
+      const fileToUpload = isImage ? (await compressImage(file, "merchant")).file : file;
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(fileToUpload);
       });
       const res = await fetch("/api/merchants/upload-file", {
         method: "POST",
@@ -510,23 +501,22 @@ export default function MerchantEdit() {
 
   const handleBrandDocUpload = async (idx: number, field: string, file: File) => {
     const isImage = file.type.startsWith("image/");
-    const MAX_BYTES = isImage ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
-    const limitLabel = isImage ? "10 MB" : "25 MB";
     const fieldLabel = field.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
-    if (file.size > MAX_BYTES) {
+    if (!isImage && file.size > 25 * 1024 * 1024) {
       toast({
         title: `Brand ${idx + 1} – ${fieldLabel}: File too large`,
-        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum is ${limitLabel}.`,
+        description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum for documents is 25 MB.`,
         variant: "destructive",
       });
       return;
     }
     try {
+      const fileToUpload = isImage ? (await compressImage(file, "merchant")).file : file;
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(fileToUpload);
       });
       const res = await fetch("/api/merchants/upload-file", {
         method: "POST",

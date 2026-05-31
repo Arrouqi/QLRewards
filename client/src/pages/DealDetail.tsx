@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, ChangeEvent, useCallback } from "react";
+import { compressImage, compressImages } from "@/lib/compressImage";
 import { useLocation, useRoute } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -125,6 +126,7 @@ export default function DealDetail() {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [adminComment, setAdminComment] = useState("");
   const [merchantUserId, setMerchantUserId] = useState("");
   const [merchantBranchId, setMerchantBranchId] = useState("");
@@ -545,50 +547,38 @@ export default function DealDetail() {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
 
-    const MAX_IMG_BYTES = 10 * 1024 * 1024;
     const files = Array.from(e.target.files);
-    const errors: string[] = [];
-    const validFiles: File[] = [];
-
-    for (const file of files) {
-      if (file.size > MAX_IMG_BYTES) {
-        errors.push(`"${file.name}" (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds the 10 MB limit.`);
-      } else {
-        validFiles.push(file);
-      }
-    }
-
-    setImageUploadErrors(errors);
-
-    if (validFiles.length === 0) {
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
 
     const remaining = MAX_PHOTOS - uploadedImages.length;
     if (remaining <= 0) {
       toast({ title: "Maximum images reached", description: `You can only upload up to ${MAX_PHOTOS} images`, variant: "destructive" });
-      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    const filesToUpload = validFiles.slice(0, remaining);
-    filesToUpload.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setUploadedImages(prev => [...prev, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-
-    if (validFiles.length > remaining) {
+    const filesToProcess = files.slice(0, remaining);
+    if (files.length > remaining) {
       toast({ title: "Some images skipped", description: `Only ${remaining} more image(s) allowed (max ${MAX_PHOTOS})`, variant: "destructive" });
     }
 
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setIsCompressing(true);
+    setImageUploadErrors([]);
+    try {
+      const { files: compressed, errors } = await compressImages(filesToProcess, "deal");
+      if (errors.length > 0) setImageUploadErrors(errors);
+      for (const file of compressed) {
+        const reader = new FileReader();
+        await new Promise<void>(resolve => {
+          reader.onload = () => { setUploadedImages(prev => [...prev, reader.result as string]); resolve(); };
+          reader.readAsDataURL(file);
+        });
+      }
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   const handleReplaceImage = (index: number) => {
@@ -596,25 +586,25 @@ export default function DealDetail() {
     replaceFileInputRef.current?.click();
   };
 
-  const handleReplaceFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleReplaceFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || replaceIndex === null) { e.target.value = ""; return; }
-    const MAX_IMG_BYTES = 10 * 1024 * 1024;
-    if (file.size > MAX_IMG_BYTES) {
-      setImageUploadErrors([`"${file.name}" (${(file.size / 1024 / 1024).toFixed(1)} MB) exceeds the 10 MB limit.`]);
-      e.target.value = "";
-      setReplaceIndex(null);
-      return;
-    }
-    setImageUploadErrors([]);
-    const idx = replaceIndex;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setUploadedImages(prev => prev.map((img, i) => i === idx ? reader.result as string : img));
-    };
-    reader.readAsDataURL(file);
-    setReplaceIndex(null);
     e.target.value = "";
+    setIsCompressing(true);
+    setImageUploadErrors([]);
+    try {
+      const { file: compressed, error } = await compressImage(file, "deal");
+      if (error) { setImageUploadErrors([error]); return; }
+      const idx = replaceIndex;
+      const reader = new FileReader();
+      await new Promise<void>(resolve => {
+        reader.onload = () => { setUploadedImages(prev => prev.map((img, i) => i === idx ? reader.result as string : img)); resolve(); };
+        reader.readAsDataURL(compressed);
+      });
+    } finally {
+      setIsCompressing(false);
+      setReplaceIndex(null);
+    }
   };
 
   const handleEditImage = (index: number) => {
@@ -1509,7 +1499,16 @@ export default function DealDetail() {
                         </div>
                       ))}
                       
-                      {uploadedImages.length < MAX_PHOTOS && (
+                      {isCompressing && (
+                        <div
+                          className="rounded-lg border-2 border-[#FF7F39]/50 bg-[#FF7F39]/5 flex flex-col items-center justify-center"
+                          style={{ aspectRatio: '16/10' }}
+                        >
+                          <Loader2 className="h-7 w-7 text-[#FF7F39] animate-spin mb-1" />
+                          <span className="text-xs text-[#FF7F39] font-medium">Compressing…</span>
+                        </div>
+                      )}
+                      {!isCompressing && uploadedImages.length < MAX_PHOTOS && (
                         <div
                           onClick={handleImageClick}
                           className="rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors"
