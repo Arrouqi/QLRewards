@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from "react";
+import { compressFileForUpload } from "@/lib/compressImage";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -453,15 +454,15 @@ function MerchantReferralForm({ onSuccess }: { onSuccess: () => void }) {
       let merchantCommentFileUrls: string[] = [];
       if (merchantCommentFiles.length > 0) {
         const base64Files = await Promise.all(
-          merchantCommentFiles.map(
-            (f) =>
-              new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(f);
-              })
-          )
+          merchantCommentFiles.map(async (f) => {
+            const fileToUpload = await compressFileForUpload(f, "merchant");
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(fileToUpload);
+            });
+          })
         );
         const uploadRes = await fetch("/api/feedbacks/upload", {
           method: "POST",
@@ -775,15 +776,15 @@ export default function FeedbackForm() {
       let staffKnowsRedeemFileUrls: string[] = [];
       if (values.staffKnowsRedeem === "no" && staffKnowsRedeemFiles.length > 0) {
         const base64Files = await Promise.all(
-          staffKnowsRedeemFiles.map(
-            (f) =>
-              new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(f);
-              })
-          )
+          staffKnowsRedeemFiles.map(async (f) => {
+            const fileToUpload = await compressFileForUpload(f, "merchant");
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(fileToUpload);
+            });
+          })
         );
         const uploadRes = await fetch("/api/feedbacks/upload", {
           method: "POST",
@@ -798,15 +799,15 @@ export default function FeedbackForm() {
       let processRewardFileUrls: string[] = [];
       if (values.rewardApprovedImmediately === "no" && processRewardFiles.length > 0) {
         const base64Files = await Promise.all(
-          processRewardFiles.map(
-            (f) =>
-              new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(f);
-              })
-          )
+          processRewardFiles.map(async (f) => {
+            const fileToUpload = await compressFileForUpload(f, "merchant");
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(fileToUpload);
+            });
+          })
         );
         const uploadRes = await fetch("/api/feedbacks/upload", {
           method: "POST",
@@ -821,15 +822,15 @@ export default function FeedbackForm() {
       let merchantCommentFileUrls: string[] = [];
       if (merchantCommentFiles.length > 0) {
         const base64Files = await Promise.all(
-          merchantCommentFiles.map(
-            (f) =>
-              new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(f);
-              })
-          )
+          merchantCommentFiles.map(async (f) => {
+            const fileToUpload = await compressFileForUpload(f, "merchant");
+            return new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(fileToUpload);
+            });
+          })
         );
         const uploadRes = await fetch("/api/feedbacks/upload", {
           method: "POST",

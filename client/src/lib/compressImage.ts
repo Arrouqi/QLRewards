@@ -19,12 +19,28 @@ const PRESETS: Record<CompressPreset, Parameters<typeof imageCompression>[1]> = 
 
 const MAX_INPUT_BYTES = 100 * 1024 * 1024;
 
+const HEIC_MIME = new Set(["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"]);
+const HEIC_EXT = /\.(heic|heif)$/i;
+
+function isHeicFile(file: File): boolean {
+  return HEIC_MIME.has(file.type.toLowerCase()) || HEIC_EXT.test(file.name);
+}
+
+const HEIC_ERROR =
+  'This photo is in HEIC format, which most browsers can\'t process. ' +
+  'On iPhone: go to Settings → Camera → Formats and choose "Most Compatible" to shoot in JPEG. ' +
+  'Or share the photo to convert it automatically before uploading.';
+
 export async function compressImage(
   file: File,
   preset: CompressPreset = "deal"
 ): Promise<{ file: File; compressed: boolean; error?: string }> {
   if (!file.type.startsWith("image/")) {
     return { file, compressed: false };
+  }
+
+  if (isHeicFile(file)) {
+    return { file, compressed: false, error: `"${file.name}" is in HEIC format. ${HEIC_ERROR}` };
   }
 
   if (file.size > MAX_INPUT_BYTES) {
@@ -49,7 +65,13 @@ export async function compressImages(
 ): Promise<{ files: File[]; errors: string[] }> {
   const results = await Promise.all(files.map((f) => compressImage(f, preset)));
   return {
-    files: results.map((r) => r.file),
+    files: results.filter((r) => !r.error).map((r) => r.file),
     errors: results.flatMap((r) => (r.error ? [r.error] : [])),
   };
+}
+
+export async function compressFileForUpload(file: File, preset: CompressPreset = "merchant"): Promise<File> {
+  if (!file.type.startsWith("image/") || isHeicFile(file)) return file;
+  const result = await compressImage(file, preset);
+  return result.file;
 }

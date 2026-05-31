@@ -1,4 +1,5 @@
 import { useState, useRef, ChangeEvent, useEffect } from "react";
+import { compressFileForUpload } from "@/lib/compressImage";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -507,8 +508,8 @@ export default function MerchantSuccess() {
     const file = e.target.files?.[0];
     if (!file || !merchantId) return;
 
-    const MAX_BYTES = 25 * 1024 * 1024;
-    if (file.size > MAX_BYTES) {
+    const isImage = file.type.startsWith("image/");
+    if (!isImage && file.size > 25 * 1024 * 1024) {
       toast({
         title: "Signed Contract: File too large",
         description: `"${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)} MB. Maximum allowed is 25 MB. Please compress the PDF and try again.`,
@@ -520,6 +521,8 @@ export default function MerchantSuccess() {
     }
 
     setUploading(true);
+    if (e.target) e.target.value = "";
+    const fileToUpload = await compressFileForUpload(file, "merchant");
     const reader = new FileReader();
     reader.onload = async () => {
       try {
@@ -545,10 +548,9 @@ export default function MerchantSuccess() {
         });
       } finally {
         setUploading(false);
-        if (e.target) e.target.value = "";
       }
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(fileToUpload);
   };
 
   if (loading) {

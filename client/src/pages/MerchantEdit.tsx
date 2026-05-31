@@ -300,7 +300,18 @@ export default function MerchantEdit() {
     }
     setIsUploadingSalesOrder(true);
     try {
-      const fileToUpload = isImage ? (await compressImage(file, "merchant")).file : file;
+      let fileToUpload: File;
+      if (isImage) {
+        const result = await compressImage(file, "merchant");
+        if (result.error) {
+          toast({ title: "Cannot upload file", description: result.error, variant: "destructive" });
+          setIsUploadingSalesOrder(false);
+          return;
+        }
+        fileToUpload = result.file;
+      } else {
+        fileToUpload = file;
+      }
       const reader = new FileReader();
       reader.onload = async () => {
         try {
@@ -480,7 +491,17 @@ export default function MerchantEdit() {
       return;
     }
     try {
-      const fileToUpload = isImage ? (await compressImage(file, "merchant")).file : file;
+      let fileToUpload: File;
+      if (isImage) {
+        const result = await compressImage(file, "merchant");
+        if (result.error) {
+          toast({ title: `${fieldLabel}: Cannot upload file`, description: result.error, variant: "destructive" });
+          return;
+        }
+        fileToUpload = result.file;
+      } else {
+        fileToUpload = file;
+      }
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);
@@ -511,7 +532,17 @@ export default function MerchantEdit() {
       return;
     }
     try {
-      const fileToUpload = isImage ? (await compressImage(file, "merchant")).file : file;
+      let fileToUpload: File;
+      if (isImage) {
+        const result = await compressImage(file, "merchant");
+        if (result.error) {
+          toast({ title: `Brand ${idx + 1} – ${fieldLabel}: Cannot upload file`, description: result.error, variant: "destructive" });
+          return;
+        }
+        fileToUpload = result.file;
+      } else {
+        fileToUpload = file;
+      }
       const reader = new FileReader();
       const base64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);

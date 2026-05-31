@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { compressFileForUpload } from "@/lib/compressImage";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { format } from "date-fns";
@@ -376,6 +377,7 @@ export default function MerchantView() {
     if (!merchant) return;
     setIsUploadingSignedContract(true);
     try {
+      const fileToUpload = await compressFileForUpload(file, "merchant");
       const reader = new FileReader();
       reader.onload = async () => {
         try {
@@ -395,7 +397,7 @@ export default function MerchantView() {
           setIsUploadingSignedContract(false);
         }
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(fileToUpload);
     } catch {
       setIsUploadingSignedContract(false);
       toast({ title: "Error reading file", variant: "destructive" });
