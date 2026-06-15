@@ -173,14 +173,22 @@ export async function registerRoutes(
     }
   }
 
+  // Directory holding the static deep-link landing pages. In production they are bundled
+  // into dist/public (alongside index.cjs, so __dirname/public); in dev they live in client/public.
+  // NOTE: import.meta.dirname is empty in the CJS production bundle, so it must only be used in dev.
+  const landingPageDir =
+    process.env.NODE_ENV === "production"
+      ? path.resolve(__dirname, "public")
+      : path.resolve(import.meta.dirname, "..", "client", "public");
+
   // Pretty-URL alias for the QL deals deep-link landing page (the actual file lives in client/public/ql-deals.html)
   app.get(["/ql-deals", "/ql-deal", "/deals-app"], (_req, res) => {
-    res.sendFile(path.resolve(import.meta.dirname, "..", "client", "public", "ql-deals.html"));
+    res.sendFile(path.resolve(landingPageDir, "ql-deals.html"));
   });
 
   // Pretty-URL alias for the QL home/app deep-link landing page (opens the app home or main website)
   app.get(["/ql-home", "/ql-app", "/qatarliving"], (_req, res) => {
-    res.sendFile(path.resolve(import.meta.dirname, "..", "client", "public", "ql-home.html"));
+    res.sendFile(path.resolve(landingPageDir, "ql-home.html"));
   });
 
   // Per-IP rate limiter factory for public endpoints (in-memory; resets on restart)

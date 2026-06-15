@@ -1,3 +1,4 @@
 - [db:push session-table data loss](db-push-session-table.md) — `db:push` tries to DROP the session table; use targeted ALTER instead.
 - [Merchant soft delete](merchant-soft-delete.md) — `deleted_at` hard-hides merchants everywhere; every read path must filter it; restore is DB-only.
 - [Production migrations are manual](production-manual-migrations.md) — prod is a separate GitHub server; schema changes need hand-written SQL in replit.md, not db:push.
+- [import.meta.dirname empty in CJS prod](import-meta-dirname-cjs.md) — server bundled to CJS; use `__dirname` in prod, `import.meta.dirname` only in dev, or routes 500 after publish.
