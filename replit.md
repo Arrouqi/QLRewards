@@ -49,7 +49,7 @@ Preferred communication style: Simple, everyday language.
 - **systemSettings**: Key-value store for system configuration. Includes `role_permissions` key storing JSON map of `{ moderation: [...], sales: [...] }` permission arrays. Permission `merchants.training` controls training access (default: ON for both roles).
 - **feedbacks**: Public feedback submissions. Two types: Mystery Shopper (full multi-section form) and Merchant Referral (Living Deals Staff Interaction form). Shared columns (`merchantName`, `merchantLocation`, `visitDate`, `shopperName`) are reused across both types; merchant referral has its own `referral_*` columns. Status: new/reviewed/archived.
 - **feedbackComments**: Internal comments on feedback entries.
-- **redirectLogs**: Tracks deep-link landing page hits, recording visitor info, platform, outcome, and device details for analytics.
+- **redirectLogs**: Tracks deep-link landing page hits, recording visitor info, platform, outcome, device details, and `linkType` for analytics. Two redirect links exist: `linkType='deals'` (`/ql-deals`, `/ql-deal`, `/deals-app` → app `ql://RewardsScreen` / `qatarliving.com/deals`) and `linkType='home'` (`/ql-home`, `/ql-app`, `/qatarliving` → app `ql://` / `qatarliving.com/`). Both beacon to `POST /api/track/ql-deals`. The Redirect Analytics dashboard has a dropdown to switch between the two links; legacy NULL rows are treated as `deals`.
 
 #### Pending Production Migrations (Feedbacks feature)
 Run on production DB before deploying:
@@ -110,6 +110,16 @@ ALTER TABLE feedbacks
 ALTER TABLE feedbacks
   ADD COLUMN IF NOT EXISTS staff_knows_redeem_comment text,
   ADD COLUMN IF NOT EXISTS staff_knows_redeem_files text[];
+```
+
+#### Pending Production Migrations (Second Redirect Link — Home/App)
+Run on production DB before deploying:
+```sql
+-- Distinguishes which redirect link a hit came from: 'deals' (existing /ql-deals)
+-- or 'home' (new /ql-home). NULL legacy rows are treated as 'deals' by the dashboard.
+ALTER TABLE redirect_logs ADD COLUMN IF NOT EXISTS link_type text;
+-- Backfill all existing hits as the original deals link:
+UPDATE redirect_logs SET link_type = 'deals' WHERE link_type IS NULL;
 ```
 
 #### Pending Production Migrations (Merchant Soft Delete)

@@ -178,6 +178,11 @@ export async function registerRoutes(
     res.sendFile(path.resolve(import.meta.dirname, "..", "client", "public", "ql-deals.html"));
   });
 
+  // Pretty-URL alias for the QL home/app deep-link landing page (opens the app home or main website)
+  app.get(["/ql-home", "/ql-app", "/qatarliving"], (_req, res) => {
+    res.sendFile(path.resolve(import.meta.dirname, "..", "client", "public", "ql-home.html"));
+  });
+
   // Per-IP rate limiter factory for public endpoints (in-memory; resets on restart)
   function makeRateLimiter(opts: { windowMs: number; max: number; onLimit?: (res: Response) => void }) {
     const buckets = new Map<string, { count: number; windowStart: number }>();
@@ -223,7 +228,7 @@ export async function registerRoutes(
   // Public tracking endpoint for the ql-deals redirect page (called via sendBeacon)
   app.post("/api/track/ql-deals", trackRateLimit, express.json({ limit: "10kb" }), async (req, res) => {
     try {
-      const body = (req.body || {}) as { visitorId?: string; platform?: string; outcome?: string; pagePath?: string };
+      const body = (req.body || {}) as { visitorId?: string; platform?: string; outcome?: string; pagePath?: string; linkType?: string };
       const ua = req.headers["user-agent"] || "";
       const parsed = parseUserAgent(ua);
       const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || null;
@@ -231,6 +236,7 @@ export async function registerRoutes(
 
       const allowedPlatforms = new Set(["ios", "android", "desktop"]);
       const allowedOutcomes = new Set(["app_attempt", "store", "web"]);
+      const allowedLinkTypes = new Set(["deals", "home"]);
 
       await storage.createRedirectLog({
         visitorId: typeof body.visitorId === "string" ? body.visitorId.slice(0, 64) : null,
@@ -243,6 +249,7 @@ export async function registerRoutes(
         ipAddress: ip,
         referrer: referrer ? referrer.slice(0, 500) : null,
         pagePath: typeof body.pagePath === "string" ? body.pagePath.slice(0, 200) : null,
+        linkType: body.linkType && allowedLinkTypes.has(body.linkType) ? body.linkType : "deals",
       });
       res.status(204).end();
     } catch (e) {
@@ -255,7 +262,8 @@ export async function registerRoutes(
   app.get("/api/admin/redirect-logs/stats", requireAuth, requireAdmin, async (req, res) => {
     try {
       const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
-      const stats = await storage.getRedirectLogStats(sinceDays && sinceDays > 0 ? sinceDays : undefined);
+      const linkType = req.query.linkType === "home" || req.query.linkType === "deals" ? req.query.linkType : undefined;
+      const stats = await storage.getRedirectLogStats(sinceDays && sinceDays > 0 ? sinceDays : undefined, linkType);
       res.json(stats);
     } catch (e: any) {
       console.error("[redirect-stats] failed", e);
@@ -269,10 +277,11 @@ export async function registerRoutes(
       const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
       const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
       const since = sinceDays && sinceDays > 0 ? sinceDays : undefined;
+      const linkType = req.query.linkType === "home" || req.query.linkType === "deals" ? req.query.linkType : undefined;
       const offset = (page - 1) * PAGE_SIZE;
       const [rows, total] = await Promise.all([
-        storage.getRedirectLogs(PAGE_SIZE, offset, since),
-        storage.getRedirectLogCount(since),
+        storage.getRedirectLogs(PAGE_SIZE, offset, since, linkType),
+        storage.getRedirectLogCount(since, linkType),
       ]);
       res.json({ rows, total, page, pageSize: PAGE_SIZE });
     } catch (e: any) {
@@ -285,7 +294,8 @@ export async function registerRoutes(
     try {
       const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
       const since = sinceDays && sinceDays > 0 ? sinceDays : undefined;
-      const rows = await storage.getRedirectLogs(10000, 0, since);
+      const linkType = req.query.linkType === "home" || req.query.linkType === "deals" ? req.query.linkType : undefined;
+      const rows = await storage.getRedirectLogs(10000, 0, since, linkType);
       res.json(rows);
     } catch (e: any) {
       console.error("[redirect-logs-export] failed", e);

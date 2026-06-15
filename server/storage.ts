@@ -21,7 +21,7 @@ import {
   submissionLogs, systemSettings, activityLogs, redirectLogs, feedbacks, feedbackComments, merchantTrainings
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, inArray, and, desc, sql, gte, isNull } from "drizzle-orm";
+import { eq, inArray, and, or, desc, sql, gte, isNull } from "drizzle-orm";
 
 export interface IStorage {
   createDeal(deal: InsertDeal): Promise<Deal>;
@@ -94,9 +94,9 @@ export interface IStorage {
   getActivityLogs(limit?: number, offset?: number): Promise<ActivityLog[]>;
   clearActivityLogs(): Promise<void>;
   createRedirectLog(log: InsertRedirectLog): Promise<RedirectLog>;
-  getRedirectLogs(limit?: number, offset?: number, sinceDays?: number): Promise<RedirectLog[]>;
-  getRedirectLogCount(sinceDays?: number): Promise<number>;
-  getRedirectLogStats(sinceDays?: number): Promise<{
+  getRedirectLogs(limit?: number, offset?: number, sinceDays?: number, linkType?: string): Promise<RedirectLog[]>;
+  getRedirectLogCount(sinceDays?: number, linkType?: string): Promise<number>;
+  getRedirectLogStats(sinceDays?: number, linkType?: string): Promise<{
     total: number;
     uniqueVisitors: number;
     byPlatform: { key: string; count: number }[];
@@ -565,26 +565,39 @@ export class DatabaseStorage implements IStorage {
     return newLog;
   }
 
-  async getRedirectLogs(limit = 200, offset = 0, sinceDays?: number): Promise<RedirectLog[]> {
-    let query = db.select().from(redirectLogs).$dynamic();
+  // Builds a combined WHERE for the redirect-log queries from a time cutoff and a link type.
+  // linkType 'deals' also matches legacy NULL rows (all historical hits were the deals link).
+  private redirectLogWhere(sinceDays?: number, linkType?: string) {
+    const conds: any[] = [];
     if (sinceDays && sinceDays > 0) {
-      const cutoff = new Date(Date.now() - sinceDays * 86400000);
-      query = query.where(gte(redirectLogs.createdAt, cutoff));
+      conds.push(gte(redirectLogs.createdAt, new Date(Date.now() - sinceDays * 86400000)));
     }
+    if (linkType === "home") {
+      conds.push(eq(redirectLogs.linkType, "home"));
+    } else if (linkType === "deals") {
+      conds.push(or(eq(redirectLogs.linkType, "deals"), isNull(redirectLogs.linkType)));
+    }
+    if (conds.length === 0) return undefined;
+    return conds.length === 1 ? conds[0] : and(...conds);
+  }
+
+  async getRedirectLogs(limit = 200, offset = 0, sinceDays?: number, linkType?: string): Promise<RedirectLog[]> {
+    let query = db.select().from(redirectLogs).$dynamic();
+    const where = this.redirectLogWhere(sinceDays, linkType);
+    if (where) query = query.where(where);
     return await query.orderBy(desc(redirectLogs.createdAt)).limit(limit).offset(offset);
   }
 
-  async getRedirectLogCount(sinceDays?: number): Promise<number> {
-    const cutoff = sinceDays && sinceDays > 0 ? new Date(Date.now() - sinceDays * 86400000) : null;
+  async getRedirectLogCount(sinceDays?: number, linkType?: string): Promise<number> {
+    const where = this.redirectLogWhere(sinceDays, linkType);
     const q = db.select({ c: sql<number>`count(*)::int` }).from(redirectLogs).$dynamic();
-    const filtered = cutoff ? q.where(gte(redirectLogs.createdAt, cutoff)) : q;
+    const filtered = where ? q.where(where) : q;
     const [row] = await filtered;
     return Number(row?.c ?? 0);
   }
 
-  async getRedirectLogStats(sinceDays?: number) {
-    const cutoff = sinceDays && sinceDays > 0 ? new Date(Date.now() - sinceDays * 86400000) : null;
-    const whereClause = cutoff ? gte(redirectLogs.createdAt, cutoff) : undefined;
+  async getRedirectLogStats(sinceDays?: number, linkType?: string) {
+    const whereClause = this.redirectLogWhere(sinceDays, linkType);
 
     const groupBy = async (col: any) => {
       const base = db

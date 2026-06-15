@@ -472,6 +472,7 @@ export const redirectLogs = pgTable("redirect_logs", {
   ipAddress: text("ip_address"),
   referrer: text("referrer"),
   pagePath: text("page_path"),
+  linkType: text("link_type"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

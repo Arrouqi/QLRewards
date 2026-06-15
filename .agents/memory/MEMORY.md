@@ -1,3 +1,3 @@
-- [db:push session-table data loss](db-push-session-table.md) — `npm run db:push` tries to DROP the connect-pg-simple `session` table (not in Drizzle schema); never confirm it. Apply schema changes with targeted `ALTER TABLE ... IF NOT EXISTS` instead.
-- [Merchant soft delete](merchant-soft-delete.md) — `merchants.deleted_at` timestamp is a hard hide (more severe than archive status); every read path must filter it and restore is DB-only by design.
-- [Production migrations are manual](production-manual-migrations.md) — user's prod is a separate GitHub-deployed server; schema changes need hand-written SQL listed in replit.md, NOT db:push.
+- [db:push session-table data loss](db-push-session-table.md) — `db:push` tries to DROP the session table; use targeted ALTER instead.
+- [Merchant soft delete](merchant-soft-delete.md) — `deleted_at` hard-hides merchants everywhere; every read path must filter it; restore is DB-only.
+- [Production migrations are manual](production-manual-migrations.md) — prod is a separate GitHub server; schema changes need hand-written SQL in replit.md, not db:push.

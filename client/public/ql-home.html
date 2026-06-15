@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Qatar Living – Deals</title>
-  <meta name="apple-itunes-app" content="app-id=961568535, app-argument=ql://RewardsScreen" />
+  <title>Qatar Living</title>
+  <meta name="apple-itunes-app" content="app-id=961568535, app-argument=ql://" />
   <meta name="google-play-app" content="app-id=com.qatarliving.classifieds" />
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -21,17 +21,17 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="logo">🏷️</div>
+    <div class="logo">🏠</div>
     <h1>Opening Qatar Living…</h1>
-    <p>Taking you to the Deals.</p>
+    <p>Taking you to Qatar Living.</p>
     <div class="spinner"></div>
   </div>
 
   <script>
-    var DEEP_LINK   = 'ql://RewardsScreen';
+    var DEEP_LINK   = 'ql://';
     var ANDROID_URL = 'https://play.google.com/store/apps/details?id=com.qatarliving.classifieds&hl=en-US';
     var IOS_URL     = 'https://apps.apple.com/us/app/qatar-living/id961568535';
-    var WEB_URL     = 'https://www.qatarliving.com/deals';
+    var WEB_URL     = 'https://www.qatarliving.com/';
     var FALLBACK_MS = 1500;
 
     var ua        = navigator.userAgent || '';
@@ -59,7 +59,7 @@
           platform: platform,
           outcome: outcome,
           pagePath: location.pathname,
-          linkType: 'deals'
+          linkType: 'home'
         });
         if (navigator.sendBeacon) {
           var blob = new Blob([payload], { type: 'application/json' });

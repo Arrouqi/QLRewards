@@ -112,6 +112,11 @@ const RANGE_OPTIONS = [
   { label: "All time", value: "0" },
 ];
 
+const LINK_OPTIONS = [
+  { label: "Deals link", value: "deals", paths: "/ql-deals", target: "the Deals / Rewards screen" },
+  { label: "Home link", value: "home", paths: "/ql-home", target: "the app home / main website" },
+];
+
 const PLATFORM_LABEL: Record<string, string> = {
   ios: "iOS",
   android: "Android",
@@ -135,7 +140,10 @@ export default function RedirectAnalytics() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [range, setRange] = useState("7");
+  const [linkType, setLinkType] = useState("deals");
   const [logsPage, setLogsPage] = useState(1);
+
+  const currentLink = LINK_OPTIONS.find((o) => o.value === linkType) ?? LINK_OPTIONS[0];
 
   const { data: authData } = useQuery<{ role: string }>({
     queryKey: ["/api/auth/session"],
@@ -148,10 +156,16 @@ export default function RedirectAnalytics() {
 
   const isAdmin = authData?.role === "admin";
 
-  const sinceParam = range === "0" ? "" : `sinceDays=${range}`;
+  const buildParams = (extra?: Record<string, string>) => {
+    const params = new URLSearchParams();
+    if (range !== "0") params.set("sinceDays", range);
+    params.set("linkType", linkType);
+    if (extra) for (const [k, v] of Object.entries(extra)) params.set(k, v);
+    return params;
+  };
 
-  const statsKey = ["/api/admin/redirect-logs/stats", range];
-  const logsKey = ["/api/admin/redirect-logs", range, logsPage];
+  const statsKey = ["/api/admin/redirect-logs/stats", range, linkType];
+  const logsKey = ["/api/admin/redirect-logs", range, linkType, logsPage];
 
   const {
     data: stats,
@@ -160,10 +174,7 @@ export default function RedirectAnalytics() {
   } = useQuery<Stats>({
     queryKey: statsKey,
     queryFn: async () => {
-      const url = sinceParam
-        ? `/api/admin/redirect-logs/stats?${sinceParam}`
-        : `/api/admin/redirect-logs/stats`;
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(`/api/admin/redirect-logs/stats?${buildParams()}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch stats");
       return res.json();
     },
@@ -177,9 +188,7 @@ export default function RedirectAnalytics() {
   } = useQuery<LogsResponse>({
     queryKey: logsKey,
     queryFn: async () => {
-      const params = new URLSearchParams();
-      if (sinceParam) params.set("sinceDays", range);
-      params.set("page", String(logsPage));
+      const params = buildParams({ page: String(logsPage) });
       const res = await fetch(`/api/admin/redirect-logs?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch logs");
       return res.json();
@@ -208,6 +217,11 @@ export default function RedirectAnalytics() {
     setLogsPage(1);
   }, []);
 
+  const handleLinkChange = useCallback((val: string) => {
+    setLinkType(val);
+    setLogsPage(1);
+  }, []);
+
   const handleRefresh = useCallback(() => {
     refetchStats();
     refetchLogs();
@@ -215,8 +229,7 @@ export default function RedirectAnalytics() {
 
   const exportCsv = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      if (sinceParam) params.set("sinceDays", range);
+      const params = buildParams();
       const res = await fetch(`/api/admin/redirect-logs/export?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed");
       const allRows: LogRow[] = await res.json();
@@ -243,7 +256,7 @@ export default function RedirectAnalytics() {
     } catch {
       toast({ title: "Export failed", variant: "destructive" });
     }
-  }, [range, sinceParam, toast]);
+  }, [range, linkType, toast]);
 
   const platformPie = useMemo(() => prettifyBucket(stats?.byPlatform || [], PLATFORM_LABEL), [stats]);
   const outcomePie = useMemo(() => prettifyBucket(stats?.byOutcome || [], OUTCOME_LABEL), [stats]);
@@ -270,6 +283,18 @@ export default function RedirectAnalytics() {
 
   const filterBar = (
     <div className="flex items-center gap-2 flex-wrap">
+      <Select value={linkType} onValueChange={handleLinkChange}>
+        <SelectTrigger className="w-[150px]" data-testid="select-link">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {LINK_OPTIONS.map((o) => (
+            <SelectItem key={o.value} value={o.value} data-testid={`option-link-${o.value}`}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Select value={range} onValueChange={handleRangeChange}>
         <SelectTrigger className="w-[160px]" data-testid="select-range">
           <SelectValue />
@@ -328,7 +353,7 @@ export default function RedirectAnalytics() {
               Redirect Analytics
             </h1>
             <p className="text-sm text-muted-foreground">
-              Hits on the <code className="bg-muted px-1 rounded">/ql-deals</code> deep-link landing page.
+              Hits on the <code className="bg-muted px-1 rounded">{currentLink.paths}</code> deep-link landing page &mdash; opens {currentLink.target}.
             </p>
           </div>
           {filterBar}
@@ -486,7 +511,7 @@ export default function RedirectAnalytics() {
                     <Loader2 className="h-6 w-6 animate-spin text-[#00426D]" />
                   </div>
                 ) : !logsData || logsData.rows.length === 0 ? (
-                  <EmptyState message="No hits yet. Visit /ql-deals to generate one." />
+                  <EmptyState message={`No hits yet. Visit ${currentLink.paths} to generate one.`} />
                 ) : (
                   <>
                     <div className="overflow-x-auto">
