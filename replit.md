@@ -112,6 +112,23 @@ ALTER TABLE feedbacks
   ADD COLUMN IF NOT EXISTS staff_knows_redeem_files text[];
 ```
 
+#### Pending Production Migrations (Merchant Soft Delete)
+Run on production DB before deploying:
+```sql
+-- Soft delete: hides a merchant from the entire app (more severe than archive).
+-- NULL = live; a timestamp = deleted. Set by sales/moderation/admin via the UI.
+ALTER TABLE merchants ADD COLUMN IF NOT EXISTS deleted_at timestamp;
+```
+**To restore a soft-deleted merchant (admin only, direct DB):**
+```sql
+-- Find deleted merchants:
+SELECT id, company_name, brand_name, status, deleted_at
+FROM merchants WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC;
+
+-- Restore one by id (it returns to its previous status automatically):
+UPDATE merchants SET deleted_at = NULL WHERE id = '<merchant-id>';
+```
+
 #### Pending Production Migrations (Group Merchant feature)
 Run on production DB before deploying:
 ```sql

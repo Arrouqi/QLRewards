@@ -21,7 +21,7 @@ import {
   submissionLogs, systemSettings, activityLogs, redirectLogs, feedbacks, feedbackComments, merchantTrainings
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, inArray, and, desc, sql, gte } from "drizzle-orm";
+import { eq, inArray, and, desc, sql, gte, isNull } from "drizzle-orm";
 
 export interface IStorage {
   createDeal(deal: InsertDeal): Promise<Deal>;
@@ -67,6 +67,7 @@ export interface IStorage {
   createMerchant(merchant: InsertMerchant): Promise<Merchant>;
   getAllMerchants(): Promise<Array<Merchant & { trainingCount: number }>>;
   getMerchantById(id: string): Promise<Merchant | undefined>;
+  softDeleteMerchant(id: string): Promise<Merchant | undefined>;
   updateMerchant(id: string, data: Partial<InsertMerchant>): Promise<Merchant | undefined>;
   updateMerchantStatus(id: string, status: string): Promise<Merchant | undefined>;
   createMerchantDeal(deal: InsertMerchantDeal): Promise<MerchantDeal>;
@@ -409,13 +410,26 @@ export class DatabaseStorage implements IStorage {
         merchant: merchants,
         trainingCount: sql<number>`(SELECT COUNT(*) FROM merchant_trainings WHERE merchant_id = ${merchants.id})`.mapWith(Number),
       })
-      .from(merchants);
+      .from(merchants)
+      .where(isNull(merchants.deletedAt));
     return rows.map((r) => ({ ...r.merchant, trainingCount: r.trainingCount }));
   }
 
   async getMerchantById(id: string): Promise<Merchant | undefined> {
-    const [merchant] = await db.select().from(merchants).where(eq(merchants.id, id));
+    const [merchant] = await db
+      .select()
+      .from(merchants)
+      .where(and(eq(merchants.id, id), isNull(merchants.deletedAt)));
     return merchant;
+  }
+
+  async softDeleteMerchant(id: string): Promise<Merchant | undefined> {
+    const [updated] = await db
+      .update(merchants)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(merchants.id, id), isNull(merchants.deletedAt)))
+      .returning();
+    return updated;
   }
 
   async updateMerchant(id: string, data: Partial<InsertMerchant>): Promise<Merchant | undefined> {

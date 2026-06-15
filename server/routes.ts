@@ -1804,6 +1804,37 @@ export async function registerRoutes(
     }
   });
 
+  // Soft delete: hides the merchant everywhere in the app (more severe than
+  // archive). Allowed for sales/moderation/admin at any status. There is no
+  // restore endpoint by design — only an admin can restore it directly in the
+  // database (UPDATE merchants SET deleted_at = NULL WHERE id = '...').
+  app.patch("/api/merchants/:id/soft-delete", requireAuth, async (req, res) => {
+    try {
+      const userRole = req.session.role || "user";
+      if (!["admin", "sales", "moderation"].includes(userRole)) {
+        return res.status(403).json({ error: "Not authorized to delete merchants" });
+      }
+      const existing = await storage.getMerchantById(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      const merchant = await storage.softDeleteMerchant(req.params.id);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      storage.createActivityLog({
+        username: req.session.username || "Unknown",
+        action: "Soft-deleted merchant",
+        merchantId: req.params.id,
+        merchantName: existing.companyName,
+        details: `Merchant hidden from the app (status was "${existing.status}"). Restorable only via database.`,
+      }).catch(err => console.error("[ActivityLog] Error:", err));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.delete("/api/merchants/:id", requireAuth, async (req, res) => {
     try {
       if (req.session.role !== "admin") {
@@ -1997,6 +2028,10 @@ export async function registerRoutes(
 
   app.get("/api/merchants/:id/notes", requireAuth, async (req, res) => {
     try {
+      const merchant = await storage.getMerchantById(req.params.id);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
       const notes = await storage.getMerchantNotes(req.params.id);
       res.json(notes);
     } catch (error: any) {
@@ -2028,6 +2063,10 @@ export async function registerRoutes(
 
   app.get("/api/merchants/:id/trainings", requireAuth, async (req, res) => {
     try {
+      const merchant = await storage.getMerchantById(req.params.id);
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
       const trainings = await storage.getMerchantTrainings(req.params.id);
       res.json(trainings);
     } catch (error: any) {

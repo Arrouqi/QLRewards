@@ -99,6 +99,7 @@ export default function MerchantManagement() {
   const [offersDialogValue, setOffersDialogValue] = useState<number>(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [merchantToDelete, setMerchantToDelete] = useState<Merchant | null>(null);
+  const [merchantToSoftDelete, setMerchantToSoftDelete] = useState<Merchant | null>(null);
   const [statusConfirmDialog, setStatusConfirmDialog] = useState<{
     merchant: Merchant;
     targetStatus: string;
@@ -269,6 +270,28 @@ export default function MerchantManagement() {
       toast({ title: "Merchant permanently deleted" });
       setDeleteDialogOpen(false);
       setMerchantToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Cannot delete", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const softDeleteMerchantMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/merchants/${id}/soft-delete`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to delete merchant");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["merchants"] });
+      toast({ title: "Merchant deleted", description: "It's now hidden from the app. Only an admin can restore it from the database." });
+      setMerchantToSoftDelete(null);
     },
     onError: (error: any) => {
       toast({ title: "Cannot delete", description: error.message, variant: "destructive" });
@@ -719,6 +742,19 @@ export default function MerchantManagement() {
                               Archive
                             </DropdownMenuItem>
                           )}
+                          {(isAdmin || isSales || isModeration) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setMerchantToSoftDelete(merchant)}
+                                className="text-red-600"
+                                data-testid={`menu-soft-delete-${merchant.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -794,6 +830,38 @@ export default function MerchantManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!merchantToSoftDelete} onOpenChange={(open) => { if (!open) setMerchantToSoftDelete(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Merchant
+            </DialogTitle>
+            <DialogDescription>
+              This will hide <strong>{merchantToSoftDelete?.companyName}</strong>{merchantToSoftDelete?.brandName ? ` (${merchantToSoftDelete.brandName})` : ""} from the entire app. It won't appear in any list or filter. Only an admin can restore it directly from the database. The merchant's data is kept and not permanently erased.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setMerchantToSoftDelete(null)}
+              data-testid="button-cancel-soft-delete"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => merchantToSoftDelete && softDeleteMerchantMutation.mutate(merchantToSoftDelete.id)}
+              disabled={softDeleteMerchantMutation.isPending}
+              data-testid="button-confirm-soft-delete"
+            >
+              {softDeleteMerchantMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!offersDialogMerchant} onOpenChange={(open) => { if (!open) setOffersDialogMerchant(null); }}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>

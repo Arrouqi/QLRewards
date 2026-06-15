@@ -189,6 +189,7 @@ export const merchants = pgTable("merchants", {
   submittedBy: text("submitted_by"),
   offersCreated: integer("offers_created").notNull().default(0),
   status: text("status").notNull().default("pending"),
+  deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
