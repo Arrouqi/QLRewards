@@ -714,8 +714,8 @@ export default function MerchantEdit() {
 
   return (
     <AdminLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="sticky top-0 z-30 -mx-4 px-4 py-3 bg-white/95 backdrop-blur border-b border-slate-200 flex items-center justify-between shadow-sm">
+      <div className="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
+        <div className="sticky top-0 z-30 -mx-4 px-4 md:-mx-6 md:px-6 -mt-4 md:-mt-6 py-3 bg-white/95 backdrop-blur border-b border-slate-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shadow-sm">
           <Button
             variant="ghost"
             onClick={() => setLocation(`/admin/merchants/${merchant.id}`)}

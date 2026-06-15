@@ -1010,19 +1010,19 @@ export default function MerchantView() {
 
   return (
     <AdminLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="max-w-5xl mx-auto space-y-6 p-4 md:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Button
             variant="ghost"
             onClick={() => setLocation("/admin/merchants")}
-            className="text-slate-600"
+            className="text-slate-600 self-start"
             data-testid="button-back"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Merchants
           </Button>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {getStatusBadge(merchant.status)}
 
             {can("merchants.training" as any) && (merchant.status === "licensed" || merchant.status === "trained") && (
