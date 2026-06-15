@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   GraduationCap,
   Plus,
+  Check,
   Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -161,10 +162,38 @@ export default function MerchantView() {
   const [trainingDialogOpen, setTrainingDialogOpen] = useState(false);
   const [isSubmittingTraining, setIsSubmittingTraining] = useState(false);
   const [trainingForm, setTrainingForm] = useState({ date: "", time: "", trainerName: "", comment: "" });
+  const [isEditingSignatory, setIsEditingSignatory] = useState(false);
+  const [signatoryDraft, setSignatoryDraft] = useState("");
+  const [isSavingSignatory, setIsSavingSignatory] = useState(false);
 
   useEffect(() => {
     fetchMerchant();
   }, [params?.id]);
+
+  const handleSaveSignatory = async () => {
+    if (!merchant) return;
+    setIsSavingSignatory(true);
+    try {
+      const res = await fetch(`/api/merchants/${merchant.id}/signatory`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ merchantSignatoryName: signatoryDraft }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || "Failed to update signatory name");
+      }
+      const updated = await res.json();
+      setMerchant({ ...merchant, merchantSignatoryName: updated.merchantSignatoryName });
+      setIsEditingSignatory(false);
+      toast({ title: "Authorized signatory name updated" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSavingSignatory(false);
+    }
+  };
 
   const fetchMerchant = async () => {
     if (!params?.id) return;
@@ -1425,27 +1454,79 @@ export default function MerchantView() {
           </Card>
         )}
 
-        {merchant.merchantSignatoryName && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-[#00426D]">Signature Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-start gap-8">
-                <div>
-                  <p className="text-sm text-slate-500 mb-2">Signatory Name</p>
-                  <p className="font-medium">{merchant.merchantSignatoryName}</p>
-                  {merchant.commencementDate && (
-                    <>
-                      <p className="text-sm text-slate-500 mt-3 mb-1">Commencement Date</p>
-                      <p className="font-medium">{format(new Date(merchant.commencementDate), "MMMM d, yyyy")}</p>
-                    </>
-                  )}
-                </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-[#00426D]">Signature Information</CardTitle>
+            {(isAdmin || isSales || isModeration) && !isEditingSignatory && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSignatoryDraft(merchant.merchantSignatoryName || "");
+                  setIsEditingSignatory(true);
+                }}
+                data-testid="button-edit-signatory"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit Signatory Name
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start gap-8">
+              <div className="w-full max-w-md">
+                <p className="text-sm text-slate-500 mb-2">Authorized Signatory Name</p>
+                {isEditingSignatory ? (
+                  <div className="space-y-3">
+                    <Input
+                      value={signatoryDraft}
+                      onChange={(e) => setSignatoryDraft(e.target.value)}
+                      placeholder="Name of authorized signatory"
+                      maxLength={200}
+                      data-testid="input-edit-signatory"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleSaveSignatory}
+                        disabled={isSavingSignatory}
+                        className="bg-[#00426D] hover:bg-[#003557]"
+                        data-testid="button-save-signatory"
+                      >
+                        {isSavingSignatory ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Check className="h-4 w-4 mr-2" />
+                        )}
+                        Save
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditingSignatory(false)}
+                        disabled={isSavingSignatory}
+                        data-testid="button-cancel-signatory"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="font-medium" data-testid="text-signatory-name">
+                    {merchant.merchantSignatoryName || <span className="text-slate-400 italic">Not set</span>}
+                  </p>
+                )}
+                {merchant.commencementDate && (
+                  <>
+                    <p className="text-sm text-slate-500 mt-3 mb-1">Commencement Date</p>
+                    <p className="font-medium">{format(new Date(merchant.commencementDate), "MMMM d, yyyy")}</p>
+                  </>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

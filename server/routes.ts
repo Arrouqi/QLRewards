@@ -1764,6 +1764,46 @@ export async function registerRoutes(
     }
   });
 
+  // Update only the authorized signatory name. Allowed for any authenticated
+  // admin user (sales/moderation/admin) regardless of merchant status, so the
+  // name on the agreement can be corrected after the merchant leaves "pending".
+  app.patch("/api/merchants/:id/signatory", requireAuth, async (req, res) => {
+    try {
+      const userRole = req.session.role || "user";
+      if (!["admin", "sales", "moderation"].includes(userRole)) {
+        return res.status(403).json({ error: "Not authorized to edit signatory name" });
+      }
+      const { merchantSignatoryName } = req.body;
+      if (typeof merchantSignatoryName !== "string") {
+        return res.status(400).json({ error: "Signatory name is required" });
+      }
+      const trimmed = merchantSignatoryName.trim();
+      if (trimmed.length > 200) {
+        return res.status(400).json({ error: "Signatory name is too long (max 200 characters)" });
+      }
+      const existing = await storage.getMerchantById(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      const merchant = await storage.updateMerchant(req.params.id, {
+        merchantSignatoryName: trimmed || null,
+      });
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      storage.createActivityLog({
+        username: req.session.username || "Unknown",
+        action: "Updated authorized signatory name",
+        merchantId: req.params.id,
+        merchantName: existing.companyName,
+        details: `Changed from "${existing.merchantSignatoryName || "(empty)"}" to "${trimmed || "(empty)"}"`,
+      }).catch(err => console.error("[ActivityLog] Error:", err));
+      res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.delete("/api/merchants/:id", requireAuth, async (req, res) => {
     try {
       if (req.session.role !== "admin") {
