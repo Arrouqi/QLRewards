@@ -165,6 +165,9 @@ export default function MerchantView() {
   const [isEditingSignatory, setIsEditingSignatory] = useState(false);
   const [signatoryDraft, setSignatoryDraft] = useState("");
   const [isSavingSignatory, setIsSavingSignatory] = useState(false);
+  const [isEditingFees, setIsEditingFees] = useState(false);
+  const [feesDraft, setFeesDraft] = useState({ subscriptionFee: "", transactionFee: "" });
+  const [isSavingFees, setIsSavingFees] = useState(false);
 
   useEffect(() => {
     fetchMerchant();
@@ -192,6 +195,38 @@ export default function MerchantView() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setIsSavingSignatory(false);
+    }
+  };
+
+  const handleSaveFees = async () => {
+    if (!merchant) return;
+    setIsSavingFees(true);
+    try {
+      const res = await fetch(`/api/merchants/${merchant.id}/fees`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          subscriptionFee: feesDraft.subscriptionFee,
+          transactionFee: feesDraft.transactionFee,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || "Failed to update fees");
+      }
+      const updated = await res.json();
+      setMerchant({
+        ...merchant,
+        subscriptionFee: updated.subscriptionFee,
+        transactionFee: updated.transactionFee,
+      });
+      setIsEditingFees(false);
+      toast({ title: "Fee structure updated" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSavingFees(false);
     }
   };
 
@@ -1453,6 +1488,100 @@ export default function MerchantView() {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-[#00426D]">Fee Structure</CardTitle>
+            {(isAdmin || isSales || isModeration) && !isEditingFees && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setFeesDraft({
+                    subscriptionFee: merchant.subscriptionFee ?? "",
+                    transactionFee: merchant.transactionFee ?? "",
+                  });
+                  setIsEditingFees(true);
+                }}
+                data-testid="button-edit-fees"
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit Fees
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {isEditingFees ? (
+              <div className="space-y-4 max-w-md">
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-500">Subscription Fee (QAR per year)</p>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={feesDraft.subscriptionFee}
+                    onChange={(e) => setFeesDraft((prev) => ({ ...prev, subscriptionFee: e.target.value }))}
+                    placeholder="0"
+                    data-testid="input-edit-subscription-fee"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-500">Transaction Fee (QAR per transaction)</p>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={feesDraft.transactionFee}
+                    onChange={(e) => setFeesDraft((prev) => ({ ...prev, transactionFee: e.target.value }))}
+                    placeholder="0"
+                    data-testid="input-edit-transaction-fee"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleSaveFees}
+                    disabled={isSavingFees}
+                    className="bg-[#00426D] hover:bg-[#003557]"
+                    data-testid="button-save-fees"
+                  >
+                    {isSavingFees ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingFees(false)}
+                    disabled={isSavingFees}
+                    data-testid="button-cancel-fees"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">Subscription Fee</p>
+                  <p className="text-lg font-semibold text-[#00426D]" data-testid="text-subscription-fee">
+                    {merchant.subscriptionFee ?? "0"} QAR <span className="text-sm font-normal text-slate-500">per year</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 mb-1">Transaction Fee</p>
+                  <p className="text-lg font-semibold text-[#00426D]" data-testid="text-transaction-fee">
+                    {merchant.transactionFee ?? "0"} QAR <span className="text-sm font-normal text-slate-500">per transaction</span>
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

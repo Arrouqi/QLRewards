@@ -1822,6 +1822,60 @@ export async function registerRoutes(
     }
   });
 
+  // Edit fee structure (subscription + transaction fee) from the merchant
+  // detail view. Allowed for sales/moderation/admin at ANY status, so fees can
+  // be adjusted after the request has moved past the initial "With Sales" stage
+  // (the full edit form is status-locked for sales).
+  app.patch("/api/merchants/:id/fees", requireAuth, async (req, res) => {
+    try {
+      const userRole = req.session.role || "user";
+      if (!["admin", "sales", "moderation"].includes(userRole)) {
+        return res.status(403).json({ error: "Not authorized to edit fees" });
+      }
+      const { subscriptionFee, transactionFee } = req.body;
+      const validateFee = (val: any, label: string): string | null => {
+        if (val === undefined || val === null || val === "") {
+          throw new Error(`${label} is required`);
+        }
+        const str = String(val).trim();
+        const num = Number(str);
+        if (!Number.isFinite(num) || num < 0) {
+          throw new Error(`${label} must be a valid non-negative number`);
+        }
+        return str;
+      };
+      let subFee: string | null;
+      let txFee: string | null;
+      try {
+        subFee = validateFee(subscriptionFee, "Subscription fee");
+        txFee = validateFee(transactionFee, "Transaction fee");
+      } catch (validationErr: any) {
+        return res.status(400).json({ error: validationErr.message });
+      }
+      const existing = await storage.getMerchantById(req.params.id);
+      if (!existing) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      const merchant = await storage.updateMerchant(req.params.id, {
+        subscriptionFee: subFee,
+        transactionFee: txFee,
+      });
+      if (!merchant) {
+        return res.status(404).json({ error: "Merchant not found" });
+      }
+      storage.createActivityLog({
+        username: req.session.username || "Unknown",
+        action: "Updated fee structure",
+        merchantId: req.params.id,
+        merchantName: existing.companyName,
+        details: `Subscription fee: "${existing.subscriptionFee ?? "(empty)"}" → "${subFee}"; Transaction fee: "${existing.transactionFee ?? "(empty)"}" → "${txFee}"`,
+      }).catch(err => console.error("[ActivityLog] Error:", err));
+      res.json(merchant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Soft delete: hides the merchant everywhere in the app (more severe than
   // archive). Allowed for sales/moderation/admin at any status. There is no
   // restore endpoint by design — only an admin can restore it directly in the
