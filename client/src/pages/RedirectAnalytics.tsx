@@ -115,6 +115,7 @@ const RANGE_OPTIONS = [
 const LINK_OPTIONS = [
   { label: "Deals link", value: "deals", paths: "/ql-deals", target: "the Deals / Rewards screen" },
   { label: "Home link", value: "home", paths: "/ql-home", target: "the app home / main website" },
+  { label: "Deals link (mobile only)", value: "deals-mobile", paths: "/ql-deals-mobile", target: "the Deals / Rewards screen (desktop → Apple App Store)" },
 ];
 
 const PLATFORM_LABEL: Record<string, string> = {

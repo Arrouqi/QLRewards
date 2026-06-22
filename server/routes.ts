@@ -191,6 +191,12 @@ export async function registerRoutes(
     res.sendFile(path.resolve(landingPageDir, "ql-home.html"));
   });
 
+  // Pretty-URL alias for the mobile-only Deals link: same as ql-deals on phones,
+  // but desktop visitors go to the Apple App Store instead of the website.
+  app.get(["/ql-deals-mobile"], (_req, res) => {
+    res.sendFile(path.resolve(landingPageDir, "ql-deals-mobile.html"));
+  });
+
   // Per-IP rate limiter factory for public endpoints (in-memory; resets on restart)
   function makeRateLimiter(opts: { windowMs: number; max: number; onLimit?: (res: Response) => void }) {
     const buckets = new Map<string, { count: number; windowStart: number }>();
@@ -244,7 +250,7 @@ export async function registerRoutes(
 
       const allowedPlatforms = new Set(["ios", "android", "desktop"]);
       const allowedOutcomes = new Set(["app_attempt", "store", "web"]);
-      const allowedLinkTypes = new Set(["deals", "home"]);
+      const allowedLinkTypes = new Set(["deals", "home", "deals-mobile"]);
 
       await storage.createRedirectLog({
         visitorId: typeof body.visitorId === "string" ? body.visitorId.slice(0, 64) : null,
@@ -270,7 +276,7 @@ export async function registerRoutes(
   app.get("/api/admin/redirect-logs/stats", requireAuth, requireAdmin, async (req, res) => {
     try {
       const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
-      const linkType = req.query.linkType === "home" || req.query.linkType === "deals" ? req.query.linkType : undefined;
+      const linkType = req.query.linkType === "home" || req.query.linkType === "deals" || req.query.linkType === "deals-mobile" ? req.query.linkType : undefined;
       const stats = await storage.getRedirectLogStats(sinceDays && sinceDays > 0 ? sinceDays : undefined, linkType);
       res.json(stats);
     } catch (e: any) {
@@ -285,7 +291,7 @@ export async function registerRoutes(
       const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
       const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
       const since = sinceDays && sinceDays > 0 ? sinceDays : undefined;
-      const linkType = req.query.linkType === "home" || req.query.linkType === "deals" ? req.query.linkType : undefined;
+      const linkType = req.query.linkType === "home" || req.query.linkType === "deals" || req.query.linkType === "deals-mobile" ? req.query.linkType : undefined;
       const offset = (page - 1) * PAGE_SIZE;
       const [rows, total] = await Promise.all([
         storage.getRedirectLogs(PAGE_SIZE, offset, since, linkType),
@@ -302,7 +308,7 @@ export async function registerRoutes(
     try {
       const sinceDays = req.query.sinceDays ? parseInt(req.query.sinceDays as string, 10) : undefined;
       const since = sinceDays && sinceDays > 0 ? sinceDays : undefined;
-      const linkType = req.query.linkType === "home" || req.query.linkType === "deals" ? req.query.linkType : undefined;
+      const linkType = req.query.linkType === "home" || req.query.linkType === "deals" || req.query.linkType === "deals-mobile" ? req.query.linkType : undefined;
       const rows = await storage.getRedirectLogs(10000, 0, since, linkType);
       res.json(rows);
     } catch (e: any) {
