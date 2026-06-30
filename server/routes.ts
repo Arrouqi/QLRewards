@@ -1073,11 +1073,11 @@ export async function registerRoutes(
       if (req.session.role !== "admin") {
         return res.status(403).json({ error: "Admin access required" });
       }
-      const { name, oldName } = req.body;
+      const { name, nameAr, oldName } = req.body;
       if (!name) {
         return res.status(400).json({ error: "Name is required" });
       }
-      const category = await storage.updateCategory(req.params.id, name);
+      const category = await storage.updateCategory(req.params.id, name, nameAr ?? null);
       if (!category) {
         return res.status(404).json({ error: "Category not found" });
       }
@@ -1120,11 +1120,11 @@ export async function registerRoutes(
       if (req.session.role !== "admin") {
         return res.status(403).json({ error: "Admin access required" });
       }
-      const { name } = req.body;
+      const { name, nameAr } = req.body;
       if (!name) {
         return res.status(400).json({ error: "Name is required" });
       }
-      const subCategory = await storage.updateSubCategory(req.params.id, name);
+      const subCategory = await storage.updateSubCategory(req.params.id, name, nameAr ?? null);
       if (!subCategory) {
         return res.status(404).json({ error: "Subcategory not found" });
       }

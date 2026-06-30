@@ -1,0 +1,23 @@
+{
+  "language": {
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "actions": {
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "next": "Next",
+    "back": "Back",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "add": "Add",
+    "remove": "Remove",
+    "delete": "Delete",
+    "edit": "Edit",
+    "upload": "Upload",
+    "uploading": "Uploading...",
+    "select": "Select",
+    "optional": "Optional"
+  }
+}

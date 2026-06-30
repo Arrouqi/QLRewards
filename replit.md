@@ -181,6 +181,16 @@ ALTER TABLE merchant_deals
   ADD COLUMN IF NOT EXISTS brand_id text;
 ```
 
+#### Pending Production Migrations (Multi-lingual categories)
+Run on production DB before deploying:
+```sql
+-- Optional Arabic display names for category / sub-category dropdowns.
+-- NULL = no Arabic name yet (UI falls back to the English name).
+-- Set per-category via the admin Settings → Categories tab.
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS name_ar text;
+ALTER TABLE sub_categories ADD COLUMN IF NOT EXISTS name_ar text;
+```
+
 ### Project Structure
 - `client/`: React frontend.
 - `server/`: Express backend.

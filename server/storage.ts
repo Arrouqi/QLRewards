@@ -44,12 +44,12 @@ export interface IStorage {
   updateDealMerchantIds(id: string, merchantUserId: string | null, merchantBranchId: string | null): Promise<Deal | undefined>;
   createCategory(category: InsertCategory): Promise<Category>;
   getAllCategories(): Promise<Category[]>;
-  updateCategory(id: string, name: string): Promise<Category | undefined>;
+  updateCategory(id: string, name: string, nameAr?: string | null): Promise<Category | undefined>;
   deleteCategory(id: string): Promise<void>;
   createSubCategory(subCategory: InsertSubCategory): Promise<SubCategory>;
   getSubCategoriesByCategoryId(categoryId: string): Promise<SubCategory[]>;
   getAllSubCategories(): Promise<SubCategory[]>;
-  updateSubCategory(id: string, name: string): Promise<SubCategory | undefined>;
+  updateSubCategory(id: string, name: string, nameAr?: string | null): Promise<SubCategory | undefined>;
   deleteSubCategory(id: string): Promise<void>;
   createTerm(term: InsertTerm): Promise<Term>;
   getAllTerms(): Promise<Term[]>;
@@ -267,10 +267,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(categories);
   }
 
-  async updateCategory(id: string, name: string): Promise<Category | undefined> {
+  async updateCategory(id: string, name: string, nameAr?: string | null): Promise<Category | undefined> {
     const [updated] = await db
       .update(categories)
-      .set({ name })
+      .set({ name, ...(nameAr !== undefined ? { nameAr } : {}) })
       .where(eq(categories.id, id))
       .returning();
     return updated;
@@ -301,10 +301,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(subCategories);
   }
 
-  async updateSubCategory(id: string, name: string): Promise<SubCategory | undefined> {
+  async updateSubCategory(id: string, name: string, nameAr?: string | null): Promise<SubCategory | undefined> {
     const [updated] = await db
       .update(subCategories)
-      .set({ name })
+      .set({ name, ...(nameAr !== undefined ? { nameAr } : {}) })
       .where(eq(subCategories.id, id))
       .returning();
     return updated;

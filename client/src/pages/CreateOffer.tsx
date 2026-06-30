@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef, ChangeEvent, useCallback } from "react";
+import { useState, useEffect, useRef, ChangeEvent, useCallback, useMemo } from "react";
 import { compressImage, compressImages } from "@/lib/compressImage";
+import { useTranslation, Trans } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,15 +36,19 @@ import {
   Building2
 } from "lucide-react";
 
+import { getLocalizedCategoryName } from "@/lib/categoryName";
+
 interface SubCategory {
   id: string;
   categoryId: string;
   name: string;
+  nameAr?: string | null;
 }
 
 interface Category {
   id: string;
   name: string;
+  nameAr?: string | null;
   subCategories: SubCategory[];
 }
 
@@ -118,12 +124,12 @@ interface ESMerchant {
   category?: { id: number; name: string };
 }
 
-const formSchema = z.object({
-  category: z.string().min(1, "Category is required"),
-  subCategory: z.string().min(1, "Sub-category is required"),
-  offerType: z.string().min(1, "Deal type is required"),
-  offerDuration: z.string().min(1, "Duration is required"),
-  redemption: z.string().min(1, "Redemption is required"),
+const makeFormSchema = (t: (key: string) => string) => z.object({
+  category: z.string().min(1, t("validation.categoryRequired")),
+  subCategory: z.string().min(1, t("validation.subCategoryRequired")),
+  offerType: z.string().min(1, t("validation.dealTypeRequired")),
+  offerDuration: z.string().min(1, t("validation.durationRequired")),
+  redemption: z.string().min(1, t("validation.redemptionRequired")),
   limitPerUser: z.string().optional(),
   originalPrice: z.string().optional(),
   isMultipleItems: z.boolean().default(false),
@@ -133,20 +139,20 @@ const formSchema = z.object({
   trancheValidity: z.string().optional(),
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
-  title: z.string().min(5, "Title must be at least 5 characters"),
+  title: z.string().min(5, t("validation.titleMin")),
   description: z.string().optional(),
-  claimRules: z.array(z.string()).min(1, "Select at least one claim rule"),
-  generalRules: z.array(z.string()).min(1, "Select at least one general rule"),
+  claimRules: z.array(z.string()).min(1, t("validation.claimRuleRequired")),
+  generalRules: z.array(z.string()).min(1, t("validation.generalRuleRequired")),
   otherRules: z.string().optional(),
-  merchantId: z.string().min(1, "Please select a merchant"),
-  merchantName: z.string().min(1, "Merchant name is required"),
+  merchantId: z.string().min(1, t("validation.merchantRequired")),
+  merchantName: z.string().min(1, t("validation.merchantNameRequired")),
   merchantEmail: z.string().optional(),
   merchantPhone: z.string().optional(),
-  branches: z.array(z.string()).min(1, "At least one branch is required"),
-  agreement: z.boolean().refine(val => val === true, "You must agree to the terms"),
+  branches: z.array(z.string()).min(1, t("validation.branchRequired")),
+  agreement: z.boolean().refine(val => val === true, t("validation.agreementRequired")),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<ReturnType<typeof makeFormSchema>>;
 
 const RichTextToolbar = () => (
   <div className="flex items-center gap-1 p-2 border-b border-slate-100 bg-slate-50/50">
@@ -165,6 +171,8 @@ const RichTextToolbar = () => (
 );
 
 export default function CreateOffer() {
+  const { t, i18n } = useTranslation(["createDeal", "common"]);
+  const formSchema = useMemo(() => makeFormSchema((key) => t(key)), [t, i18n.language]);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isSpecificDays, setIsSpecificDays] = useState(false);
@@ -277,8 +285,8 @@ export default function CreateOffer() {
   useEffect(() => {
     if (categoriesError) {
       toast({
-        title: "Error loading categories",
-        description: "Please refresh the page to try again",
+        title: t("toast.errorLoadingCategoriesTitle"),
+        description: t("toast.errorLoadingCategoriesDesc"),
         variant: "destructive",
       });
     }
@@ -298,13 +306,13 @@ export default function CreateOffer() {
 
     const remaining = MAX_PHOTOS - uploadedImages.length;
     if (remaining <= 0) {
-      toast({ title: "Maximum images reached", description: `You can only upload up to ${MAX_PHOTOS} images`, variant: "destructive" });
+      toast({ title: t("toast.maxImagesTitle"), description: t("toast.maxImagesDesc", { max: MAX_PHOTOS }), variant: "destructive" });
       return;
     }
 
     const filesToProcess = files.slice(0, remaining);
     if (files.length > remaining) {
-      toast({ title: "Some images skipped", description: `Only ${remaining} more image(s) allowed (max ${MAX_PHOTOS})`, variant: "destructive" });
+      toast({ title: t("toast.someSkippedTitle"), description: t("toast.someSkippedDesc", { remaining, max: MAX_PHOTOS }), variant: "destructive" });
     }
 
     setIsCompressing(true);
@@ -413,14 +421,14 @@ export default function CreateOffer() {
           return newImages;
         });
         toast({
-          title: "Image updated",
-          description: "Image has been re-cropped successfully",
+          title: t("toast.imageUpdatedTitle"),
+          description: t("toast.imageUpdatedDesc"),
         });
       } else {
         setUploadedImages(prev => [...prev, croppedImage]);
         toast({
-          title: "Image added",
-          description: "Image has been cropped and added successfully",
+          title: t("toast.imageAddedTitle"),
+          description: t("toast.imageAddedDesc"),
         });
       }
     }
@@ -520,36 +528,36 @@ export default function CreateOffer() {
 
   const onFormError = (errors: any) => {
     const fieldLabels: Record<string, string> = {
-      title: "Title",
-      description: "Description",
-      category: "Category",
-      subCategory: "Sub-Category",
-      offerType: "Deal Type",
-      duration: "Duration",
-      offerDuration: "Duration",
-      originalPrice: "Original Price",
-      discountPercentage: "Discount Percentage",
-      discountedPrice: "Discounted Price",
-      redemption: "Redemption",
-      limitPerUser: "Limit Per User",
-      branches: "Branches",
-      claimRules: "Claim Rules",
-      generalRules: "General Rules",
-      images: "Images",
-      merchantId: "Merchant",
-      merchantName: "Merchant Name",
-      merchantEmail: "Merchant Email",
-      merchantPhone: "Merchant Phone",
-      agreement: "Terms & Conditions",
+      title: t("fieldLabels.title"),
+      description: t("fieldLabels.description"),
+      category: t("fieldLabels.category"),
+      subCategory: t("fieldLabels.subCategory"),
+      offerType: t("fieldLabels.offerType"),
+      duration: t("fieldLabels.duration"),
+      offerDuration: t("fieldLabels.offerDuration"),
+      originalPrice: t("fieldLabels.originalPrice"),
+      discountPercentage: t("fieldLabels.discountPercentage"),
+      discountedPrice: t("fieldLabels.discountedPrice"),
+      redemption: t("fieldLabels.redemption"),
+      limitPerUser: t("fieldLabels.limitPerUser"),
+      branches: t("fieldLabels.branches"),
+      claimRules: t("fieldLabels.claimRules"),
+      generalRules: t("fieldLabels.generalRules"),
+      images: t("fieldLabels.images"),
+      merchantId: t("fieldLabels.merchantId"),
+      merchantName: t("fieldLabels.merchantName"),
+      merchantEmail: t("fieldLabels.merchantEmail"),
+      merchantPhone: t("fieldLabels.merchantPhone"),
+      agreement: t("fieldLabels.agreement"),
     };
     const errorMessages = Object.entries(errors)
       .map(([field, error]: [string, any]) => {
         const label = fieldLabels[field] || field;
-        return `${label}: ${error?.message || 'Required'}`;
+        return `${label}: ${error?.message || t("toast.fieldRequired")}`;
       })
       .join(". ");
     toast({
-      title: "Please fix the following errors",
+      title: t("toast.fixErrorsTitle"),
       description: errorMessages,
       variant: "destructive",
     });
@@ -590,8 +598,8 @@ export default function CreateOffer() {
     
     if (uploadedImages.length < MIN_PHOTOS) {
       toast({
-        title: "Not enough photos",
-        description: `Please upload at least ${MIN_PHOTOS} photos`,
+        title: t("toast.notEnoughPhotosTitle"),
+        description: t("toast.notEnoughPhotosDesc", { min: MIN_PHOTOS }),
         variant: "destructive",
       });
       return;
@@ -640,33 +648,33 @@ export default function CreateOffer() {
       });
 
       if (!response.ok) {
-        let errorMessage = "Failed to submit deal.";
+        let errorMessage = t("toast.submitErrorDefault");
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch {
           if (response.status === 413) {
-            errorMessage = "Images are too large. Please reduce the file sizes and try again.";
+            errorMessage = t("toast.imagesTooLarge");
           } else if (response.status >= 500) {
-            errorMessage = "Server error. Please try again in a few minutes.";
+            errorMessage = t("toast.serverError");
           }
         }
         throw new Error(errorMessage);
       }
 
       toast({
-        title: "Success",
-        description: "Your deal has been submitted successfully!",
+        title: t("toast.successTitle"),
+        description: t("toast.successDesc"),
       });
 
       setLocation("/success");
     } catch (error: any) {
       const isNetworkError = error.message === "Failed to fetch" || error.name === "TypeError";
       toast({
-        title: "Submission Failed",
+        title: t("toast.submissionFailedTitle"),
         description: isNetworkError
-          ? "Could not connect to the server. Please check your internet connection and try again."
-          : (error.message || "Failed to submit deal"),
+          ? t("toast.networkError")
+          : (error.message || t("toast.failedToSubmit")),
         variant: "destructive",
       });
     } finally {
@@ -680,19 +688,22 @@ export default function CreateOffer() {
   const generalRulesOptions = generalTerms.map(term => term.text);
 
   const offerTypes = [
-    { id: "bogo", label: "Buy 1 Get 1", icon: Gift },
-    { id: "discount", label: "Discount", icon: Percent },
-    { id: "voucher", label: "Voucher", icon: Tag },
-    { id: "bundle", label: "Bundle", icon: ShoppingBag },
+    { id: "bogo", label: t("dealTypes.bogo"), icon: Gift },
+    { id: "discount", label: t("dealTypes.discount"), icon: Percent },
+    { id: "voucher", label: t("dealTypes.voucher"), icon: Tag },
+    { id: "bundle", label: t("dealTypes.bundle"), icon: ShoppingBag },
   ];
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] flex flex-col font-sans relative">
-      <a href="/admin/login" className="absolute top-3 right-4 text-xs text-slate-400 hover:text-slate-600 transition-colors" data-testid="link-staff-login">Staff Login</a>
+      <div className="absolute top-3 right-4 flex items-center gap-3">
+        <LanguageSwitcher />
+        <a href="/admin/login" className="text-xs text-slate-400 hover:text-slate-600 transition-colors" data-testid="link-staff-login">{t("staffLogin")}</a>
+      </div>
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
         <div className="mb-8">
-            <h1 className="text-2xl font-bold text-[#00426D]">Create Offer for Existing Merchant</h1>
-            <p className="text-slate-500 mt-1">Use this form to create a new offer for a merchant already registered on the Qatar Living Deals platform. Select the merchant from the dropdown below to get started.</p>
+            <h1 className="text-2xl font-bold text-[#00426D]">{t("header.title")}</h1>
+            <p className="text-slate-500 mt-1">{t("header.subtitle")}</p>
         </div>
 
         <Form {...form}>
@@ -704,10 +715,10 @@ export default function CreateOffer() {
 
                 {/* Deal Details and Pricing */}
                 <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Deal Details and Pricing</h2>
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">{t("dealDetails.sectionTitle")}</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
                     <p className="text-sm text-slate-500 italic mb-4">
-                      • Choose the most suitable category to ensure your reward is listed correctly.
+                      {t("dealDetails.categoryHelper")}
                     </p>
 
                     <FormField
@@ -715,7 +726,7 @@ export default function CreateOffer() {
                       name="category"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Category <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.category")} <span className="text-red-500">*</span></FormLabel>
                           <Select 
                             onValueChange={(categoryName) => {
                               field.onChange(categoryName);
@@ -728,17 +739,17 @@ export default function CreateOffer() {
                                 {categoriesLoading ? (
                                   <div className="flex items-center gap-2">
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    <span>Loading...</span>
+                                    <span>{t("dealDetails.loading")}</span>
                                   </div>
                                 ) : (
-                                  <SelectValue placeholder="Select Category" />
+                                  <SelectValue placeholder={t("dealDetails.selectCategory")} />
                                 )}
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {categories.map((category) => (
                                 <SelectItem key={category.id} value={category.name} data-testid={`option-category-${category.id}`}>
-                                  {category.name}
+                                  {getLocalizedCategoryName(category)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -752,7 +763,7 @@ export default function CreateOffer() {
                       name="subCategory"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Sub-Category <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.subCategory")} <span className="text-red-500">*</span></FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
                             value={field.value}
@@ -760,13 +771,13 @@ export default function CreateOffer() {
                           >
                             <FormControl>
                               <SelectTrigger className="h-11 bg-slate-50" data-testid="select-subcategory">
-                                <SelectValue placeholder={watchedCategory ? "Select Sub-Category" : "Select a category first"} />
+                                <SelectValue placeholder={watchedCategory ? t("dealDetails.selectSubCategory") : t("dealDetails.selectCategoryFirst")} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {availableSubCategories.map((sub) => (
                                 <SelectItem key={sub.id} value={sub.name} data-testid={`option-subcategory-${sub.id}`}>
-                                  {sub.name}
+                                  {getLocalizedCategoryName(sub)}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -780,7 +791,7 @@ export default function CreateOffer() {
                       name="offerType"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Deal Type <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.dealType")} <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                               {offerTypes.map((type) => {
@@ -817,16 +828,16 @@ export default function CreateOffer() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
-                            Duration <span className="text-red-500">*</span>
+                            {t("dealDetails.duration")} <span className="text-red-500">*</span>
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger type="button"><Info className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                                <TooltipContent><p className="max-w-xs text-xs">How long this deal stays active on the platform. E.g., "3 months", "6 weeks", or "1 year".</p></TooltipContent>
+                                <TooltipContent><p className="max-w-xs text-xs">{t("dealDetails.durationTooltip")}</p></TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           </FormLabel>
                           <FormControl>
-                            <Input className="h-11 bg-slate-50" placeholder="e.g., 3 months, 6 weeks, 1 year" {...field} />
+                            <Input className="h-11 bg-slate-50" placeholder={t("dealDetails.durationPlaceholder")} {...field} />
                           </FormControl>
                         </FormItem>
                       )}
@@ -839,23 +850,23 @@ export default function CreateOffer() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
-                              Redemption <span className="text-red-500">*</span>
+                              {t("dealDetails.redemption")} <span className="text-red-500">*</span>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger type="button"><Info className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                                  <TooltipContent><p className="max-w-xs text-xs">Choose "Unlimited" to let customers use this deal as many times as they want, or "Limited" to set a maximum per customer.</p></TooltipContent>
+                                  <TooltipContent><p className="max-w-xs text-xs">{t("dealDetails.redemptionTooltip")}</p></TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             </FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger className="h-11 bg-slate-50">
-                                  <SelectValue placeholder="Choose" />
+                                  <SelectValue placeholder={t("dealDetails.choose")} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="unlimited">Unlimited</SelectItem>
-                                <SelectItem value="limited">Limited</SelectItem>
+                                <SelectItem value="unlimited">{t("dealDetails.unlimited")}</SelectItem>
+                                <SelectItem value="limited">{t("dealDetails.limited")}</SelectItem>
                               </SelectContent>
                             </Select>
                           </FormItem>
@@ -868,9 +879,9 @@ export default function CreateOffer() {
                           name="limitPerUser"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">Limit Per User <span className="text-red-500">*</span></FormLabel>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.limitPerUser")} <span className="text-red-500">*</span></FormLabel>
                               <FormControl>
-                                <Input type="number" placeholder="e.g. 1" className="h-11 bg-slate-50" {...field} />
+                                <Input type="number" placeholder={t("dealDetails.limitPerUserPlaceholder")} className="h-11 bg-slate-50" {...field} />
                               </FormControl>
                             </FormItem>
                           )}
@@ -895,7 +906,7 @@ export default function CreateOffer() {
                                 />
                               </FormControl>
                               <FormLabel className="font-medium text-slate-700">
-                                Is this deal valid for two tranches?
+                                {t("dealDetails.twoTranches")}
                               </FormLabel>
                             </FormItem>
                           )}
@@ -908,26 +919,17 @@ export default function CreateOffer() {
                               name="trancheValidity"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel className="text-xs font-bold text-slate-500 uppercase">Tranche Validity</FormLabel>
+                                  <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.trancheValidity")}</FormLabel>
                                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
                                       <SelectTrigger className="h-11 bg-white">
-                                        <SelectValue placeholder="Choose" />
+                                        <SelectValue placeholder={t("dealDetails.choose")} />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      <SelectItem value="1">1 Week</SelectItem>
-                                      <SelectItem value="2">2 Weeks</SelectItem>
-                                      <SelectItem value="3">3 Weeks</SelectItem>
-                                      <SelectItem value="4">4 Weeks</SelectItem>
-                                      <SelectItem value="5">5 Weeks</SelectItem>
-                                      <SelectItem value="6">6 Weeks</SelectItem>
-                                      <SelectItem value="7">7 Weeks</SelectItem>
-                                      <SelectItem value="8">8 Weeks</SelectItem>
-                                      <SelectItem value="9">9 Weeks</SelectItem>
-                                      <SelectItem value="10">10 Weeks</SelectItem>
-                                      <SelectItem value="11">11 Weeks</SelectItem>
-                                      <SelectItem value="12">12 Weeks</SelectItem>
+                                      {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                                        <SelectItem key={n} value={String(n)}>{t("weeks", { count: n })}</SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 </FormItem>
@@ -955,7 +957,7 @@ export default function CreateOffer() {
                                 />
                               </FormControl>
                               <FormLabel className="font-medium text-slate-700">
-                                This Deal is for Multiple Items
+                                {t("dealDetails.multipleItems")}
                               </FormLabel>
                             </FormItem>
                           )}
@@ -969,7 +971,7 @@ export default function CreateOffer() {
                              </div>
                              <Info className="h-5 w-5 text-[#F57F17] flex-shrink-0" />
                              <p className="text-[#5D4037] text-sm">
-                               If your deal is for multiple items, the price won't show on the deal card and details page.
+                               {t("dealDetails.multipleItemsInfo")}
                              </p>
                           </div>
                         )}
@@ -983,7 +985,7 @@ export default function CreateOffer() {
                           name="originalPrice"
                           render={({ field }) => (
                             <FormItem className="flex-1">
-                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">{offerType === "voucher" ? "Voucher Amount" : "Original Price"} <span className="text-red-500">*</span></FormLabel>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">{offerType === "voucher" ? t("dealDetails.voucherAmount") : t("dealDetails.originalPrice")} <span className="text-red-500">*</span></FormLabel>
                               <div className="relative">
                                 <FormControl>
                                   <Input 
@@ -1015,7 +1017,7 @@ export default function CreateOffer() {
                                 )}
                                 data-testid="button-discount-percentage"
                               >
-                                Discount %
+                                {t("dealDetails.discountPercentToggle")}
                               </button>
                               <button
                                 type="button"
@@ -1031,7 +1033,7 @@ export default function CreateOffer() {
                                 )}
                                 data-testid="button-discount-price"
                               >
-                                Discounted Price
+                                {t("dealDetails.discountedPriceToggle")}
                               </button>
                             </div>
                             {discountType === "percentage" ? (
@@ -1040,7 +1042,7 @@ export default function CreateOffer() {
                                 name="discountPercentage"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discount Percentage <span className="text-red-500">*</span></FormLabel>
+                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.discountPercentage")} <span className="text-red-500">*</span></FormLabel>
                                     <div className="relative">
                                       <FormControl>
                                         <Input placeholder="0" className="h-11 bg-slate-50 pr-12" {...field} />
@@ -1057,7 +1059,7 @@ export default function CreateOffer() {
                                 name="discountedPrice"
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">Discounted Price <span className="text-red-500">*</span></FormLabel>
+                                    <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.discountedPrice")} <span className="text-red-500">*</span></FormLabel>
                                     <div className="relative">
                                       <FormControl>
                                         <Input placeholder="0.00" className="h-11 bg-slate-50 pr-12" {...field} />
@@ -1091,10 +1093,10 @@ export default function CreateOffer() {
                             </FormControl>
                             <div className="space-y-1 leading-none">
                               <FormLabel className="font-medium text-slate-700">
-                                Available on specific days only
+                                {t("dealDetails.specificDays")}
                               </FormLabel>
                               <p className="text-xs text-slate-500">
-                                If your deal is valid only on specific days, please select them. Otherwise, it will be active every day.
+                                {t("dealDetails.specificDaysHelper")}
                               </p>
                             </div>
                           </FormItem>
@@ -1118,7 +1120,7 @@ export default function CreateOffer() {
                                       htmlFor={`day-${day}`}
                                       className="text-sm font-medium text-slate-700 cursor-pointer"
                                     >
-                                      {day}
+                                      {t(`days.${day}`)}
                                     </label>
                                     <Switch
                                       id={`day-${day}`}
@@ -1147,14 +1149,14 @@ export default function CreateOffer() {
 
                 {/* Deal Description */}
                 <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Deal Description</h2>
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">{t("description.sectionTitle")}</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
                     <FormField
                       control={form.control}
                       name="title"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Title <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("description.title")} <span className="text-red-500">*</span></FormLabel>
                           <div className="relative">
                             <FormControl>
                               <Input className="h-11 bg-slate-50" maxLength={60} {...field} />
@@ -1171,14 +1173,14 @@ export default function CreateOffer() {
                       render={({ field }) => (
                         <FormItem className="space-y-2">
                           <Label className="text-xs text-slate-500">
-                            • Clearly mention the deal, validity, and terms so users understand what's included.
+                            {t("description.helper")}
                           </Label>
                           <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
                             <RichTextToolbar />
                             <FormControl>
                               <textarea 
                                 className="w-full h-32 p-3 bg-white focus:outline-none resize-none text-sm" 
-                                placeholder="Description"
+                                placeholder={t("description.placeholder")}
                                 maxLength={300}
                                 {...field}
                               />
@@ -1195,7 +1197,7 @@ export default function CreateOffer() {
 
                 {/* Other Rules */}
                 <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Other Rules</h2>
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">{t("otherRules.sectionTitle")}</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
                     
                     <FormField
@@ -1203,7 +1205,7 @@ export default function CreateOffer() {
                       name="claimRules"
                       render={() => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Claim Rules <span className="font-normal normal-case text-slate-400">(Must choose one at least)</span></FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("otherRules.claimRules")} <span className="font-normal normal-case text-slate-400">{t("otherRules.mustChooseOne")}</span></FormLabel>
                           <div className="flex flex-col space-y-3 mt-2">
                             {claimRulesOptions.map((item) => (
                               <FormField
@@ -1251,7 +1253,7 @@ export default function CreateOffer() {
                       name="generalRules"
                       render={() => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">General Rules <span className="font-normal normal-case text-slate-400">(Must choose one at least)</span></FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("otherRules.generalRules")} <span className="font-normal normal-case text-slate-400">{t("otherRules.mustChooseOne")}</span></FormLabel>
                           <div className="grid gap-3 mt-2">
                             {generalRulesOptions.map((item) => (
                               <FormField
@@ -1301,7 +1303,7 @@ export default function CreateOffer() {
                             <FormControl>
                               <textarea 
                                 className="w-full h-24 p-3 bg-white focus:outline-none resize-none text-sm" 
-                                placeholder="Other Rules"
+                                placeholder={t("otherRules.placeholder")}
                                 maxLength={300}
                                 {...field}
                               />
@@ -1319,10 +1321,10 @@ export default function CreateOffer() {
 
                 {/* Select Merchant */}
                 <section>
-                  <h2 className="text-lg font-bold text-[#00426D] mb-4">Merchant</h2>
+                  <h2 className="text-lg font-bold text-[#00426D] mb-4">{t("merchant.sectionTitle")}</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-4">
                     <p className="text-sm text-slate-500 italic mb-4">
-                      Select an existing merchant from the list. Start typing to search.
+                      {t("merchant.helper")}
                     </p>
 
                     <FormField
@@ -1330,13 +1332,13 @@ export default function CreateOffer() {
                       name="merchantId"
                       render={() => (
                         <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Select Merchant <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("merchant.selectMerchant")} <span className="text-red-500">*</span></FormLabel>
                           <div className="relative" ref={merchantDropdownRef}>
                             <div className="relative">
                               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                               <Input
                                 className="h-11 bg-slate-50 pl-9"
-                                placeholder="Search merchant by name..."
+                                placeholder={t("merchant.searchPlaceholder")}
                                 value={merchantSearch}
                                 onChange={(e) => handleMerchantSearch(e.target.value)}
                                 onFocus={() => setShowMerchantDropdown(true)}
@@ -1364,9 +1366,9 @@ export default function CreateOffer() {
                             {showMerchantDropdown && !selectedMerchant && (
                               <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                                 {isMerchantsLoading ? (
-                                  <div className="p-3 text-sm text-slate-500 text-center">Loading merchants...</div>
+                                  <div className="p-3 text-sm text-slate-500 text-center">{t("merchant.loadingMerchants")}</div>
                                 ) : esMerchants.length === 0 ? (
-                                  <div className="p-3 text-sm text-slate-500 text-center">No merchants found</div>
+                                  <div className="p-3 text-sm text-slate-500 text-center">{t("merchant.noMerchantsFound")}</div>
                                 ) : (
                                   esMerchants.map((m) => (
                                     <button
@@ -1400,14 +1402,14 @@ export default function CreateOffer() {
                           <span className="font-medium text-[#00426D]">{selectedMerchant.agencyName}</span>
                         </div>
                         {selectedMerchant.agencyEmail && (
-                          <p className="text-sm text-slate-600">Email: {selectedMerchant.agencyEmail}</p>
+                          <p className="text-sm text-slate-600">{t("merchant.email")} {selectedMerchant.agencyEmail}</p>
                         )}
                         {selectedMerchant.contactMobile && (
-                          <p className="text-sm text-slate-600">Phone: {selectedMerchant.contactMobile}</p>
+                          <p className="text-sm text-slate-600">{t("merchant.phone")} {selectedMerchant.contactMobile}</p>
                         )}
                         {selectedMerchant.branches && selectedMerchant.branches.length > 0 && (
                           <p className="text-sm text-slate-600">
-                            Branches: {selectedMerchant.branches.map(b => b.name).join(", ")}
+                            {t("merchant.branches")} {selectedMerchant.branches.map(b => b.name).join(", ")}
                           </p>
                         )}
                       </div>
@@ -1418,7 +1420,7 @@ export default function CreateOffer() {
                 {/* Branches */}
                 {selectedMerchant && (
                   <section>
-                    <h2 className="text-lg font-bold text-[#00426D] mb-4">Applicable Branches</h2>
+                    <h2 className="text-lg font-bold text-[#00426D] mb-4">{t("branches.sectionTitle")}</h2>
                     <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
                       <FormField
                         control={form.control}
@@ -1427,8 +1429,8 @@ export default function CreateOffer() {
                           <FormItem>
                             {selectedMerchant.branches && selectedMerchant.branches.length > 1 ? (
                               <>
-                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Select branches for this deal <span className="text-red-500">*</span></FormLabel>
-                                <p className="text-xs text-slate-500 mb-2">Select at least one branch</p>
+                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("branches.selectForDeal")} <span className="text-red-500">*</span></FormLabel>
+                                <p className="text-xs text-slate-500 mb-2">{t("branches.selectAtLeastOne")}</p>
                                 <div className="space-y-2">
                                   {selectedMerchant.branches.map((branch) => {
                                     const isSelected = field.value?.includes(branch.name);
@@ -1457,15 +1459,15 @@ export default function CreateOffer() {
                               </>
                             ) : selectedMerchant.branches && selectedMerchant.branches.length === 1 ? (
                               <>
-                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Applicable Branch</FormLabel>
+                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("branches.applicableBranch")}</FormLabel>
                                 <p className="text-sm text-slate-600 p-2 bg-slate-50 rounded border">
-                                  {selectedMerchant.branches[0].name} (automatically selected)
+                                  {selectedMerchant.branches[0].name} {t("branches.autoSelected")}
                                 </p>
                               </>
                             ) : (
                               <>
-                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Branches <span className="text-red-500">*</span></FormLabel>
-                                <p className="text-xs text-slate-500 mb-2">No branches found for this merchant. Enter branch names manually.</p>
+                                <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("branches.title")} <span className="text-red-500">*</span></FormLabel>
+                                <p className="text-xs text-slate-500 mb-2">{t("branches.noBranchesFound")}</p>
                                 <div className="space-y-2">
                                   <div className="flex flex-wrap gap-2 min-h-[44px] p-2 bg-slate-50 border border-slate-200 rounded-md">
                                     {field.value?.map((branch, index) => (
@@ -1485,7 +1487,7 @@ export default function CreateOffer() {
                                     ))}
                                     <input
                                       type="text"
-                                      placeholder={field.value?.length ? "" : "Type branch name and press Enter"}
+                                      placeholder={field.value?.length ? "" : t("branches.typeAndPressEnter")}
                                       className="flex-1 min-w-[200px] bg-transparent border-none outline-none text-sm placeholder:text-slate-400"
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter' || e.key === ',') {
@@ -1532,7 +1534,14 @@ export default function CreateOffer() {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel className="text-sm text-slate-600 font-normal">
-                            I agree to the <a href="https://www.qatarliving.com/rules-advertising" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">Rules for Advertising</a> on Qatar Living and the <a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">Terms of use</a>.
+                            <Trans
+                              i18nKey="agreement.text"
+                              ns="createDeal"
+                              components={[
+                                <a href="https://www.qatarliving.com/rules-advertising" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline" />,
+                                <a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline" />,
+                              ]}
+                            />
                           </FormLabel>
                           <FormMessage />
                         </div>
@@ -1545,49 +1554,49 @@ export default function CreateOffer() {
               {/* Right Column - Upload Photos */}
               <div className="lg:col-span-5 space-y-8">
                 <section>
-                   <h2 className="text-lg font-bold text-[#00426D] mb-4">Upload Deal Photos</h2>
+                   <h2 className="text-lg font-bold text-[#00426D] mb-4">{t("photos.sectionTitle")}</h2>
                    <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
                       {imageUploadErrors.length > 0 && (
                         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 space-y-1" data-testid="deal-image-upload-errors">
                           {imageUploadErrors.map((err, i) => (
                             <p key={i} className="text-sm text-red-600 flex items-start gap-1">
                               <span className="shrink-0 mt-0.5">⚠</span>
-                              <span><strong>Deal Photo:</strong> {err}</span>
+                              <span><strong>{t("photos.dealPhoto")}</strong> {err}</span>
                             </p>
                           ))}
-                          <p className="text-xs text-red-500 mt-1">Please use images under 10 MB. You can compress images at <a href="https://squoosh.app" target="_blank" rel="noopener noreferrer" className="underline">squoosh.app</a>.</p>
+                          <p className="text-xs text-red-500 mt-1"><Trans i18nKey="photos.sizeHelp" ns="createDeal" components={[<a href="https://squoosh.app" target="_blank" rel="noopener noreferrer" className="underline" />]} /></p>
                         </div>
                       )}
                       <div className="flex items-start gap-3 mb-4 bg-slate-50 p-3 rounded text-xs text-slate-600">
                         <Info className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
                         <p>
-                          Upload at least {MIN_PHOTOS} photos (maximum {MAX_PHOTOS}) to attract shoppers to your deal. Use landscape orientation (horizontal) for optimal photo display.
+                          {t("photos.info1", { min: MIN_PHOTOS, max: MAX_PHOTOS })}
                           <br/><br/>
-                          Use clear, relevant, and unique images that represent the actual deal. Avoid promotional banners or pixelated visuals.
+                          {t("photos.info2")}
                         </p>
                       </div>
 
                       <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                        <span>Hold and drag to reorder</span>
+                        <span>{t("photos.dragToReorder")}</span>
                         <TooltipProvider delayDuration={100}>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button type="button" className="flex items-center gap-1 cursor-help text-[#00426D] hover:text-[#003557]">
                                 <Info className="h-3 w-3" />
-                                <span>1280 x 800 - recommended size</span>
+                                <span>{t("photos.recommendedSize")}</span>
                               </button>
                             </TooltipTrigger>
                             <TooltipContent side="top">
-                              <p>For best display quality, upload images with 1280 x 800 pixels (16:10 aspect ratio)</p>
+                              <p>{t("photos.recommendedSizeTooltip")}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </div>
 
                       <div className="text-xs text-slate-500 mb-3">
-                        {uploadedImages.length} / {MAX_PHOTOS} photos uploaded
+                        {t("photos.photosUploaded", { current: uploadedImages.length, max: MAX_PHOTOS })}
                         {uploadedImages.length < MIN_PHOTOS && (
-                          <span className="text-amber-600 ml-2">(minimum {MIN_PHOTOS} required)</span>
+                          <span className="text-amber-600 ml-2">{t("photos.minimumRequired", { min: MIN_PHOTOS })}</span>
                         )}
                       </div>
 
@@ -1633,7 +1642,7 @@ export default function CreateOffer() {
                             />
                             {index === 0 && (
                               <div className="absolute top-2 left-2 bg-[#FF7F39] text-white text-[10px] px-2 py-1 rounded font-medium">
-                                Cover
+                                {t("photos.cover")}
                               </div>
                             )}
                             {index > 0 && (
@@ -1647,7 +1656,7 @@ export default function CreateOffer() {
                                 onClick={() => handleReplaceImage(index)}
                                 className="bg-white/90 text-slate-700 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
                                 data-testid={`button-replace-image-${index}`}
-                                title="Replace photo"
+                                title={t("photos.replacePhoto")}
                               >
                                 <Upload className="h-4 w-4" />
                               </button>
@@ -1656,7 +1665,7 @@ export default function CreateOffer() {
                                 onClick={() => handleEditImage(index)}
                                 className="bg-white/90 text-slate-700 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
                                 data-testid={`button-edit-image-${index}`}
-                                title="Edit/Crop"
+                                title={t("photos.editCrop")}
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
@@ -1665,7 +1674,7 @@ export default function CreateOffer() {
                                 onClick={() => removeImage(index)}
                                 className="bg-white/90 text-red-500 rounded-md p-1.5 hover:bg-white shadow-sm transition-colors"
                                 data-testid={`button-remove-image-${index}`}
-                                title="Remove"
+                                title={t("photos.remove")}
                               >
                                 <X className="h-4 w-4" />
                               </button>
@@ -1680,7 +1689,7 @@ export default function CreateOffer() {
                             style={{ aspectRatio: '16/10' }}
                           >
                             <Loader2 className="h-7 w-7 text-[#FF7F39] animate-spin mb-1" />
-                            <span className="text-xs text-[#FF7F39] font-medium">Compressing…</span>
+                            <span className="text-xs text-[#FF7F39] font-medium">{t("photos.compressing")}</span>
                           </div>
                         )}
 
@@ -1695,12 +1704,12 @@ export default function CreateOffer() {
                           >
                             {uploadedImages.length === 0 && idx === 0 && (
                               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FF7F39] text-white text-[10px] px-3 py-1 rounded font-medium z-10 whitespace-nowrap">
-                                Cover Photo
+                                {t("photos.coverPhoto")}
                               </div>
                             )}
                             <div className="w-full h-full border-2 border-dashed border-slate-300 rounded-lg hover:border-[#FF7F39] hover:bg-[#FF7F39]/5 transition-colors flex flex-col items-center justify-center">
                               <Plus className="h-8 w-8 text-slate-400 mb-1" />
-                              <span className="text-xs text-slate-500 font-medium">Upload</span>
+                              <span className="text-xs text-slate-500 font-medium">{t("photos.upload")}</span>
                             </div>
                           </div>
                         ))}
@@ -1714,7 +1723,7 @@ export default function CreateOffer() {
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 z-50">
               <div className="container mx-auto max-w-6xl flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-2 sm:gap-4">
                 <Button type="button" variant="outline" className="min-w-[100px] border-slate-300 text-slate-600 hover:bg-slate-50 order-2 sm:order-1">
-                  Close
+                  {t("footer.close")}
                 </Button>
                 <Button 
                   type="submit" 
@@ -1724,10 +1733,10 @@ export default function CreateOffer() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Submitting...
+                      {t("footer.submitting")}
                     </>
                   ) : (
-                    "Submit Deal"
+                    t("footer.submitDeal")
                   )}
                 </Button>
               </div>
@@ -1743,12 +1752,12 @@ export default function CreateOffer() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CropIcon className="h-5 w-5" />
-              {editingIndex !== null ? "Edit Image" : "Crop Image"} (16:10)
+              {editingIndex !== null ? t("crop.editImage") : t("crop.cropImage")} {t("crop.ratioSuffix")}
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center gap-4">
             <p className="text-sm text-slate-500">
-              Adjust the crop area to fit the 16:10 aspect ratio for optimal display.
+              {t("crop.instruction")}
             </p>
             {imageToCrop && (
               <ReactCrop
@@ -1761,7 +1770,7 @@ export default function CreateOffer() {
                 <img
                   ref={imgRef}
                   src={imageToCrop}
-                  alt="Crop preview"
+                  alt={t("crop.cropPreviewAlt")}
                   onLoad={onImageLoad}
                   className="max-h-[400px] w-auto"
                 />
@@ -1776,7 +1785,7 @@ export default function CreateOffer() {
               onClick={handleCropCancel}
               data-testid="button-cancel-crop"
             >
-              Cancel
+              {t("crop.cancel")}
             </Button>
             <Button
               type="button"
@@ -1786,7 +1795,7 @@ export default function CreateOffer() {
               data-testid="button-confirm-crop"
             >
               <Check className="h-4 w-4 mr-2" />
-              Confirm Crop
+              {t("crop.confirmCrop")}
             </Button>
           </DialogFooter>
         </DialogContent>

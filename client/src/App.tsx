@@ -1,8 +1,11 @@
 import { Switch, Route, Redirect } from "wouter";
+import { useTranslation } from "react-i18next";
+import { DirectionProvider } from "@radix-ui/react-direction";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { isRtl } from "./i18n";
 import NotFound from "@/pages/not-found";
 import CreateOffer from "@/pages/CreateOffer";
 import OfferForm from "@/pages/OfferForm";
@@ -57,13 +60,18 @@ function Router() {
 }
 
 function App() {
+  const { i18n } = useTranslation();
+  const dir = isRtl(i18n.language) ? "rtl" : "ltr";
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <DirectionProvider dir={dir}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </DirectionProvider>
   );
 }
 

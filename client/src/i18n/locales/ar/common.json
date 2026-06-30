@@ -1,0 +1,23 @@
+{
+  "language": {
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "actions": {
+    "submit": "إرسال",
+    "submitting": "جارٍ الإرسال...",
+    "next": "التالي",
+    "back": "رجوع",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ...",
+    "add": "إضافة",
+    "remove": "إزالة",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "upload": "رفع",
+    "uploading": "جارٍ الرفع...",
+    "select": "اختيار",
+    "optional": "اختياري"
+  }
+}

@@ -36,6 +36,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -64,15 +66,19 @@ import {
 import { useLocation } from "wouter";
 import { PhoneInput } from "@/components/ui/phone-input";
 
+import { getLocalizedCategoryName } from "@/lib/categoryName";
+
 interface SubCategory {
   id: string;
   categoryId: string;
   name: string;
+  nameAr?: string | null;
 }
 
 interface Category {
   id: string;
   name: string;
+  nameAr?: string | null;
   subCategories: SubCategory[];
 }
 
@@ -95,15 +101,17 @@ function centerAspectCrop(
   );
 }
 
-const branchSchema = z.object({
-  name: z.string().min(1, "Branch name is required"),
+type TFn = (key: string, options?: any) => string;
+
+const makeBranchSchema = (t: TFn) => z.object({
+  name: z.string().min(1, t("validation.branchNameRequired")),
   location: z.string().optional(),
-  phone: z.string().min(1, "Branch phone is required"),
+  phone: z.string().min(1, t("validation.branchPhoneRequired")),
   detail: z.string().optional(),
   brandId: z.string().optional(),
 });
 
-const brandSchema = z.object({
+const makeBrandSchema = (_t: TFn) => z.object({
   brandName: z.string().optional(),
   address: z.string().optional(),
   contactPerson: z.string().optional(),
@@ -121,12 +129,12 @@ const brandSchema = z.object({
   businessCategories: z.array(z.string()).optional(),
 });
 
-const dealSchema = z.object({
-  category: z.string().min(1, "Category is required"),
-  subCategory: z.string().min(1, "Sub-category is required"),
-  dealType: z.string().min(1, "Deal type is required"),
-  duration: z.string().min(1, "Duration is required"),
-  redemption: z.string().min(1, "Redemption is required"),
+const makeDealSchema = (t: TFn) => z.object({
+  category: z.string().min(1, t("validation.categoryRequired")),
+  subCategory: z.string().min(1, t("validation.subCategoryRequired")),
+  dealType: z.string().min(1, t("validation.dealTypeRequired")),
+  duration: z.string().min(1, t("validation.durationRequired")),
+  redemption: z.string().min(1, t("validation.redemptionRequired")),
   limitPerUser: z.string().optional(),
   originalPrice: z.string().optional(),
   isMultipleItems: z.boolean().default(false),
@@ -136,28 +144,28 @@ const dealSchema = z.object({
   trancheValidity: z.string().optional(),
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
-  title: z.string().min(5, "Title must be at least 5 characters"),
+  title: z.string().min(5, t("validation.titleMin")),
   description: z.string().optional(),
   claimRules: z.array(z.string()).optional(),
   generalRules: z.array(z.string()).optional(),
   otherRules: z.string().optional(),
   branches: z.array(z.string()).optional(),
-  images: z.array(z.string()).min(4, "At least 4 images are required per deal"),
+  images: z.array(z.string()).min(4, t("validation.imagesMin")),
 });
 
-const merchantSchema = z.object({
+const makeMerchantSchema = (t: TFn) => z.object({
   companyType: z.enum(["individual", "group"]).default("individual"),
-  companyName: z.string().min(1, "Company name is required"),
+  companyName: z.string().min(1, t("validation.companyNameRequired")),
   crNumber: z.string().optional(),
   brandName: z.string().optional(),
-  address: z.string().min(1, "Address is required"),
-  contactPerson: z.string().min(1, "Contact person is required"),
-  email: z.string().email("Valid email is required"),
-  phone: z.string().min(1, "Phone number is required"),
+  address: z.string().min(1, t("validation.addressRequired")),
+  contactPerson: z.string().min(1, t("validation.contactPersonRequired")),
+  email: z.string().email(t("validation.emailValid")),
+  phone: z.string().min(1, t("validation.phoneRequired")),
   products: z.array(z.string()).optional(),
   businessCategories: z.array(z.string()).optional(),
-  branches: z.array(branchSchema).optional(),
-  brands: z.array(brandSchema).optional(),
+  branches: z.array(makeBranchSchema(t)).optional(),
+  brands: z.array(makeBrandSchema(t)).optional(),
   subscriptionFee: z.string().default("0"),
   transactionFee: z.string().default("3.00"),
   crDocument: z.string().optional(),
@@ -168,51 +176,56 @@ const merchantSchema = z.object({
   logo: z.string().optional(),
   coverImage: z.string().optional(),
   whatsapp: z.string().optional(),
-  merchantSignatoryName: z.string().min(1, "Authorized signatory name is required"),
-  commencementDate: z.string().min(1, "Commencement date is required"),
+  merchantSignatoryName: z.string().min(1, t("validation.signatoryRequired")),
+  commencementDate: z.string().min(1, t("validation.commencementDateRequired")),
   termsAccepted: z.boolean().refine(val => val === true, {
-    message: "You must accept the terms and conditions to submit",
+    message: t("validation.termsRequired"),
   }),
-  deals: z.array(dealSchema).optional(),
+  deals: z.array(makeDealSchema(t)).optional(),
 }).superRefine((data, ctx) => {
   if (data.companyType === "group") {
     if (!data.brands || data.brands.length < 1) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brands"], message: "At least one brand is required for group companies" });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brands"], message: t("validation.brandRequiredGroup") });
     }
     return;
   }
   // Individual: keep all the original required fields
   if (!data.crNumber || !/^[a-zA-Z0-9]{4,14}$/.test(data.crNumber)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crNumber"], message: "CR number must be 4-14 alphanumeric characters" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crNumber"], message: t("validation.crNumberFormat") });
   }
   if (!data.brandName || data.brandName.trim() === "") {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandName"], message: "Brand name is required" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandName"], message: t("validation.brandNameRequired") });
   }
   if (!data.products || data.products.length === 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["products"], message: "Select at least one product" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["products"], message: t("validation.productRequired") });
   }
   if (!data.businessCategories || data.businessCategories.length === 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["businessCategories"], message: "Select at least one category" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["businessCategories"], message: t("validation.categorySelectRequired") });
   }
   if (!data.crDocument || data.crDocument.trim() === "") {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crDocument"], message: "CR Document is required" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crDocument"], message: t("validation.crDocumentRequired") });
   }
 });
 
-type MerchantFormValues = z.infer<typeof merchantSchema>;
-type DealFormValues = z.infer<typeof dealSchema>;
+const passthroughT: TFn = (key: string) => key;
+const merchantSchemaBase = makeMerchantSchema(passthroughT);
+
+type MerchantFormValues = z.infer<typeof merchantSchemaBase>;
+type DealFormValues = z.infer<ReturnType<typeof makeDealSchema>>;
 
 const productTypes = [
-  { id: "bogo", label: "Buy 1 Get 1" },
-  { id: "discount", label: "Discount" },
-  { id: "voucher", label: "Voucher" },
-  { id: "bundle", label: "Bundle" },
+  { id: "bogo" },
+  { id: "discount" },
+  { id: "voucher" },
+  { id: "bundle" },
 ];
 
 
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function MerchantOnboarding() {
+  const { t, i18n } = useTranslation(["onboarding", "common"]);
+  const merchantSchema = useMemo(() => makeMerchantSchema(t), [i18n.language]);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -375,7 +388,7 @@ export default function MerchantOnboarding() {
 
     if (!isImage && file.size > 25 * 1024 * 1024) {
       const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-      const msg = `"${file.name}" (${sizeMB} MB) exceeds the 25 MB limit. Please use a smaller file.`;
+      const msg = t("toast.fileSizeExceeds", { name: file.name, size: sizeMB });
       if (onError) onError(msg);
       if (e.target) e.target.value = "";
       return;
@@ -424,12 +437,12 @@ export default function MerchantOnboarding() {
       const isGroupSubmit = data.companyType === "group";
       if (isGroupSubmit) {
         if (!data.brands || data.brands.length === 0) {
-          toast({ title: "At least one brand required", description: "Group companies must have at least one brand.", variant: "destructive" });
+          toast({ title: t("toast.atLeastOneBrandTitle"), description: t("toast.atLeastOneBrandDesc"), variant: "destructive" });
           setIsSubmitting(false);
           return;
         }
         if (data.brands.length > 50) {
-          toast({ title: "Too many brands", description: "Maximum 50 brands per group.", variant: "destructive" });
+          toast({ title: t("toast.tooManyBrandsTitle"), description: t("toast.tooManyBrandsDesc"), variant: "destructive" });
           setIsSubmitting(false);
           return;
         }
@@ -441,8 +454,8 @@ export default function MerchantOnboarding() {
           const deal = data.deals[i];
           if (!deal.branches || deal.branches.length === 0) {
             toast({
-              title: "Branch Selection Required",
-              description: `Please select at least one branch for Deal ${i + 1}: ${deal.title}`,
+              title: t("toast.branchSelectionTitle"),
+              description: t("toast.branchSelectionDesc", { num: i + 1, title: deal.title }),
               variant: "destructive",
             });
             setIsSubmitting(false);
@@ -480,15 +493,15 @@ export default function MerchantOnboarding() {
       });
 
       if (!response.ok) {
-        let errorMessage = "Failed to submit the application.";
+        let errorMessage = t("toast.failedSubmit");
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch {
           if (response.status === 413) {
-            errorMessage = "File attachments are too large. Please reduce the file sizes and try again.";
+            errorMessage = t("toast.filesTooLarge");
           } else if (response.status >= 500) {
-            errorMessage = "Server error. Please try again in a few minutes.";
+            errorMessage = t("toast.serverError");
           }
         }
         throw new Error(errorMessage);
@@ -501,17 +514,17 @@ export default function MerchantOnboarding() {
       let description = msg;
 
       if (error.name === "TypeError" && msg === "Failed to fetch") {
-        description = "Could not connect to the server. Please check your internet connection and try again.";
+        description = t("toast.couldNotConnect");
       } else if (msg.toLowerCase().includes("invalid string length") || msg.toLowerCase().includes("string length")) {
-        description = "One or more uploaded images or documents are too large. Please re-upload your images — they will be compressed automatically. If the problem persists, try smaller files.";
+        description = t("toast.imagesTooLarge");
       } else if (msg.toLowerCase().includes("413") || msg.includes("too large") || msg.includes("payload")) {
-        description = "Total upload size is too large. Please use smaller images or documents and try again.";
+        description = t("toast.totalTooLarge");
       } else if (!msg) {
-        description = "Something went wrong. Please try again or contact support if the issue continues.";
+        description = t("toast.somethingWrong");
       }
 
       toast({
-        title: "Submission Failed",
+        title: t("toast.submissionFailedTitle"),
         description,
         variant: "destructive",
         duration: 8000,
@@ -525,31 +538,34 @@ export default function MerchantOnboarding() {
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="bg-gradient-to-br from-[#00426D] via-[#00395D] to-[#002A45] text-white py-10 px-4 relative">
-        <a href="/admin/login" className="absolute top-3 right-4 text-xs text-white/40 hover:text-white/70 transition-colors" data-testid="link-staff-login">Staff Login</a>
+        <div className="absolute top-3 right-4 flex items-center gap-3">
+          <LanguageSwitcher className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white" />
+          <a href="/admin/login" className="text-xs text-white/40 hover:text-white/70 transition-colors" data-testid="link-staff-login">{t("staffLogin")}</a>
+        </div>
         <div className="container mx-auto max-w-5xl">
           <div className="flex items-center gap-4 mb-6">
             <img src="/ql-logo.png" alt="Qatar Living" className="h-10" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">Grow Your Business with Qatar Living Deals</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-3">{t("hero.title")}</h1>
           <p className="text-white/80 text-lg mb-8 max-w-2xl">
-            Partner with Qatar's largest community platform and reach thousands of new customers ready to discover your offers.
+            {t("hero.subtitle")}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
               <Users className="h-5 w-5 text-[#FF7F39] flex-shrink-0" />
-              <span className="text-sm text-white/90">Massive Audience Reach</span>
+              <span className="text-sm text-white/90">{t("hero.audience")}</span>
             </div>
             <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
               <TrendingUp className="h-5 w-5 text-[#FF7F39] flex-shrink-0" />
-              <span className="text-sm text-white/90">Boost Your Revenue</span>
+              <span className="text-sm text-white/90">{t("hero.revenue")}</span>
             </div>
             <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
               <Zap className="h-5 w-5 text-[#FF7F39] flex-shrink-0" />
-              <span className="text-sm text-white/90">Quick & Easy Setup</span>
+              <span className="text-sm text-white/90">{t("hero.setup")}</span>
             </div>
             <div className="flex items-center gap-3 bg-white/10 rounded-lg p-3">
               <Shield className="h-5 w-5 text-[#FF7F39] flex-shrink-0" />
-              <span className="text-sm text-white/90">Trusted Platform</span>
+              <span className="text-sm text-white/90">{t("hero.trusted")}</span>
             </div>
           </div>
         </div>
@@ -560,23 +576,23 @@ export default function MerchantOnboarding() {
           <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
             console.log("Form validation errors:", errors);
             const fieldLabels: Record<string, string> = {
-              companyName: "Company Name",
-              crNumber: "CR Number",
-              brandName: "Brand Name",
-              address: "Address",
-              contactPerson: "Contact Person",
-              email: "Email",
-              phone: "Phone",
-              products: "Products",
-              businessCategories: "Business Categories",
-              crDocument: "CR Document",
-              merchantSignatoryName: "Authorized Signatory Name",
-              commencementDate: "Commencement Date",
-              termsAccepted: "Terms & Conditions",
-              deals: "Deal Offers",
-              whatsapp: "WhatsApp",
-              logo: "Logo",
-              coverImage: "Cover Image",
+              companyName: t("validation.fieldLabels.companyName"),
+              crNumber: t("validation.fieldLabels.crNumber"),
+              brandName: t("validation.fieldLabels.brandName"),
+              address: t("validation.fieldLabels.address"),
+              contactPerson: t("validation.fieldLabels.contactPerson"),
+              email: t("validation.fieldLabels.email"),
+              phone: t("validation.fieldLabels.phone"),
+              products: t("validation.fieldLabels.products"),
+              businessCategories: t("validation.fieldLabels.businessCategories"),
+              crDocument: t("validation.fieldLabels.crDocument"),
+              merchantSignatoryName: t("validation.fieldLabels.merchantSignatoryName"),
+              commencementDate: t("validation.fieldLabels.commencementDate"),
+              termsAccepted: t("validation.fieldLabels.termsAccepted"),
+              deals: t("validation.fieldLabels.deals"),
+              whatsapp: t("validation.fieldLabels.whatsapp"),
+              logo: t("validation.fieldLabels.logo"),
+              coverImage: t("validation.fieldLabels.coverImage"),
             };
             const messages = Object.keys(errors).map(key => {
               const label = fieldLabels[key] || key;
@@ -588,14 +604,14 @@ export default function MerchantOnboarding() {
                     const msg = dealErr[f]?.message;
                     return msg || f;
                   });
-                  return `Deal ${i + 1}: ${fields.join(", ")}`;
+                  return `${t("validation.dealPrefix", { num: i + 1 })}${fields.join(", ")}`;
                 }).filter(Boolean);
-                return dealErrors.length > 0 ? dealErrors.join("; ") : "Check all deal fields";
+                return dealErrors.length > 0 ? dealErrors.join("; ") : t("validation.checkDealFields");
               }
-              return `${label}: ${(error as any)?.message || 'Required'}`;
+              return `${label}: ${(error as any)?.message || t("validation.required")}`;
             });
             toast({
-              title: "Please fix the errors below",
+              title: t("toast.fixErrorsTitle"),
               description: messages.join(". "),
               variant: "destructive",
             });
@@ -610,7 +626,7 @@ export default function MerchantOnboarding() {
               <CardContent className="pt-6">
                 <div className="text-center space-y-4">
                   <p className="text-sm text-slate-700 leading-relaxed">
-                    This <span className="font-semibold">AGREEMENT</span> is made and entered into on{" "}
+                    {t("agreement.intro")} <span className="font-semibold">{t("agreement.agreementWord")}</span> {t("agreement.madeOn")}{" "}
                     <FormField
                       control={form.control}
                       name="commencementDate"
@@ -625,10 +641,10 @@ export default function MerchantOnboarding() {
                         </span>
                       )}
                     />
-                    {" "}("<span className="font-semibold">Commencement Date</span>") between{" "}
-                    <span className="font-semibold">Qatar Living</span> ("Living Deals"){" "}
-                    20/Floor, Tornado Tower, Majlis Al Tawoon Street, West Bay, Doha, Qatar.{" "}
-                    (CR NO: 60909)
+                    {" "}("<span className="font-semibold">{t("agreement.commencementDateWord")}</span>") {t("agreement.between")}{" "}
+                    <span className="font-semibold">{t("agreement.companyName")}</span> ("{t("agreement.livingDeals")}"){" "}
+                    {t("agreement.address")}{" "}
+                    {t("agreement.crNo")}
                   </p>
                 </div>
               </CardContent>
@@ -637,7 +653,7 @@ export default function MerchantOnboarding() {
             {/* Company Type */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#00426D]">Company Type</CardTitle>
+                <CardTitle className="text-[#00426D]">{t("companyType.title")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <FormField
@@ -664,12 +680,12 @@ export default function MerchantOnboarding() {
                                   onChange={() => field.onChange(opt)}
                                   className="h-4 w-4 accent-[#FF7F39]"
                                 />
-                                <span className="font-semibold capitalize">{opt}</span>
+                                <span className="font-semibold capitalize">{t(`companyType.${opt}`)}</span>
                               </div>
                               <span className="text-xs text-slate-600 ml-6">
                                 {opt === "individual"
-                                  ? "Single brand / company with one CR."
-                                  : "Group with multiple brands, each with its own details and documents."}
+                                  ? t("companyType.individualDesc")
+                                  : t("companyType.groupDesc")}
                               </span>
                             </label>
                           );
@@ -687,7 +703,7 @@ export default function MerchantOnboarding() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-[#00426D]">
                   <Building2 className="h-5 w-5" />
-                  {isGroup ? "Group Information" : "Company Information"}
+                  {isGroup ? t("companyInfo.groupTitle") : t("companyInfo.companyTitle")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -697,9 +713,9 @@ export default function MerchantOnboarding() {
                     name="companyName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Company Name *</FormLabel>
+                        <FormLabel>{t("companyInfo.companyName")}</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Enter company name" data-testid="input-company-name" />
+                          <Input {...field} placeholder={t("companyInfo.companyNamePlaceholder")} data-testid="input-company-name" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -714,16 +730,16 @@ export default function MerchantOnboarding() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center gap-1.5">
-                              CR Number *
+                              {t("companyInfo.crNumber")}
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                                  <TooltipContent><p className="max-w-xs text-xs">Your Commercial Registration number issued by the Ministry of Commerce. 4-14 alphanumeric characters.</p></TooltipContent>
+                                  <TooltipContent><p className="max-w-xs text-xs">{t("companyInfo.crNumberTooltip")}</p></TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
                             </FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="e.g. 123456 or ABC1234" maxLength={14} data-testid="input-cr-number" />
+                              <Input {...field} placeholder={t("companyInfo.crNumberPlaceholder")} maxLength={14} data-testid="input-cr-number" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -735,9 +751,9 @@ export default function MerchantOnboarding() {
                         name="brandName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Merchant Brand Name *</FormLabel>
+                            <FormLabel>{t("companyInfo.brandName")}</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="Enter brand name" data-testid="input-brand-name" />
+                              <Input {...field} placeholder={t("companyInfo.brandNamePlaceholder")} data-testid="input-brand-name" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -752,9 +768,9 @@ export default function MerchantOnboarding() {
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Address *</FormLabel>
+                      <FormLabel>{t("companyInfo.address")}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter full address" data-testid="input-address" />
+                        <Input {...field} placeholder={t("companyInfo.addressPlaceholder")} data-testid="input-address" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -769,9 +785,9 @@ export default function MerchantOnboarding() {
                     name="contactPerson"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Contact Person *</FormLabel>
+                        <FormLabel>{t("companyInfo.contactPerson")}</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Full name" data-testid="input-contact-person" />
+                          <Input {...field} placeholder={t("companyInfo.contactPersonPlaceholder")} data-testid="input-contact-person" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -783,9 +799,9 @@ export default function MerchantOnboarding() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email Address *</FormLabel>
+                        <FormLabel>{t("companyInfo.email")}</FormLabel>
                         <FormControl>
-                          <Input {...field} type="email" placeholder="email@company.com" data-testid="input-email" />
+                          <Input {...field} type="email" placeholder={t("companyInfo.emailPlaceholder")} data-testid="input-email" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -797,12 +813,12 @@ export default function MerchantOnboarding() {
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number *</FormLabel>
+                        <FormLabel>{t("companyInfo.phone")}</FormLabel>
                         <FormControl>
                           <PhoneInput
                             value={field.value}
                             onChange={field.onChange}
-                            placeholder="Phone number"
+                            placeholder={t("companyInfo.phonePlaceholder")}
                             data-testid="input-phone"
                           />
                         </FormControl>
@@ -816,12 +832,12 @@ export default function MerchantOnboarding() {
                     name="whatsapp"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>WhatsApp Number</FormLabel>
+                        <FormLabel>{t("companyInfo.whatsapp")}</FormLabel>
                         <FormControl>
                           <PhoneInput
                             value={field.value || ""}
                             onChange={field.onChange}
-                            placeholder="WhatsApp number"
+                            placeholder={t("companyInfo.whatsappPlaceholder")}
                             data-testid="input-whatsapp"
                           />
                         </FormControl>
@@ -836,21 +852,21 @@ export default function MerchantOnboarding() {
             {/* Conditions */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#00426D]">Conditions</CardTitle>
+                <CardTitle className="text-[#00426D]">{t("conditions.title")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3 text-sm text-slate-700">
                   <li className="flex items-start gap-2">
                     <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
-                    <span>Merchant will provide offers to Qatar Living users via the Living Deals program as per the attached offer form.</span>
+                    <span>{t("conditions.item1")}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
-                    <span>Merchant authorizes Qatar Living to promote these offers across its platforms, apps, newsletters, and marketing channels.</span>
+                    <span>{t("conditions.item2")}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
-                    <span>Merchant guarantees all marketing information is accurate, lawful, and not misleading.</span>
+                    <span>{t("conditions.item3")}</span>
                   </li>
                 </ul>
               </CardContent>
@@ -860,7 +876,7 @@ export default function MerchantOnboarding() {
             {!isGroup && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#00426D]">Living Deals Products <span className="text-sm font-normal text-slate-500">(select all that apply)</span></CardTitle>
+                <CardTitle className="text-[#00426D]">{t("products.title")} <span className="text-sm font-normal text-slate-500">{t("products.selectAll")}</span></CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -889,7 +905,7 @@ export default function MerchantOnboarding() {
                           }}
                           className="h-4 w-4 accent-[#FF7F39]"
                         />
-                        <span className="font-medium text-sm">{product.label}</span>
+                        <span className="font-medium text-sm">{t(`products.types.${product.id}`)}</span>
                       </label>
                     );
                   })}
@@ -903,7 +919,7 @@ export default function MerchantOnboarding() {
             {!isGroup && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#00426D]">Business Categories</CardTitle>
+                <CardTitle className="text-[#00426D]">{t("businessCategories.title")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -932,7 +948,7 @@ export default function MerchantOnboarding() {
                           }}
                           className="h-4 w-4 accent-[#FF7F39]"
                         />
-                        <span className="text-sm">{category.name}</span>
+                        <span className="text-sm">{getLocalizedCategoryName(category)}</span>
                       </label>
                     );
                   })}
@@ -947,7 +963,7 @@ export default function MerchantOnboarding() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-[#00426D]">
-                    Brands <span className="text-slate-400 font-normal text-sm">({brandFields.length}/50)</span>
+                    {t("brands.title")} <span className="text-slate-400 font-normal text-sm">({brandFields.length}/50)</span>
                   </CardTitle>
                   <Button
                     type="button"
@@ -958,12 +974,12 @@ export default function MerchantOnboarding() {
                     data-testid="button-add-brand"
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Add Brand
+                    {t("brands.addBrand")}
                   </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {brandFields.length === 0 && (
-                    <p className="text-slate-500 text-sm text-center py-4">No brands added yet.</p>
+                    <p className="text-slate-500 text-sm text-center py-4">{t("brands.empty")}</p>
                   )}
                   {brandFields.map((brand, bIdx) => (
                     <BrandFormSection
@@ -982,15 +998,15 @@ export default function MerchantOnboarding() {
             {/* Branches */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-[#00426D]">Branches</CardTitle>
+                <CardTitle className="text-[#00426D]">{t("branches.title")}</CardTitle>
                 <Button type="button" variant="outline" size="sm" onClick={addBranch} data-testid="button-add-branch">
                   <Plus className="h-4 w-4 mr-1" />
-                  Add Branch
+                  {t("branches.addBranch")}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 {branchFields.length === 0 && (
-                  <p className="text-slate-500 text-sm text-center py-4">No branches added. Click "Add Branch" to add one.</p>
+                  <p className="text-slate-500 text-sm text-center py-4">{t("branches.empty")}</p>
                 )}
                 {branchFields.map((branch, index) => (
                   <div key={branch.id} className="p-4 border rounded-lg space-y-4 relative">
@@ -1010,11 +1026,11 @@ export default function MerchantOnboarding() {
                         name={`branches.${index}.name`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Branch Name *</FormLabel>
+                            <FormLabel>{t("branches.branchName")}</FormLabel>
                             <FormControl>
                               <Input 
                                 {...field} 
-                                placeholder="Branch name" 
+                                placeholder={t("branches.branchNamePlaceholder")} 
                                 data-testid={`input-branch-name-${index}`}
                                 onBlur={(e) => {
                                   field.onBlur();
@@ -1031,9 +1047,9 @@ export default function MerchantOnboarding() {
                         name={`branches.${index}.location`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Location (Google Maps URL)</FormLabel>
+                            <FormLabel>{t("branches.location")}</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="https://maps.google.com/..." data-testid={`input-branch-location-${index}`} />
+                              <Input {...field} placeholder={t("branches.locationPlaceholder")} data-testid={`input-branch-location-${index}`} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1044,12 +1060,12 @@ export default function MerchantOnboarding() {
                         name={`branches.${index}.phone`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone *</FormLabel>
+                            <FormLabel>{t("branches.phone")}</FormLabel>
                             <FormControl>
                               <PhoneInput
                                 value={field.value}
                                 onChange={field.onChange}
-                                placeholder="Phone number"
+                                placeholder={t("branches.phonePlaceholder")}
                                 data-testid={`input-branch-phone-${index}`}
                               />
                             </FormControl>
@@ -1062,9 +1078,9 @@ export default function MerchantOnboarding() {
                         name={`branches.${index}.detail`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Address Details</FormLabel>
+                            <FormLabel>{t("branches.addressDetails")}</FormLabel>
                             <FormControl>
-                              <Textarea {...field} placeholder="Branch address details" rows={2} data-testid={`textarea-branch-detail-${index}`} />
+                              <Textarea {...field} placeholder={t("branches.addressDetailsPlaceholder")} rows={2} data-testid={`textarea-branch-detail-${index}`} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -1076,7 +1092,7 @@ export default function MerchantOnboarding() {
                           name={`branches.${index}.brandId`}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Brand</FormLabel>
+                              <FormLabel>{t("branches.brand")}</FormLabel>
                               <FormControl>
                                 <select
                                   value={field.value || ""}
@@ -1084,10 +1100,10 @@ export default function MerchantOnboarding() {
                                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                   data-testid={`select-branch-brand-${index}`}
                                 >
-                                  <option value="">— Unassigned —</option>
+                                  <option value="">{t("brands.unassigned")}</option>
                                   {brandsValue.map((b: any, bIdx: number) => (
                                     <option key={bIdx} value={String(bIdx)}>
-                                      {b.brandName?.trim() || `Brand ${bIdx + 1}`}
+                                      {b.brandName?.trim() || t("brands.brandLabel", { num: bIdx + 1 })}
                                     </option>
                                   ))}
                                 </select>
@@ -1108,7 +1124,7 @@ export default function MerchantOnboarding() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-[#00426D]">
-                  Deals {dealFields.length > 0 && <span className="text-slate-400 font-normal text-sm">({dealFields.length}/20)</span>}
+                  {t("deals.title")} {dealFields.length > 0 && <span className="text-slate-400 font-normal text-sm">({dealFields.length}/20)</span>}
                 </CardTitle>
                 <Button
                   type="button"
@@ -1119,15 +1135,15 @@ export default function MerchantOnboarding() {
                   data-testid="button-add-deal"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  Add Deal
+                  {t("deals.addDeal")}
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 {dealFields.length === 0 && (
-                  <p className="text-slate-500 text-sm text-center py-4">No deals added. Click "Add Deal" to add one.</p>
+                  <p className="text-slate-500 text-sm text-center py-4">{t("deals.empty")}</p>
                 )}
                 {dealFields.length >= 20 && (
-                  <p className="text-amber-600 text-sm text-center py-2 bg-amber-50 rounded-md">Maximum of 20 deals reached.</p>
+                  <p className="text-amber-600 text-sm text-center py-2 bg-amber-50 rounded-md">{t("deals.maxReached")}</p>
                 )}
                 {dealFields.map((deal, index) => (
                   <DealFormSection
@@ -1151,13 +1167,13 @@ export default function MerchantOnboarding() {
             {/* Fee Information */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#00426D]">Fee Structure</CardTitle>
+                <CardTitle className="text-[#00426D]">{t("fees.title")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="bg-gradient-to-r from-[#00426D]/5 to-[#FF7F39]/5 p-4 sm:p-6 rounded-xl border border-[#00426D]/10">
                   <div className="space-y-4">
                     <div className="flex flex-col gap-2">
-                      <span className="text-base sm:text-lg font-bold text-[#00426D]">Subscription Fee (QAR per year):</span>
+                      <span className="text-base sm:text-lg font-bold text-[#00426D]">{t("fees.subscriptionFee")}</span>
                       <FormField
                         control={form.control}
                         name="subscriptionFee"
@@ -1173,7 +1189,7 @@ export default function MerchantOnboarding() {
                                   className="w-32 text-xl font-bold text-[#FF7F39] border-[#00426D]/30" 
                                   data-testid="input-subscription-fee"
                                 />
-                                <span className="text-base text-slate-600">QAR</span>
+                                <span className="text-base text-slate-600">{t("fees.qar")}</span>
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -1182,7 +1198,7 @@ export default function MerchantOnboarding() {
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <span className="text-base sm:text-lg font-bold text-[#00426D]">Transaction Fee (QAR per transaction):</span>
+                      <span className="text-base sm:text-lg font-bold text-[#00426D]">{t("fees.transactionFee")}</span>
                       <FormField
                         control={form.control}
                         name="transactionFee"
@@ -1198,7 +1214,7 @@ export default function MerchantOnboarding() {
                                   className="w-32 text-xl font-bold text-[#FF7F39] border-[#00426D]/30" 
                                   data-testid="input-transaction-fee"
                                 />
-                                <span className="text-base text-slate-600">QAR per transaction</span>
+                                <span className="text-base text-slate-600">{t("fees.qarPerTransaction")}</span>
                               </div>
                             </FormControl>
                             <FormMessage />
@@ -1212,15 +1228,15 @@ export default function MerchantOnboarding() {
                 <ul className="space-y-3 text-sm text-slate-700">
                   <li className="flex items-start gap-2">
                     <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
-                    <span><strong>Subscription Payment:</strong> 100% advance upon signing or renewal.</span>
+                    <span><strong>{t("fees.subPaymentLabel")}</strong> {t("fees.subPaymentText")}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
-                    <span><strong>Redemption Fees:</strong> Qatar Living will issue a monthly invoice for redeemed transactions; payments due within 15 days.</span>
+                    <span><strong>{t("fees.redemptionFeesLabel")}</strong> {t("fees.redemptionFeesText")}</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
-                    <span>Unpaid balances may lead to suspension of offers until cleared.</span>
+                    <span>{t("fees.unpaid")}</span>
                   </li>
                 </ul>
               </CardContent>
@@ -1232,37 +1248,37 @@ export default function MerchantOnboarding() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-[#00426D]">
                   <FileText className="h-5 w-5" />
-                  Required Documents
+                  {t("documents.title")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <DocumentUpload
-                    label="CR Document *"
+                    label={t("documents.crDocument")}
                     field="crDocument"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Establishment Card (Optional)"
+                    label={t("documents.establishmentCard")}
                     field="establishmentCard"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Trade License (Optional)"
+                    label={t("documents.tradeLicense")}
                     field="tradeLicense"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Menu / Price List (Optional)"
+                    label={t("documents.menuPriceList")}
                     field="menuPriceList"
                     form={form}
                     onChange={handleFileUpload}
                   />
                   <DocumentUpload
-                    label="Tax Card (Optional)"
+                    label={t("documents.taxCard")}
                     field="taxCardDocument"
                     form={form}
                     onChange={handleFileUpload}
@@ -1272,17 +1288,17 @@ export default function MerchantOnboarding() {
                 <Separator />
 
                 <div>
-                  <h4 className="font-medium text-[#00426D] mb-4">Brand Assets (Optional)</h4>
+                  <h4 className="font-medium text-[#00426D] mb-4">{t("documents.brandAssets")}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <DocumentUpload
-                      label="Logo"
+                      label={t("documents.logo")}
                       field="logo"
                       form={form}
                       onChange={handleFileUpload}
                       accept="image/*"
                     />
                     <DocumentUpload
-                      label="Cover Image"
+                      label={t("documents.coverImage")}
                       field="coverImage"
                       form={form}
                       onChange={handleFileUpload}
@@ -1298,28 +1314,28 @@ export default function MerchantOnboarding() {
             {/* Terms */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#00426D]">Terms & Conditions</CardTitle>
+                <CardTitle className="text-[#00426D]">{t("terms.title")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="bg-slate-50 p-4 rounded-lg space-y-4 text-sm text-slate-700 max-h-80 overflow-y-auto">
-                  <h4 className="font-semibold text-[#00426D]">Merchant Obligations</h4>
+                  <h4 className="font-semibold text-[#00426D]">{t("terms.obligationsTitle")}</h4>
                   <ul className="list-disc pl-5 space-y-1">
-                    <li>Merchant ensures goods/service meet quality standards and comply with regulations.</li>
-                    <li>Merchant will honor offers without extra fees or conditions.</li>
-                    <li>Merchant will resolve user complaints promptly at no cost to Qatar Living or the users.</li>
-                    <li>Merchant must provide an approved price list from the Ministry of Commerce and update Qatar Living on any changes.</li>
+                    <li>{t("terms.obligation1")}</li>
+                    <li>{t("terms.obligation2")}</li>
+                    <li>{t("terms.obligation3")}</li>
+                    <li>{t("terms.obligation4")}</li>
                   </ul>
                   
-                  <h4 className="font-semibold text-[#00426D] pt-3">Merchant Indemnity</h4>
-                  <p>Merchant agrees to indemnify, defend, and hold harmless Qatar Living from any claims, damages, liabilities, or losses arising from the Merchant's breach of this Agreement, any misrepresentations, or any failure to deliver the goods or services as promised.</p>
+                  <h4 className="font-semibold text-[#00426D] pt-3">{t("terms.indemnityTitle")}</h4>
+                  <p>{t("terms.indemnityText")}</p>
                   
-                  <h4 className="font-semibold text-[#00426D] pt-3">Entire Agreement</h4>
-                  <p>The agreement, together with the attached offer details and the Terms of Use available on the Qatar Living website (<a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">https://www.qatarliving.com/terms-of-use</a>), constitutes the entire agreement between the parties. This Agreement and the attached documents represent the full and complete understanding between both parties and supersede all prior discussions, negotiations, or agreements.</p>
+                  <h4 className="font-semibold text-[#00426D] pt-3">{t("terms.entireAgreementTitle")}</h4>
+                  <p>{t("terms.entireAgreementText1")}<a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">https://www.qatarliving.com/terms-of-use</a>{t("terms.entireAgreementText2")}</p>
                   
-                  <p className="pt-3">Please find the link to the Terms and Conditions below:<br/>
+                  <p className="pt-3">{t("terms.linkLabel")}<br/>
                   <a href="https://www.qatarliving.com/terms-of-use" target="_blank" rel="noopener noreferrer" className="text-[#00426D] hover:underline">https://www.qatarliving.com/terms-of-use</a></p>
                   
-                  <p className="pt-3 font-medium border-t border-slate-200 mt-3 pt-3">By signing this Agreement, you acknowledge that you have read, understood, and agree to be bound by the Terms of Use published on the Qatar Living website.</p>
+                  <p className="pt-3 font-medium border-t border-slate-200 mt-3 pt-3">{t("terms.acknowledge")}</p>
                 </div>
                 
                 <FormField
@@ -1336,10 +1352,10 @@ export default function MerchantOnboarding() {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel className="text-sm font-medium">
-                          I agree to the Terms and Conditions
+                          {t("terms.agreeCheckbox")}
                         </FormLabel>
                         <FormDescription className="text-xs text-slate-500">
-                          By checking this box, you confirm that you have read, understood, and agree to be bound by the Terms of Use.
+                          {t("terms.agreeDescription")}
                         </FormDescription>
                         <FormMessage />
                       </div>
@@ -1352,7 +1368,7 @@ export default function MerchantOnboarding() {
             {/* Authorized Signatory */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-[#00426D]">Authorized Signatory</CardTitle>
+                <CardTitle className="text-[#00426D]">{t("signatory.title")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <FormField
@@ -1360,12 +1376,12 @@ export default function MerchantOnboarding() {
                   name="merchantSignatoryName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Authorized Signatory Name *</FormLabel>
+                      <FormLabel>{t("signatory.name")}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Full name of authorized signatory" data-testid="input-signatory-name" />
+                        <Input {...field} placeholder={t("signatory.namePlaceholder")} data-testid="input-signatory-name" />
                       </FormControl>
                       <FormDescription className="text-xs text-slate-500">
-                        The signature and stamp will be added manually after downloading the PDF agreement.
+                        {t("signatory.description")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -1377,7 +1393,7 @@ export default function MerchantOnboarding() {
             {/* Submit */}
             <div className="flex justify-end gap-4 pb-8">
               <Button type="button" variant="outline" onClick={() => setLocation("/")}>
-                Cancel
+                {t("buttons.cancel")}
               </Button>
               <Button 
                 type="submit" 
@@ -1388,10 +1404,10 @@ export default function MerchantOnboarding() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
+                    {t("buttons.submitting")}
                   </>
                 ) : (
-                  "Submit Application"
+                  t("buttons.submit")
                 )}
               </Button>
             </div>
@@ -1409,6 +1425,7 @@ function DocumentUpload({ label, field, form, onChange, accept }: {
   onChange: (field: any, e: ChangeEvent<HTMLInputElement>, onError?: (msg: string) => void) => void;
   accept?: string;
 }) {
+  const { t } = useTranslation(["onboarding", "common"]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -1452,7 +1469,7 @@ function DocumentUpload({ label, field, form, onChange, accept }: {
         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
           <Check className="h-4 w-4 text-green-600 shrink-0" />
           <span className="text-sm text-green-700 truncate flex-1" title={fileName || undefined}>
-            {fileName || "File uploaded"}
+            {fileName || t("upload.fileUploaded")}
           </span>
           <div className="flex items-center gap-1 ml-auto shrink-0">
             <Button
@@ -1461,10 +1478,10 @@ function DocumentUpload({ label, field, form, onChange, accept }: {
               size="sm"
               onClick={() => { setUploadError(null); inputRef.current?.click(); }}
               className="text-slate-500 hover:text-[#00426D] h-7 px-2 text-xs"
-              title={`Replace ${label}`}
+              title={t("upload.replaceTitle", { label })}
             >
               <Pencil className="h-3 w-3 mr-1" />
-              Replace
+              {t("upload.replace")}
             </Button>
             <Button
               type="button"
@@ -1472,10 +1489,10 @@ function DocumentUpload({ label, field, form, onChange, accept }: {
               size="sm"
               onClick={handleClear}
               className="text-red-500 hover:text-red-700 h-7 px-2 text-xs"
-              title={`Remove ${label}`}
+              title={t("upload.removeTitle", { label })}
             >
               <X className="h-3 w-3 mr-1" />
-              Remove
+              {t("upload.remove")}
             </Button>
           </div>
         </div>
@@ -1490,7 +1507,7 @@ function DocumentUpload({ label, field, form, onChange, accept }: {
         >
           <Upload className={`h-5 w-5 ${fieldError || uploadError ? "text-red-400" : "text-slate-400"}`} />
           <span className={`text-sm ${fieldError || uploadError ? "text-red-500" : "text-slate-500"}`}>
-            Click to upload{isImage ? " (max 10 MB)" : " (max 25 MB)"}
+            {isImage ? t("upload.clickImage") : t("upload.clickFile")}
           </span>
         </div>
       )}
@@ -1515,12 +1532,13 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
   onRemove: () => void;
   handleFileUpload: (field: any, e: ChangeEvent<HTMLInputElement>, onError?: (msg: string) => void) => void;
 }) {
+  const { t } = useTranslation(["onboarding", "common"]);
   const brandCats: string[] = (useWatch({ control: form.control, name: `brands.${index}.businessCategories` as any }) as string[]) || [];
 
   return (
     <div className="p-4 border-2 border-[#00426D]/15 rounded-lg space-y-4 relative bg-slate-50/40" data-testid={`brand-section-${index}`}>
       <div className="flex items-center justify-between">
-        <h4 className="font-semibold text-[#00426D]">Brand {index + 1}</h4>
+        <h4 className="font-semibold text-[#00426D]">{t("onboarding:brands.brandLabel", { num: index + 1 })}</h4>
         <Button
           type="button"
           variant="ghost"
@@ -1539,9 +1557,9 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
           name={`brands.${index}.brandName`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Brand Name</FormLabel>
+              <FormLabel>{t("onboarding:brands.brandName")}</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} placeholder="Brand name" data-testid={`input-brand-${index}-name`} />
+                <Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.brandNamePlaceholder")} data-testid={`input-brand-${index}-name`} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -1552,9 +1570,9 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
           name={`brands.${index}.crNumber`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>CR Number</FormLabel>
+              <FormLabel>{t("onboarding:brands.crNumber")}</FormLabel>
               <FormControl>
-                <Input {...field} value={field.value || ""} placeholder="e.g. 123456" maxLength={14} data-testid={`input-brand-${index}-cr`} />
+                <Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.crNumberPlaceholder")} maxLength={14} data-testid={`input-brand-${index}-cr`} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -1567,9 +1585,9 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
         name={`brands.${index}.address`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Address</FormLabel>
+            <FormLabel>{t("onboarding:brands.address")}</FormLabel>
             <FormControl>
-              <Input {...field} value={field.value || ""} placeholder="Brand address" data-testid={`input-brand-${index}-address`} />
+              <Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.addressPlaceholder")} data-testid={`input-brand-${index}-address`} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -1584,8 +1602,8 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
           name={`brands.${index}.contactPerson`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Contact Person</FormLabel>
-              <FormControl><Input {...field} value={field.value || ""} placeholder="Full name" data-testid={`input-brand-${index}-contact`} /></FormControl>
+              <FormLabel>{t("onboarding:brands.contactPerson")}</FormLabel>
+              <FormControl><Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.contactPersonPlaceholder")} data-testid={`input-brand-${index}-contact`} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -1595,8 +1613,8 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
           name={`brands.${index}.email`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl><Input {...field} value={field.value || ""} type="email" placeholder="email@brand.com" data-testid={`input-brand-${index}-email`} /></FormControl>
+              <FormLabel>{t("onboarding:brands.email")}</FormLabel>
+              <FormControl><Input {...field} value={field.value || ""} type="email" placeholder={t("onboarding:brands.emailPlaceholder")} data-testid={`input-brand-${index}-email`} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -1606,9 +1624,9 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
           name={`brands.${index}.phone`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone</FormLabel>
+              <FormLabel>{t("onboarding:brands.phone")}</FormLabel>
               <FormControl>
-                <PhoneInput value={field.value || ""} onChange={field.onChange} placeholder="Phone" data-testid={`input-brand-${index}-phone`} />
+                <PhoneInput value={field.value || ""} onChange={field.onChange} placeholder={t("onboarding:brands.phonePlaceholder")} data-testid={`input-brand-${index}-phone`} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -1619,9 +1637,9 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
           name={`brands.${index}.whatsapp`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>WhatsApp</FormLabel>
+              <FormLabel>{t("onboarding:brands.whatsapp")}</FormLabel>
               <FormControl>
-                <PhoneInput value={field.value || ""} onChange={field.onChange} placeholder="WhatsApp" data-testid={`input-brand-${index}-whatsapp`} />
+                <PhoneInput value={field.value || ""} onChange={field.onChange} placeholder={t("onboarding:brands.whatsappPlaceholder")} data-testid={`input-brand-${index}-whatsapp`} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -1632,7 +1650,7 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
       <Separator />
 
       <div>
-        <Label className="text-sm font-medium text-[#00426D]">Business Categories</Label>
+        <Label className="text-sm font-medium text-[#00426D]">{t("onboarding:brands.businessCategories")}</Label>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
           {categories.map((c) => {
             const sel = brandCats.includes(c.name);
@@ -1650,7 +1668,7 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
                   }}
                   className="h-3 w-3 accent-[#FF7F39]"
                 />
-                <span>{c.name}</span>
+                <span>{getLocalizedCategoryName(c)}</span>
               </label>
             );
           })}
@@ -1660,15 +1678,15 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
       <Separator />
 
       <div>
-        <Label className="text-sm font-medium text-[#00426D]">Documents</Label>
+        <Label className="text-sm font-medium text-[#00426D]">{t("onboarding:brands.documents")}</Label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          <DocumentUpload label="CR Document" field={`brands.${index}.crDocument` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label="Establishment Card" field={`brands.${index}.establishmentCard` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label="Trade License" field={`brands.${index}.tradeLicense` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label="Menu / Price List" field={`brands.${index}.menuPriceList` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label="Tax Card" field={`brands.${index}.taxCardDocument` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label="Logo" field={`brands.${index}.logo` as any} form={form} onChange={handleFileUpload} accept="image/*" />
-          <DocumentUpload label="Cover Image" field={`brands.${index}.coverImage` as any} form={form} onChange={handleFileUpload} accept="image/*" />
+          <DocumentUpload label={t("onboarding:brands.docCrDocument")} field={`brands.${index}.crDocument` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label={t("onboarding:brands.docEstablishmentCard")} field={`brands.${index}.establishmentCard` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label={t("onboarding:brands.docTradeLicense")} field={`brands.${index}.tradeLicense` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label={t("onboarding:brands.docMenuPriceList")} field={`brands.${index}.menuPriceList` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label={t("onboarding:brands.docTaxCard")} field={`brands.${index}.taxCardDocument` as any} form={form} onChange={handleFileUpload} />
+          <DocumentUpload label={t("onboarding:brands.docLogo")} field={`brands.${index}.logo` as any} form={form} onChange={handleFileUpload} accept="image/*" />
+          <DocumentUpload label={t("onboarding:brands.docCoverImage")} field={`brands.${index}.coverImage` as any} form={form} onChange={handleFileUpload} accept="image/*" />
         </div>
       </div>
     </div>
@@ -1676,6 +1694,7 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
 }
 
 function TwoTranchesSection({ form, index }: { form: any; index: number }) {
+  const { t } = useTranslation(["onboarding", "common"]);
   const isTwoTranches = useWatch({ control: form.control, name: `deals.${index}.isTwoTranches` });
   
   return (
@@ -1692,11 +1711,11 @@ function TwoTranchesSection({ form, index }: { form: any; index: number }) {
               />
             </FormControl>
             <FormLabel className="font-medium text-slate-700 flex items-center gap-1.5">
-              Is this deal valid for two tranches?
+              {t("onboarding:deals.twoTranches")}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                  <TooltipContent><p className="max-w-xs text-xs">A two-tranche deal splits the offer into two usage periods. For example, "Buy 1 Get 1" can be redeemed in two separate visits.</p></TooltipContent>
+                  <TooltipContent><p className="max-w-xs text-xs">{t("onboarding:deals.twoTranchesTooltip")}</p></TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </FormLabel>
@@ -1711,26 +1730,19 @@ function TwoTranchesSection({ form, index }: { form: any; index: number }) {
             name={`deals.${index}.trancheValidity`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs font-bold text-slate-500 uppercase">Tranche Validity</FormLabel>
+                <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("onboarding:deals.trancheValidity")}</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="h-11 bg-white">
-                      <SelectValue placeholder="Choose" />
+                      <SelectValue placeholder={t("onboarding:deals.trancheChoose")} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="1">1 Week</SelectItem>
-                    <SelectItem value="2">2 Weeks</SelectItem>
-                    <SelectItem value="3">3 Weeks</SelectItem>
-                    <SelectItem value="4">4 Weeks</SelectItem>
-                    <SelectItem value="5">5 Weeks</SelectItem>
-                    <SelectItem value="6">6 Weeks</SelectItem>
-                    <SelectItem value="7">7 Weeks</SelectItem>
-                    <SelectItem value="8">8 Weeks</SelectItem>
-                    <SelectItem value="9">9 Weeks</SelectItem>
-                    <SelectItem value="10">10 Weeks</SelectItem>
-                    <SelectItem value="11">11 Weeks</SelectItem>
-                    <SelectItem value="12">12 Weeks</SelectItem>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n === 1 ? t("onboarding:deals.weekSingular", { count: n }) : t("onboarding:deals.weekPlural", { count: n })}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </FormItem>
@@ -1743,6 +1755,7 @@ function TwoTranchesSection({ form, index }: { form: any; index: number }) {
 }
 
 function OfferAvailabilityDays({ form, index }: { form: any; index: number }) {
+  const { t } = useTranslation(["onboarding", "common"]);
   const specificDays = useWatch({ control: form.control, name: `deals.${index}.specificDays` }) || false;
   const days = useWatch({ control: form.control, name: `deals.${index}.days` }) || [];
 
@@ -1774,11 +1787,11 @@ function OfferAvailabilityDays({ form, index }: { form: any; index: number }) {
               />
             </FormControl>
             <FormLabel className="font-medium text-slate-700 flex items-center gap-1.5">
-              Available on specific days only
+              {t("onboarding:deals.specificDays")}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                  <TooltipContent><p className="max-w-xs text-xs">Restrict this deal to certain days of the week. Useful for weekday-only or weekend-only promotions.</p></TooltipContent>
+                  <TooltipContent><p className="max-w-xs text-xs">{t("onboarding:deals.specificDaysTooltip")}</p></TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </FormLabel>
@@ -1790,10 +1803,10 @@ function OfferAvailabilityDays({ form, index }: { form: any; index: number }) {
         <div className="mt-4 ml-7 space-y-3">
           <div className="flex gap-2">
             <Button type="button" variant="outline" size="sm" onClick={setWeekdays} data-testid={`button-weekdays-${index}`}>
-              Weekdays
+              {t("onboarding:deals.weekdays")}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={setWeekends} data-testid={`button-weekends-${index}`}>
-              Weekends
+              {t("onboarding:deals.weekends")}
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1805,7 +1818,7 @@ function OfferAvailabilityDays({ form, index }: { form: any; index: number }) {
                   onChange={() => toggleDay(day)}
                   className="h-4 w-4 accent-[#FF7F39]"
                 />
-                <span className="text-sm">{day}</span>
+                <span className="text-sm">{t(`onboarding:days.${day}`)}</span>
               </label>
             ))}
           </div>
@@ -1819,6 +1832,7 @@ const MAX_IMAGE_MB = 10;
 const MAX_IMAGE_BYTES = MAX_IMAGE_MB * 1024 * 1024;
 
 function DealImageUpload({ form, index }: { form: any; index: number }) {
+  const { t } = useTranslation(["onboarding", "common"]);
   const addInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -1844,7 +1858,7 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ files: base64List }),
     });
-    if (!res.ok) throw new Error("Upload failed. Please try again.");
+    if (!res.ok) throw new Error(t("onboarding:toast.uploadFailed"));
     const { urls } = await res.json();
     return urls;
   };
@@ -1892,11 +1906,11 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
 
   return (
     <div className="space-y-3">
-      <Label>Deal Images ({images.length}/4 minimum) *</Label>
+      <Label>{t("onboarding:deals.dealImages", { count: images.length })}</Label>
 
       {imageError && (
         <p className="text-sm text-red-500" data-testid={`text-deal-images-error-${index}`}>
-          At least 4 images are required for this deal
+          {t("onboarding:deals.imagesError")}
         </p>
       )}
 
@@ -1916,29 +1930,29 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
           <div key={imgIndex} className="relative flex flex-col items-center gap-1">
             <img
               src={img}
-              alt={`Deal image ${imgIndex + 1}`}
+              alt={t("onboarding:deals.imageAlt", { num: imgIndex + 1 })}
               className="w-24 h-24 object-cover rounded-lg border border-slate-200"
             />
             <div className="flex gap-1">
               <button
                 type="button"
-                title="Replace image"
+                title={t("onboarding:deals.replace")}
                 onClick={() => { setReplacingIndex(imgIndex); replaceInputRef.current?.click(); }}
                 className="flex items-center gap-0.5 text-xs text-slate-500 hover:text-[#00426D] bg-slate-100 hover:bg-slate-200 rounded px-1.5 py-0.5 transition-colors"
                 data-testid={`button-replace-image-${index}-${imgIndex}`}
               >
                 <Pencil className="h-3 w-3" />
-                <span>Replace</span>
+                <span>{t("onboarding:deals.replace")}</span>
               </button>
               <button
                 type="button"
-                title="Remove image"
+                title={t("onboarding:deals.remove")}
                 onClick={() => removeImage(imgIndex)}
                 className="flex items-center gap-0.5 text-xs text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded px-1.5 py-0.5 transition-colors"
                 data-testid={`button-remove-image-${index}-${imgIndex}`}
               >
                 <X className="h-3 w-3" />
-                <span>Remove</span>
+                <span>{t("onboarding:deals.remove")}</span>
               </button>
             </div>
           </div>
@@ -1958,7 +1972,7 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
           ) : (
             <>
               <ImageIcon className="h-6 w-6 mb-1" />
-              <span className="text-xs">Add Image</span>
+              <span className="text-xs">{t("onboarding:deals.addImage")}</span>
             </>
           )}
         </button>
@@ -1991,11 +2005,12 @@ function DealFormSection({
   onToggle: () => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation(["onboarding", "common"]);
   const offerTypes = [
-    { id: "bogo", label: "Buy 1 Get 1", icon: Gift },
-    { id: "discount", label: "Discount", icon: Percent },
-    { id: "voucher", label: "Voucher", icon: Tag },
-    { id: "bundle", label: "Bundle", icon: ShoppingBag },
+    { id: "bogo", label: t("onboarding:deals.offers.bogo"), icon: Gift },
+    { id: "discount", label: t("onboarding:deals.offers.discount"), icon: Percent },
+    { id: "voucher", label: t("onboarding:deals.offers.voucher"), icon: Tag },
+    { id: "bundle", label: t("onboarding:deals.offers.bundle"), icon: ShoppingBag },
   ];
 
   const categoryValue = useWatch({ control: form.control, name: `deals.${index}.category` });
@@ -2022,7 +2037,7 @@ function DealFormSection({
       >
         <div className="flex items-center gap-2">
           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          <span className="font-medium">Deal {index + 1}</span>
+          <span className="font-medium">{t("onboarding:deals.dealLabel", { num: index + 1 })}</span>
         </div>
         <Button
           type="button"
@@ -2042,9 +2057,9 @@ function DealFormSection({
             name={`deals.${index}.title`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Deal Title *</FormLabel>
+                <FormLabel>{t("onboarding:deals.dealTitle")}</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="E.g., Buy 1 Get 1 Free on All Pizzas" />
+                  <Input {...field} placeholder={t("onboarding:deals.dealTitlePlaceholder")} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -2057,16 +2072,16 @@ function DealFormSection({
               name={`deals.${index}.category`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category *</FormLabel>
+                  <FormLabel>{t("onboarding:deals.category")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={t("onboarding:deals.categoryPlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                        <SelectItem key={cat.id} value={cat.name}>{getLocalizedCategoryName(cat)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -2080,16 +2095,16 @@ function DealFormSection({
               name={`deals.${index}.subCategory`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Sub-Category *</FormLabel>
+                  <FormLabel>{t("onboarding:deals.subCategory")}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value} disabled={!categoryValue}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select sub-category" />
+                        <SelectValue placeholder={t("onboarding:deals.subCategoryPlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {subCategories.map((sub) => (
-                        <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
+                        <SelectItem key={sub.id} value={sub.name}>{getLocalizedCategoryName(sub)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -2104,7 +2119,7 @@ function DealFormSection({
             name={`deals.${index}.dealType`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Deal Type *</FormLabel>
+                <FormLabel>{t("onboarding:deals.dealType")}</FormLabel>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {offerTypes.map((type) => {
                     const Icon = type.icon;
@@ -2136,16 +2151,16 @@ function DealFormSection({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-1.5">
-                    Duration *
+                    {t("onboarding:deals.duration")}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                        <TooltipContent><p className="max-w-xs text-xs">How long this deal stays active on the platform. E.g., "3 months", "6 weeks", or "1 year".</p></TooltipContent>
+                        <TooltipContent><p className="max-w-xs text-xs">{t("onboarding:deals.durationTooltip")}</p></TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="e.g., 3 months, 6 weeks, 1 year" />
+                    <Input {...field} placeholder={t("onboarding:deals.durationPlaceholder")} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -2158,23 +2173,23 @@ function DealFormSection({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-1.5">
-                    Redemption *
+                    {t("onboarding:deals.redemption")}
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                        <TooltipContent><p className="max-w-xs text-xs">Choose "Unlimited" to let customers use this deal as many times as they want, or "Limited" to set a maximum per customer.</p></TooltipContent>
+                        <TooltipContent><p className="max-w-xs text-xs">{t("onboarding:deals.redemptionTooltip")}</p></TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select redemption type" />
+                        <SelectValue placeholder={t("onboarding:deals.redemptionPlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="unlimited">Unlimited</SelectItem>
-                      <SelectItem value="limited">Limited</SelectItem>
+                      <SelectItem value="unlimited">{t("onboarding:deals.unlimited")}</SelectItem>
+                      <SelectItem value="limited">{t("onboarding:deals.limited")}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -2188,9 +2203,9 @@ function DealFormSection({
                 name={`deals.${index}.limitPerUser`}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Limit Per User *</FormLabel>
+                    <FormLabel>{t("onboarding:deals.limitPerUser")}</FormLabel>
                     <FormControl>
-                      <Input {...field} type="number" placeholder="e.g., 1" />
+                      <Input {...field} type="number" placeholder={t("onboarding:deals.limitPerUserPlaceholder")} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -2217,11 +2232,11 @@ function DealFormSection({
                       />
                     </FormControl>
                     <FormLabel className="font-medium text-slate-700 flex items-center gap-1.5">
-                      This Deal is for Multiple Items
+                      {t("onboarding:deals.multipleItems")}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger type="button"><HelpCircle className="h-3.5 w-3.5 text-slate-400" /></TooltipTrigger>
-                          <TooltipContent><p className="max-w-xs text-xs">Enable this if the deal covers multiple products or menu items. Pricing won't be displayed on the deal card when enabled.</p></TooltipContent>
+                          <TooltipContent><p className="max-w-xs text-xs">{t("onboarding:deals.multipleItemsTooltip")}</p></TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </FormLabel>
@@ -2233,7 +2248,7 @@ function DealFormSection({
                 <div className="bg-[#FFF8E1] border border-[#FFE082] rounded-md p-3 flex items-start gap-3">
                   <Info className="h-5 w-5 text-[#F57F17] flex-shrink-0" />
                   <p className="text-[#5D4037] text-sm">
-                    If your deal is for multiple items, the price won't show on the deal card and details page.
+                    {t("onboarding:deals.multipleItemsInfo")}
                   </p>
                 </div>
               )}
@@ -2247,12 +2262,12 @@ function DealFormSection({
                 name={`deals.${index}.originalPrice`}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{dealTypeValue === "voucher" ? "Voucher Amount" : "Original Price"} *</FormLabel>
+                    <FormLabel>{dealTypeValue === "voucher" ? t("onboarding:deals.voucherAmount") : t("onboarding:deals.originalPrice")} *</FormLabel>
                     <div className="relative">
                       <FormControl>
-                        <Input placeholder="0.00" className="pr-12" {...field} />
+                        <Input placeholder={t("onboarding:deals.pricePlaceholder")} className="pr-12" {...field} />
                       </FormControl>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">{t("onboarding:fees.qar")}</div>
                     </div>
                     <FormMessage />
                   </FormItem>
@@ -2276,7 +2291,7 @@ function DealFormSection({
                       )}
                       data-testid={`button-discount-percentage-${index}`}
                     >
-                      Discount %
+                      {t("onboarding:deals.discountPercent")}
                     </button>
                     <button
                       type="button"
@@ -2292,7 +2307,7 @@ function DealFormSection({
                       )}
                       data-testid={`button-discount-price-${index}`}
                     >
-                      Discounted Price
+                      {t("onboarding:deals.discountedPrice")}
                     </button>
                   </div>
                   {discountType === "percentage" ? (
@@ -2301,10 +2316,10 @@ function DealFormSection({
                       name={`deals.${index}.discountPercentage`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Discount Percentage *</FormLabel>
+                          <FormLabel>{t("onboarding:deals.discountPercentage")}</FormLabel>
                           <div className="relative">
                             <FormControl>
-                              <Input placeholder="0" className="pr-12" {...field} />
+                              <Input placeholder={t("onboarding:deals.discountPercentagePlaceholder")} className="pr-12" {...field} />
                             </FormControl>
                             <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">%</div>
                           </div>
@@ -2318,12 +2333,12 @@ function DealFormSection({
                       name={`deals.${index}.discountedPrice`}
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Discounted Price *</FormLabel>
+                          <FormLabel>{t("onboarding:deals.discountedPriceLabel")}</FormLabel>
                           <div className="relative">
                             <FormControl>
-                              <Input placeholder="0.00" className="pr-12" {...field} />
+                              <Input placeholder={t("onboarding:deals.pricePlaceholder")} className="pr-12" {...field} />
                             </FormControl>
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">{t("onboarding:fees.qar")}</div>
                           </div>
                           <FormMessage />
                         </FormItem>
@@ -2340,9 +2355,9 @@ function DealFormSection({
             name={`deals.${index}.description`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Description</FormLabel>
+                <FormLabel>{t("onboarding:deals.description")}</FormLabel>
                 <FormControl>
-                  <Textarea {...field} placeholder="Describe the deal..." rows={3} />
+                  <Textarea {...field} placeholder={t("onboarding:deals.descriptionPlaceholder")} rows={3} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -2350,7 +2365,7 @@ function DealFormSection({
           />
 
           <div>
-            <Label>Claim Rules *</Label>
+            <Label>{t("onboarding:deals.claimRules")}</Label>
             <div className="space-y-2 mt-2">
               {claimTerms.map((term) => {
                 const isSelected = claimRulesValue.includes(term.text);
@@ -2379,7 +2394,7 @@ function DealFormSection({
           </div>
 
           <div>
-            <Label>General Rules *</Label>
+            <Label>{t("onboarding:deals.generalRules")}</Label>
             <div className="space-y-2 mt-2">
               {generalTerms.map((term) => {
                 const isSelected = generalRulesValue.includes(term.text);
@@ -2412,9 +2427,9 @@ function DealFormSection({
             name={`deals.${index}.otherRules`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Other Rules / Additional Terms</FormLabel>
+                <FormLabel>{t("onboarding:deals.otherRules")}</FormLabel>
                 <FormControl>
-                  <Textarea {...field} placeholder="Enter any additional rules or terms..." rows={3} />
+                  <Textarea {...field} placeholder={t("onboarding:deals.otherRulesPlaceholder")} rows={3} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -2423,23 +2438,24 @@ function DealFormSection({
 
           {branches.length === 0 ? (
             <div>
-              <Label>Applicable Branches</Label>
-              <p className="text-sm text-slate-500 mt-2">Add branches above first</p>
+              <Label>{t("onboarding:deals.applicableBranches")}</Label>
+              <p className="text-sm text-slate-500 mt-2">{t("onboarding:deals.addBranchesFirst")}</p>
             </div>
           ) : branches.length === 1 ? (
             <div>
-              <Label>Applicable Branch</Label>
+              <Label>{t("onboarding:deals.applicableBranch")}</Label>
               <p className="text-sm text-slate-600 mt-2 p-2 bg-slate-50 rounded border">
-                {branches[0]?.name || "Branch 1"} (automatically selected)
+                {branches[0]?.name || t("onboarding:branches.branchFallback", { num: 1 })} {t("onboarding:deals.autoSelected")}
               </p>
             </div>
           ) : (
             <div>
-              <Label>Applicable Branches *</Label>
-              <p className="text-xs text-slate-500 mb-2">Select at least one branch</p>
+              <Label>{t("onboarding:deals.applicableBranchesRequired")}</Label>
+              <p className="text-xs text-slate-500 mb-2">{t("onboarding:deals.selectAtLeastOneBranch")}</p>
               <div className="space-y-2">
                 {branches.map((branch: any, branchIndex: number) => {
                   const displayName = branch?.name || `Branch ${branchIndex + 1}`;
+                  const branchLabel = branch?.name || t("onboarding:branches.branchFallback", { num: branchIndex + 1 });
                   const isSelected = branchesValue.includes(displayName);
                   return (
                     <label
@@ -2458,13 +2474,13 @@ function DealFormSection({
                         }}
                         className="h-4 w-4 accent-[#FF7F39]"
                       />
-                      <span className="text-sm">{displayName}</span>
+                      <span className="text-sm">{branchLabel}</span>
                     </label>
                   );
                 })}
               </div>
               {branchesValue.length === 0 && (
-                <p className="text-sm text-red-500 mt-1">Please select at least one branch</p>
+                <p className="text-sm text-red-500 mt-1">{t("onboarding:deals.pleaseSelectBranch")}</p>
               )}
             </div>
           )}
