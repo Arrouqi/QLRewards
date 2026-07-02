@@ -173,6 +173,9 @@ export default function DealView() {
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle className="text-2xl text-[#00426D]" data-testid="text-title">{deal.title}</CardTitle>
+                {deal.titleAr && (
+                  <p className="text-lg text-slate-700 mt-1" dir="rtl" data-testid="text-title-ar">{deal.titleAr}</p>
+                )}
                 <p className="text-sm text-slate-500 mt-1">
                   Created on {format(new Date(deal.createdAt), "MMMM d, yyyy 'at' h:mm a")}
                 </p>
@@ -281,6 +284,9 @@ export default function DealView() {
               </div>
               <div className="bg-slate-50 rounded-lg p-4">
                 <p className="text-slate-700 whitespace-pre-wrap" data-testid="text-description">{deal.description}</p>
+                {deal.descriptionAr && (
+                  <p className="text-slate-700 whitespace-pre-wrap mt-3 pt-3 border-t border-slate-200" dir="rtl" data-testid="text-description-ar">{deal.descriptionAr}</p>
+                )}
               </div>
             </div>
 

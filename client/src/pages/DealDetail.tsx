@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { BilingualTabs } from "@/components/BilingualTabs";
 import type { Deal, AdminUser } from "@shared/schema";
 
 const ASPECT_RATIO = 16 / 10;
@@ -90,7 +91,9 @@ const dealSchema = z.object({
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
   title: z.string().min(5, "Title must be at least 5 characters"),
+  titleAr: z.string().optional(),
   description: z.string().min(1, "Description is required"),
+  descriptionAr: z.string().optional(),
   claimRules: z.array(z.string()).min(1, "Select at least one claim rule"),
   generalRules: z.array(z.string()).min(1, "Select at least one general rule"),
   otherRules: z.string().optional(),
@@ -198,7 +201,9 @@ export default function DealDetail() {
       specificDays: false,
       days: [],
       title: "",
+      titleAr: "",
       description: "",
+      descriptionAr: "",
       claimRules: [],
       generalRules: [],
       otherRules: "",
@@ -261,7 +266,9 @@ export default function DealDetail() {
         specificDays: data.specificDays || false,
         days: data.days || [],
         title: data.title || "",
+        titleAr: data.titleAr || "",
         description: data.description || "",
+        descriptionAr: data.descriptionAr || "",
         claimRules: data.claimRules || [],
         generalRules: data.generalRules || [],
         otherRules: data.otherRules || "",
@@ -817,18 +824,40 @@ export default function DealDetail() {
                   <h2 className="text-lg font-bold text-[#00426D] mb-4">Deal Details</h2>
                   
                   <div className="space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Title <span className="text-red-500">*</span></FormLabel>
-                          <FormControl>
-                            <Input className="h-11 bg-slate-50" {...field} data-testid="input-title" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                    <BilingualTabs
+                      idPrefix="deal-title"
+                      hasEnglishError={!!form.formState.errors.title}
+                      hasArabicError={!!form.formState.errors.titleAr}
+                      english={
+                        <FormField
+                          control={form.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">Title <span className="text-red-500">*</span></FormLabel>
+                              <FormControl>
+                                <Input className="h-11 bg-slate-50" {...field} data-testid="input-title" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      }
+                      arabic={
+                        <FormField
+                          control={form.control}
+                          name="titleAr"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">Deal Title (Arabic)</FormLabel>
+                              <FormControl>
+                                <Input className="h-11 bg-slate-50 text-right" dir="rtl" {...field} value={field.value || ""} data-testid="input-title-ar" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      }
                     />
 
                     <div className="grid grid-cols-2 gap-4">
@@ -1189,18 +1218,40 @@ export default function DealDetail() {
                       )}
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">Description <span className="text-red-500">*</span></FormLabel>
-                          <FormControl>
-                            <Textarea className="bg-slate-50 min-h-[100px]" {...field} data-testid="textarea-description" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                    <BilingualTabs
+                      idPrefix="deal-description"
+                      hasEnglishError={!!form.formState.errors.description}
+                      hasArabicError={!!form.formState.errors.descriptionAr}
+                      english={
+                        <FormField
+                          control={form.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">Description <span className="text-red-500">*</span></FormLabel>
+                              <FormControl>
+                                <Textarea className="bg-slate-50 min-h-[100px]" {...field} data-testid="textarea-description" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      }
+                      arabic={
+                        <FormField
+                          control={form.control}
+                          name="descriptionAr"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">Description (Arabic)</FormLabel>
+                              <FormControl>
+                                <Textarea className="bg-slate-50 min-h-[100px] text-right" dir="rtl" {...field} value={field.value || ""} data-testid="textarea-description-ar" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      }
                     />
                   </div>
                 </div>

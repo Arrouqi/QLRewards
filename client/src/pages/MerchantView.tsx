@@ -54,12 +54,17 @@ import * as XLSX from "xlsx";
 interface Merchant {
   id: string;
   companyName: string;
+  companyNameAr?: string;
   crNumber: string;
   brandName: string;
+  brandNameAr?: string;
   address: string;
   contactPerson: string;
   email: string;
   phone: string;
+  pocName?: string;
+  pocPhone?: string;
+  pocEmail?: string;
   products: string[];
   businessCategories: string[];
   branches: string[];
@@ -86,6 +91,7 @@ interface Merchant {
   brands?: Array<{
     id?: string;
     brandName?: string | null;
+    brandNameAr?: string | null;
     crNumber?: string | null;
     address?: string | null;
     contactPerson?: string | null;
@@ -1113,13 +1119,25 @@ export default function MerchantView() {
                   <CardTitle className="text-2xl text-[#00426D]" data-testid="text-company-name">
                     {merchant.companyName}
                   </CardTitle>
+                  {merchant.companyNameAr && (
+                    <p className="text-sm text-slate-500 mt-0.5" dir="rtl" data-testid="text-company-name-ar">
+                      {merchant.companyNameAr}
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 mt-1">
                     {(merchant as any).companyType === "group" ? (
                       <Badge className="bg-[#00426D] text-white" data-testid="badge-company-type">Group</Badge>
                     ) : (
                       <Badge variant="outline" data-testid="badge-company-type">Individual</Badge>
                     )}
-                    {merchant.brandName && <p className="text-slate-500">{merchant.brandName}</p>}
+                    {merchant.brandName && (
+                      <p className="text-slate-500">
+                        {merchant.brandName}
+                        {merchant.brandNameAr && (
+                          <span className="text-slate-400" dir="rtl" data-testid="text-brand-name-ar"> — {merchant.brandNameAr}</span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1182,6 +1200,35 @@ export default function MerchantView() {
               </div>
             </div>
 
+            {(merchant.pocName || merchant.pocPhone || merchant.pocEmail) && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4" data-testid="section-poc">
+                <h4 className="font-medium mb-3 flex items-center gap-2 text-[#00426D]">
+                  <User className="h-4 w-4" />
+                  Point of Contact for Daily Operations
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {merchant.pocName && (
+                    <div>
+                      <p className="text-xs text-slate-500">Contact Name</p>
+                      <p className="font-medium" data-testid="text-poc-name">{merchant.pocName}</p>
+                    </div>
+                  )}
+                  {merchant.pocPhone && (
+                    <div>
+                      <p className="text-xs text-slate-500">Contact Phone</p>
+                      <p className="font-medium" data-testid="text-poc-phone">{merchant.pocPhone}</p>
+                    </div>
+                  )}
+                  {merchant.pocEmail && (
+                    <div>
+                      <p className="text-xs text-slate-500">Contact Email</p>
+                      <p className="font-medium" data-testid="text-poc-email">{merchant.pocEmail}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <Separator />
 
             <div>
@@ -1212,7 +1259,12 @@ export default function MerchantView() {
               {(merchant as any).brands.map((b: any, idx: number) => (
                 <div key={b.id || idx} className="p-4 border-2 border-[#00426D]/15 rounded-lg bg-slate-50/40 space-y-3" data-testid={`brand-view-${idx}`}>
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-[#00426D]">{b.brandName || `Brand ${idx + 1}`}</h4>
+                    <div>
+                      <h4 className="font-semibold text-[#00426D]">{b.brandName || `Brand ${idx + 1}`}</h4>
+                      {b.brandNameAr && (
+                        <p className="text-xs text-slate-500" dir="rtl" data-testid={`text-brand-${idx}-name-ar`}>{b.brandNameAr}</p>
+                      )}
+                    </div>
                     {b.crNumber && <span className="text-xs text-slate-500">CR: {b.crNumber}</span>}
                   </div>
                   {b.address && <p className="text-sm text-slate-600"><MapPin className="h-3.5 w-3.5 inline mr-1" />{b.address}</p>}
@@ -1367,6 +1419,9 @@ export default function MerchantView() {
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <h4 className="font-semibold text-lg text-[#00426D]">{deal.title}</h4>
+                          {deal.titleAr && (
+                            <p className="text-sm text-slate-500" dir="rtl" data-testid={`text-deal-${index}-title-ar`}>{deal.titleAr}</p>
+                          )}
                           <p className="text-sm text-slate-500">{deal.category} {deal.subCategory ? `- ${deal.subCategory}` : ''}</p>
                         </div>
                         <Badge variant="outline" className="bg-white">{deal.dealType}</Badge>
@@ -1374,6 +1429,9 @@ export default function MerchantView() {
                       
                       {deal.description && (
                         <p className="text-sm text-slate-600 mb-4 bg-white p-3 rounded border">{deal.description}</p>
+                      )}
+                      {deal.descriptionAr && (
+                        <p className="text-sm text-slate-600 mb-4 bg-white p-3 rounded border" dir="rtl" data-testid={`text-deal-${index}-description-ar`}>{deal.descriptionAr}</p>
                       )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">

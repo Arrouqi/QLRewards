@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
+import { BilingualTabs } from "@/components/BilingualTabs";
 
 interface SubCategory {
   id: string;
@@ -61,17 +62,24 @@ interface Deal {
   branches?: string[];
   images?: string[];
   brandId?: string | null;
+  titleAr?: string;
+  descriptionAr?: string;
 }
 
 interface Merchant {
   id: string;
   companyName: string;
+  companyNameAr?: string;
   crNumber: string;
   brandName: string;
+  brandNameAr?: string;
   address: string;
   contactPerson: string;
   email: string;
   phone: string;
+  pocName?: string;
+  pocPhone?: string;
+  pocEmail?: string;
   products: string[];
   businessCategories: string[];
   branches: string[];
@@ -112,13 +120,18 @@ export default function MerchantEdit() {
 
   const [formData, setFormData] = useState({
     companyName: "",
+    companyNameAr: "",
     crNumber: "",
     brandName: "",
+    brandNameAr: "",
     address: "",
     contactPerson: "",
     email: "",
     phone: "",
     whatsapp: "",
+    pocName: "",
+    pocPhone: "",
+    pocEmail: "",
     subscriptionFee: "",
     transactionFee: "",
     products: "",
@@ -203,13 +216,18 @@ export default function MerchantEdit() {
       setBranches(parsedBranches);
       setFormData({
         companyName: data.companyName || "",
+        companyNameAr: data.companyNameAr || "",
         crNumber: data.crNumber || "",
         brandName: data.brandName || "",
+        brandNameAr: data.brandNameAr || "",
         address: data.address || "",
         contactPerson: data.contactPerson || "",
         email: data.email || "",
         phone: data.phone || "",
         whatsapp: data.whatsapp || "",
+        pocName: data.pocName || "",
+        pocPhone: data.pocPhone || "",
+        pocEmail: data.pocEmail || "",
         subscriptionFee: data.subscriptionFee || "",
         transactionFee: data.transactionFee || "",
         products: data.products?.join(", ") || "",
@@ -239,7 +257,9 @@ export default function MerchantEdit() {
             specificDays: deal.specificDays || false,
             days: deal.days || [],
             title: deal.title || "",
+            titleAr: deal.titleAr || "",
             description: deal.description || "",
+            descriptionAr: deal.descriptionAr || "",
             claimRules: deal.claimRules || [],
             generalRules: deal.generalRules || [],
             otherRules: deal.otherRules || "",
@@ -361,7 +381,9 @@ export default function MerchantEdit() {
       duration: "",
       redemption: "",
       title: "",
+      titleAr: "",
       description: "",
+      descriptionAr: "",
       claimRules: [],
       generalRules: [],
       branches: [],
@@ -777,6 +799,20 @@ export default function MerchantEdit() {
                 />
                 {fieldErrors.companyName && <p className="text-sm text-red-500 mt-1">{fieldErrors.companyName}</p>}
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="companyNameAr">Company Name (Arabic)</Label>
+                <Input
+                  id="companyNameAr"
+                  name="companyNameAr"
+                  dir="rtl"
+                  className="text-right"
+                  value={formData.companyNameAr}
+                  onChange={handleChange}
+                  placeholder="اسم الشركة"
+                  data-testid="input-company-name-ar"
+                />
+              </div>
               
               {!isGroup && (
                 <>
@@ -813,6 +849,20 @@ export default function MerchantEdit() {
                       className={fieldErrors.brandName ? "border-red-500 focus-visible:ring-red-500" : ""}
                     />
                     {fieldErrors.brandName && <p className="text-sm text-red-500 mt-1">{fieldErrors.brandName}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="brandNameAr">Brand Name (Arabic)</Label>
+                    <Input
+                      id="brandNameAr"
+                      name="brandNameAr"
+                      dir="rtl"
+                      className="text-right"
+                      value={formData.brandNameAr}
+                      onChange={handleChange}
+                      placeholder="اسم العلامة التجارية"
+                      data-testid="input-brand-name-ar"
+                    />
                   </div>
                 </>
               )}
@@ -964,6 +1014,46 @@ export default function MerchantEdit() {
                   placeholder="Name of authorized signatory"
                   data-testid="input-signatory-name"
                 />
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <p className="text-sm font-semibold text-[#00426D] mb-3">Point of Contact for Daily Operations</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pocName">Contact Name</Label>
+                  <Input
+                    id="pocName"
+                    name="pocName"
+                    value={formData.pocName}
+                    onChange={handleChange}
+                    placeholder="Name"
+                    data-testid="input-poc-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pocPhone">Contact Phone</Label>
+                  <Input
+                    id="pocPhone"
+                    name="pocPhone"
+                    value={formData.pocPhone}
+                    onChange={handleChange}
+                    placeholder="Phone"
+                    data-testid="input-poc-phone"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pocEmail">Contact Email</Label>
+                  <Input
+                    id="pocEmail"
+                    name="pocEmail"
+                    type="email"
+                    value={formData.pocEmail}
+                    onChange={handleChange}
+                    placeholder="Email"
+                    data-testid="input-poc-email"
+                  />
+                </div>
               </div>
             </div>
           </CardContent>
@@ -1186,7 +1276,7 @@ export default function MerchantEdit() {
                 size="sm"
                 disabled={brands.length >= 50}
                 onClick={() => { setBrandsOpen(true); setBrands([...brands, {
-                  brandName: "", address: "", contactPerson: "", email: "", phone: "", whatsapp: "",
+                  brandName: "", brandNameAr: "", address: "", contactPerson: "", email: "", phone: "", whatsapp: "",
                   crNumber: "", crDocument: null, establishmentCard: null, tradeLicense: null,
                   taxCardDocument: null, menuPriceList: null, logo: null, coverImage: null,
                   businessCategories: [],
@@ -1219,6 +1309,10 @@ export default function MerchantEdit() {
                     <div className="space-y-1">
                       <Label>Brand Name</Label>
                       <Input value={b.brandName || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, brandName: e.target.value } : x))} data-testid={`input-brand-${idx}-name`} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Brand Name (Arabic)</Label>
+                      <Input dir="rtl" className="text-right" value={b.brandNameAr || ""} onChange={(e) => setBrands(brands.map((x, i) => i === idx ? { ...x, brandNameAr: e.target.value } : x))} placeholder="اسم العلامة التجارية" data-testid={`input-brand-${idx}-name-ar`} />
                     </div>
                     <div className="space-y-1">
                       <Label>CR Number</Label>
@@ -1494,12 +1588,32 @@ export default function MerchantEdit() {
                         </div>
                       )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Title</Label>
-                          <Input
-                            value={deal.title}
-                            onChange={(e) => handleDealChange(index, "title", e.target.value)}
-                            data-testid={`input-deal-title-${index}`}
+                        <div className="space-y-2 md:col-span-2">
+                          <BilingualTabs
+                            idPrefix={`deal-title-${index}`}
+                            english={
+                              <div className="space-y-2">
+                                <Label>Title</Label>
+                                <Input
+                                  value={deal.title}
+                                  onChange={(e) => handleDealChange(index, "title", e.target.value)}
+                                  data-testid={`input-deal-title-${index}`}
+                                />
+                              </div>
+                            }
+                            arabic={
+                              <div className="space-y-2">
+                                <Label>Deal Title (Arabic)</Label>
+                                <Input
+                                  dir="rtl"
+                                  className="text-right"
+                                  value={deal.titleAr || ""}
+                                  onChange={(e) => handleDealChange(index, "titleAr", e.target.value)}
+                                  placeholder="عنوان العرض"
+                                  data-testid={`input-deal-title-ar-${index}`}
+                                />
+                              </div>
+                            }
                           />
                         </div>
                         
@@ -1664,15 +1778,34 @@ export default function MerchantEdit() {
                         )}
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Textarea
-                          value={deal.description || ""}
-                          onChange={(e) => handleDealChange(index, "description", e.target.value)}
-                          rows={2}
-                          data-testid={`input-deal-description-${index}`}
-                        />
-                      </div>
+                      <BilingualTabs
+                        idPrefix={`deal-description-${index}`}
+                        english={
+                          <div className="space-y-2">
+                            <Label>Description</Label>
+                            <Textarea
+                              value={deal.description || ""}
+                              onChange={(e) => handleDealChange(index, "description", e.target.value)}
+                              rows={2}
+                              data-testid={`input-deal-description-${index}`}
+                            />
+                          </div>
+                        }
+                        arabic={
+                          <div className="space-y-2">
+                            <Label>Description (Arabic)</Label>
+                            <Textarea
+                              dir="rtl"
+                              className="text-right"
+                              value={deal.descriptionAr || ""}
+                              onChange={(e) => handleDealChange(index, "descriptionAr", e.target.value)}
+                              rows={2}
+                              placeholder="وصف العرض"
+                              data-testid={`input-deal-description-ar-${index}`}
+                            />
+                          </div>
+                        }
+                      />
 
                       {deal.dealType === "bogo" && (
                         <div className="flex items-center space-x-2">
