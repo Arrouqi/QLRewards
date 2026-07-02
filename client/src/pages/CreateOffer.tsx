@@ -118,7 +118,7 @@ function centerAspectCrop(
 interface ESMerchant {
   id: string;
   agencyName: string;
-  agencyEmail: string;
+  agencyEmail?: string;
   agencyId: number;
   contactMobile?: string;
   branches?: { id: number; name: string; location?: { name: string } }[];
@@ -243,7 +243,7 @@ export default function CreateOffer() {
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set("size", "500");
-      const res = await fetch(`/api/es/merchants?${params}`, { credentials: "include" });
+      const res = await fetch(`/api/public/es/merchants?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch merchants");
       return res.json();
     },

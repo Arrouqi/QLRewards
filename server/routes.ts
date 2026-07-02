@@ -474,11 +474,43 @@ export async function registerRoutes(
     }
   });
 
+  async function fetchEsMerchantContact(merchantId: string): Promise<{ email?: string; phone?: string } | null> {
+    try {
+      const esUrl = process.env.ELASTIC_URL;
+      const esApiKey = process.env.ELASTIC_API_KEY;
+      if (!esUrl || !esApiKey) return null;
+      const esResponse = await fetch(`${esUrl}prod_merchants/_doc/${encodeURIComponent(merchantId)}?_source=agencyEmail,contactMobile`, {
+        headers: { Authorization: `ApiKey ${esApiKey}` },
+      });
+      if (!esResponse.ok) return null;
+      const data = await esResponse.json();
+      return {
+        email: data._source?.agencyEmail || undefined,
+        phone: data._source?.contactMobile || undefined,
+      };
+    } catch (e: any) {
+      console.error("[ES] Merchant contact lookup failed:", e.message);
+      return null;
+    }
+  }
+
   app.post("/api/deals", async (req, res) => {
     const startTime = Date.now();
     try {
       const validatedData = publicDealSubmissionSchema.parse(req.body);
-      
+
+      // Merchant contact details are not exposed to the public merchant search.
+      // When a merchant is selected, the server is authoritative: always resolve
+      // email/phone from Elasticsearch and ignore any client-supplied values.
+      if (validatedData.merchantId) {
+        const contact = await fetchEsMerchantContact(validatedData.merchantId);
+        if (!contact) {
+          console.warn(`[deals] Could not resolve ES contact for merchant ${validatedData.merchantId}; storing without contact details`);
+        }
+        validatedData.merchantEmail = contact?.email || "";
+        validatedData.merchantPhone = contact?.phone || "";
+      }
+
       const tempDeal = await storage.createDeal({ ...validatedData, images: [] });
       
       if (validatedData.images && validatedData.images.length > 0) {
@@ -2246,6 +2278,70 @@ export async function registerRoutes(
       res.json(merchant);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Public merchant lookup for the public Create Offer form — rate-limited.
+  // Exposes only non-sensitive fields (name, category, branches); contact details
+  // are resolved server-side at deal submission time.
+  app.get("/api/public/es/merchants", publicMerchantsRateLimit, async (req, res) => {
+    try {
+      const esUrl = process.env.ELASTIC_URL;
+      const esApiKey = process.env.ELASTIC_API_KEY;
+      if (!esUrl || !esApiKey) {
+        return res.json({ merchants: [], total: 0 });
+      }
+      const search = (req.query.search as string) || "";
+      const size = Math.min(parseInt(req.query.size as string) || 200, 500);
+      const from = parseInt(req.query.from as string) || 0;
+      const query: any = search
+        ? {
+            bool: {
+              should: [
+                { match_phrase_prefix: { agencyName: search } },
+                { wildcard: { agencyName: { value: `*${search.toLowerCase()}*`, case_insensitive: true } } },
+              ],
+              minimum_should_match: 1,
+            },
+          }
+        : { match_all: {} };
+      const esResponse = await fetch(`${esUrl}prod_merchants/_search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `ApiKey ${esApiKey}`,
+        },
+        body: JSON.stringify({
+          query,
+          size,
+          from,
+          _source: ["agencyName", "agencyId", "category.id", "category.name", "branches.id", "branches.name", "branches.location.name"],
+          sort: [{ "agencyName.keyword": { order: "asc", unmapped_type: "keyword" } }],
+        }),
+      });
+      if (!esResponse.ok) {
+        const errorText = await esResponse.text();
+        console.error("[public/es/merchants] ES error:", errorText);
+        return res.json({ merchants: [], total: 0 });
+      }
+      const data = await esResponse.json();
+      const merchants = (data.hits?.hits || []).map((hit: any) => ({
+        id: hit._id,
+        agencyName: hit._source?.agencyName,
+        agencyId: hit._source?.agencyId,
+        category: hit._source?.category
+          ? { id: hit._source.category.id, name: hit._source.category.name }
+          : undefined,
+        branches: (hit._source?.branches || []).map((b: any) => ({
+          id: b?.id,
+          name: b?.name,
+          location: b?.location?.name ? { name: b.location.name } : undefined,
+        })),
+      }));
+      res.json({ merchants, total: data.hits?.total?.value || 0 });
+    } catch (e: any) {
+      console.error("[public/es/merchants] error:", e.message);
+      res.json({ merchants: [], total: 0 });
     }
   });
 
