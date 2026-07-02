@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -21,9 +21,24 @@ export function BilingualTabs({
   className,
 }: BilingualTabsProps) {
   const { t } = useTranslation("common");
+  const [activeTab, setActiveTab] = useState<string>("en");
+  const prevErrors = useRef({ en: false, ar: false });
+
+  useEffect(() => {
+    const prev = prevErrors.current;
+    // Auto-switch so the validation message is visible (e.g. after a submit
+    // attempt). English gets priority when both fields error at once; as soon
+    // as the English error clears, hand off to the Arabic error.
+    if (hasEnglishError && !prev.en) {
+      setActiveTab("en");
+    } else if (hasArabicError && !hasEnglishError) {
+      setActiveTab("ar");
+    }
+    prevErrors.current = { en: !!hasEnglishError, ar: !!hasArabicError };
+  }, [hasEnglishError, hasArabicError]);
 
   return (
-    <Tabs defaultValue="en" className={cn("w-full", className)}>
+    <Tabs value={activeTab} onValueChange={setActiveTab} className={cn("w-full", className)}>
       <TabsList className="h-8 mb-1" data-testid={`tabs-bilingual-${idPrefix}`}>
         <TabsTrigger
           value="en"

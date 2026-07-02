@@ -243,7 +243,7 @@ export default function MerchantOnboarding() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedDeals, setExpandedDeals] = useState<number[]>([0]);
     
-  const { data: categories = [] } = useQuery<Category[]>({
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
       const res = await fetch("/api/categories");
@@ -1042,6 +1042,15 @@ export default function MerchantOnboarding() {
                 <CardTitle className="text-[#00426D]">{t("businessCategories.title")}</CardTitle>
               </CardHeader>
               <CardContent>
+                {categoriesLoading && (
+                  <p className="text-sm text-slate-500" data-testid="text-categories-loading">{t("businessCategories.loading")}</p>
+                )}
+                {!categoriesLoading && categoriesError != null && (
+                  <p className="text-sm text-destructive" data-testid="text-categories-error">{t("businessCategories.loadError")}</p>
+                )}
+                {!categoriesLoading && !categoriesError && categories.length === 0 && (
+                  <p className="text-sm text-slate-500" data-testid="text-categories-empty">{t("businessCategories.empty")}</p>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {categories.map((category: Category, idx: number) => {
                     const isSelected = businessCategoriesValue.includes(category.name);
@@ -1795,6 +1804,9 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
 
       <div>
         <Label className="text-sm font-medium text-[#00426D]">{t("onboarding:brands.businessCategories")}</Label>
+        {categories.length === 0 && (
+          <p className="text-xs text-slate-500 mt-2" data-testid={`text-brand-${index}-categories-empty`}>{t("onboarding:businessCategories.empty")}</p>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
           {categories.map((c) => {
             const sel = brandCats.includes(c.name);

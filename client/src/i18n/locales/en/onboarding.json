@@ -68,7 +68,10 @@
     }
   },
   "businessCategories": {
-    "title": "Business Categories"
+    "title": "Business Categories",
+    "loading": "Loading categories...",
+    "loadError": "Categories could not be loaded. Please refresh the page and try again.",
+    "empty": "No categories are available yet. Please contact Qatar Living Deals support."
   },
   "brands": {
     "title": "Brands",
