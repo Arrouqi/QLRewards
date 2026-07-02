@@ -87,7 +87,6 @@ export type AdminUser = typeof adminUsers.$inferSelect;
 export const categories = pgTable("categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  nameAr: text("name_ar"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -103,7 +102,6 @@ export const subCategories = pgTable("sub_categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   categoryId: varchar("category_id").notNull().references(() => categories.id),
   name: text("name").notNull(),
-  nameAr: text("name_ar"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

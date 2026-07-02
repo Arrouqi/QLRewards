@@ -3,3 +3,4 @@
 - [Production migrations are manual](production-manual-migrations.md) — prod is a separate GitHub server; schema changes need hand-written SQL in replit.md, not db:push.
 - [import.meta.dirname empty in CJS prod](import-meta-dirname-cjs.md) — server bundled to CJS; use `__dirname` in prod, `import.meta.dirname` only in dev, or routes 500 after publish.
 - [Bilingual form validation](bilingual-form-validation.md) — Arabic requiredness enforced only on public submission paths via separate superRefine schema exports; never run db:push (drops session table).
+- [Categories are English-only](categories-english-only.md) — never add Arabic to categories; new columns on shared tables break prod reads until the manual SQL migration runs.

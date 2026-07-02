@@ -67,19 +67,15 @@ import {
 import { useLocation } from "wouter";
 import { PhoneInput } from "@/components/ui/phone-input";
 
-import { getLocalizedCategoryName } from "@/lib/categoryName";
-
 interface SubCategory {
   id: string;
   categoryId: string;
   name: string;
-  nameAr?: string | null;
 }
 
 interface Category {
   id: string;
   name: string;
-  nameAr?: string | null;
   subCategories: SubCategory[];
 }
 
@@ -1077,7 +1073,7 @@ export default function MerchantOnboarding() {
                           }}
                           className="h-4 w-4 accent-[#FF7F39]"
                         />
-                        <span className="text-sm">{getLocalizedCategoryName(category)}</span>
+                        <span className="text-sm">{category.name}</span>
                       </label>
                     );
                   })}
@@ -1824,7 +1820,7 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
                   }}
                   className="h-3 w-3 accent-[#FF7F39]"
                 />
-                <span>{getLocalizedCategoryName(c)}</span>
+                <span>{c.name}</span>
               </label>
             );
           })}
@@ -2261,7 +2257,7 @@ function DealFormSection({
                     </FormControl>
                     <SelectContent>
                       {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name}>{getLocalizedCategoryName(cat)}</SelectItem>
+                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -2284,7 +2280,7 @@ function DealFormSection({
                     </FormControl>
                     <SelectContent>
                       {subCategories.map((sub) => (
-                        <SelectItem key={sub.id} value={sub.name}>{getLocalizedCategoryName(sub)}</SelectItem>
+                        <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

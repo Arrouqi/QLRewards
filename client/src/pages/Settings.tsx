@@ -66,13 +66,11 @@ interface SubCategory {
   id: string;
   categoryId: string;
   name: string;
-  nameAr?: string | null;
 }
 
 interface Category {
   id: string;
   name: string;
-  nameAr?: string | null;
   subCategories: SubCategory[];
 }
 
@@ -944,16 +942,12 @@ export default function Settings() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryNameAr, setNewCategoryNameAr] = useState("");
   const [newSubCategoryName, setNewSubCategoryName] = useState("");
-  const [newSubCategoryNameAr, setNewSubCategoryNameAr] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState("");
-  const [editingCategoryNameAr, setEditingCategoryNameAr] = useState("");
   const [editingSubCategoryId, setEditingSubCategoryId] = useState<string | null>(null);
   const [editingSubCategoryName, setEditingSubCategoryName] = useState("");
-  const [editingSubCategoryNameAr, setEditingSubCategoryNameAr] = useState("");
 
   const [claimRules, setClaimRules] = useState<Term[]>([]);
   const [generalRules, setGeneralRules] = useState<Term[]>([]);
@@ -1309,11 +1303,10 @@ export default function Settings() {
       const response = await fetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newCategoryName.trim(), nameAr: newCategoryNameAr.trim() || null }),
+        body: JSON.stringify({ name: newCategoryName.trim() }),
       });
       if (!response.ok) throw new Error("Failed to create category");
       setNewCategoryName("");
-      setNewCategoryNameAr("");
       await fetchCategories();
       toast({ title: "Success", description: "Category created successfully" });
     } catch (error) {
@@ -1330,12 +1323,11 @@ export default function Settings() {
       const response = await fetch(`/api/categories/${categoryId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editingCategoryName.trim(), nameAr: editingCategoryNameAr.trim() || null, oldName }),
+        body: JSON.stringify({ name: editingCategoryName.trim(), oldName }),
       });
       if (!response.ok) throw new Error("Failed to rename category");
       setEditingCategoryId(null);
       setEditingCategoryName("");
-      setEditingCategoryNameAr("");
       await fetchCategories();
       toast({ title: "Success", description: "Category renamed successfully. All existing deals have been updated." });
     } catch (error) {
@@ -1367,11 +1359,10 @@ export default function Settings() {
       const response = await fetch("/api/subcategories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categoryId: selectedCategoryId, name: newSubCategoryName.trim(), nameAr: newSubCategoryNameAr.trim() || null }),
+        body: JSON.stringify({ categoryId: selectedCategoryId, name: newSubCategoryName.trim() }),
       });
       if (!response.ok) throw new Error("Failed to create subcategory");
       setNewSubCategoryName("");
-      setNewSubCategoryNameAr("");
       setSelectedCategoryId("");
       await fetchCategories();
       toast({ title: "Success", description: "Subcategory created successfully" });
@@ -1389,12 +1380,11 @@ export default function Settings() {
       const response = await fetch(`/api/subcategories/${subCategoryId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editingSubCategoryName.trim(), nameAr: editingSubCategoryNameAr.trim() || null }),
+        body: JSON.stringify({ name: editingSubCategoryName.trim() }),
       });
       if (!response.ok) throw new Error("Failed to rename subcategory");
       setEditingSubCategoryId(null);
       setEditingSubCategoryName("");
-      setEditingSubCategoryNameAr("");
       await fetchCategories();
       toast({ title: "Success", description: "Subcategory renamed successfully" });
     } catch (error) {
@@ -2003,15 +1993,6 @@ export default function Settings() {
                   className="flex-1"
                   onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
                 />
-                <Input
-                  placeholder="الاسم بالعربية (اختياري)"
-                  value={newCategoryNameAr}
-                  onChange={(e) => setNewCategoryNameAr(e.target.value)}
-                  data-testid="input-category-name-ar"
-                  className="flex-1"
-                  dir="rtl"
-                  onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-                />
                 <Button onClick={handleAddCategory} data-testid="button-add-category" className="bg-[#00426D] hover:bg-[#003557]">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Category
@@ -2040,15 +2021,6 @@ export default function Settings() {
                   className="flex-1"
                   onKeyDown={(e) => e.key === "Enter" && handleAddSubCategory()}
                 />
-                <Input
-                  placeholder="الاسم بالعربية (اختياري)"
-                  value={newSubCategoryNameAr}
-                  onChange={(e) => setNewSubCategoryNameAr(e.target.value)}
-                  data-testid="input-subcategory-name-ar"
-                  className="flex-1"
-                  dir="rtl"
-                  onKeyDown={(e) => e.key === "Enter" && handleAddSubCategory()}
-                />
                 <Button onClick={handleAddSubCategory} data-testid="button-add-subcategory" className="bg-[#00426D] hover:bg-[#003557]">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Subcategory
@@ -2074,25 +2046,13 @@ export default function Settings() {
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") handleRenameCategory(category.id, category.name);
-                                if (e.key === "Escape") { setEditingCategoryId(null); setEditingCategoryName(""); setEditingCategoryNameAr(""); }
-                              }}
-                            />
-                            <Input
-                              value={editingCategoryNameAr}
-                              onChange={(e) => setEditingCategoryNameAr(e.target.value)}
-                              placeholder="الاسم بالعربية"
-                              className="max-w-xs"
-                              dir="rtl"
-                              data-testid={`input-edit-category-ar-${category.id}`}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleRenameCategory(category.id, category.name);
-                                if (e.key === "Escape") { setEditingCategoryId(null); setEditingCategoryName(""); setEditingCategoryNameAr(""); }
+                                if (e.key === "Escape") { setEditingCategoryId(null); setEditingCategoryName(""); }
                               }}
                             />
                             <Button size="icon" variant="ghost" onClick={() => handleRenameCategory(category.id, category.name)} className="text-green-600 hover:text-green-700">
                               <Check className="h-4 w-4" />
                             </Button>
-                            <Button size="icon" variant="ghost" onClick={() => { setEditingCategoryId(null); setEditingCategoryName(""); setEditingCategoryNameAr(""); }} className="text-slate-500">
+                            <Button size="icon" variant="ghost" onClick={() => { setEditingCategoryId(null); setEditingCategoryName(""); }} className="text-slate-500">
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
@@ -2100,13 +2060,12 @@ export default function Settings() {
                           <>
                             <h3 className="font-semibold text-[#00426D]">
                               {category.name}
-                              {category.nameAr && <span className="ml-2 text-sm font-normal text-slate-400" dir="rtl">{category.nameAr}</span>}
                             </h3>
                             <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => { setEditingCategoryId(category.id); setEditingCategoryName(category.name); setEditingCategoryNameAr(category.nameAr || ""); }}
+                                onClick={() => { setEditingCategoryId(category.id); setEditingCategoryName(category.name); }}
                                 className="text-slate-500 hover:text-[#00426D]"
                                 data-testid={`button-edit-category-${category.id}`}
                               >
@@ -2150,25 +2109,13 @@ export default function Settings() {
                                     autoFocus
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter") handleRenameSubCategory(sub.id);
-                                      if (e.key === "Escape") { setEditingSubCategoryId(null); setEditingSubCategoryName(""); setEditingSubCategoryNameAr(""); }
-                                    }}
-                                  />
-                                  <Input
-                                    value={editingSubCategoryNameAr}
-                                    onChange={(e) => setEditingSubCategoryNameAr(e.target.value)}
-                                    placeholder="الاسم بالعربية"
-                                    className="max-w-xs"
-                                    dir="rtl"
-                                    data-testid={`input-edit-subcategory-ar-${sub.id}`}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") handleRenameSubCategory(sub.id);
-                                      if (e.key === "Escape") { setEditingSubCategoryId(null); setEditingSubCategoryName(""); setEditingSubCategoryNameAr(""); }
+                                      if (e.key === "Escape") { setEditingSubCategoryId(null); setEditingSubCategoryName(""); }
                                     }}
                                   />
                                   <Button size="icon" variant="ghost" onClick={() => handleRenameSubCategory(sub.id)} className="text-green-600 hover:text-green-700">
                                     <Check className="h-4 w-4" />
                                   </Button>
-                                  <Button size="icon" variant="ghost" onClick={() => { setEditingSubCategoryId(null); setEditingSubCategoryName(""); setEditingSubCategoryNameAr(""); }} className="text-slate-500">
+                                  <Button size="icon" variant="ghost" onClick={() => { setEditingSubCategoryId(null); setEditingSubCategoryName(""); }} className="text-slate-500">
                                     <X className="h-4 w-4" />
                                   </Button>
                                 </div>
@@ -2176,14 +2123,13 @@ export default function Settings() {
                                 <>
                                   <span className="text-slate-700">
                                     {sub.name}
-                                    {sub.nameAr && <span className="ml-2 text-sm text-slate-400" dir="rtl">{sub.nameAr}</span>}
                                   </span>
                                   <div className="flex items-center gap-1">
                                     <Button
                                       variant="ghost"
                                       size="icon"
                                       className="h-8 w-8 text-slate-500 hover:text-[#00426D]"
-                                      onClick={() => { setEditingSubCategoryId(sub.id); setEditingSubCategoryName(sub.name); setEditingSubCategoryNameAr(sub.nameAr || ""); }}
+                                      onClick={() => { setEditingSubCategoryId(sub.id); setEditingSubCategoryName(sub.name); }}
                                       data-testid={`button-edit-subcategory-${sub.id}`}
                                     >
                                       <Pencil className="h-3 w-3" />

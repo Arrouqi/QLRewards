@@ -36,20 +36,17 @@ import {
   Building2
 } from "lucide-react";
 
-import { getLocalizedCategoryName } from "@/lib/categoryName";
 import { BilingualTabs } from "@/components/BilingualTabs";
 
 interface SubCategory {
   id: string;
   categoryId: string;
   name: string;
-  nameAr?: string | null;
 }
 
 interface Category {
   id: string;
   name: string;
-  nameAr?: string | null;
   subCategories: SubCategory[];
 }
 
@@ -756,7 +753,7 @@ export default function CreateOffer() {
                             <SelectContent>
                               {categories.map((category) => (
                                 <SelectItem key={category.id} value={category.name} data-testid={`option-category-${category.id}`}>
-                                  {getLocalizedCategoryName(category)}
+                                  {category.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -784,7 +781,7 @@ export default function CreateOffer() {
                             <SelectContent>
                               {availableSubCategories.map((sub) => (
                                 <SelectItem key={sub.id} value={sub.name} data-testid={`option-subcategory-${sub.id}`}>
-                                  {getLocalizedCategoryName(sub)}
+                                  {sub.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>

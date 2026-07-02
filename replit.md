@@ -207,14 +207,12 @@ ALTER TABLE merchant_deals
   ADD COLUMN IF NOT EXISTS brand_id text;
 ```
 
-#### Pending Production Migrations (Multi-lingual categories)
-Run on production DB before deploying:
+#### Categories are English-only (Arabic removed)
+Categories and sub-categories are intentionally **English-only** — no `name_ar` columns are used or required. The previously listed "Multi-lingual categories" migration was **removed** and must NOT be run. If `name_ar` was already added to `categories`/`sub_categories` on production, it can stay (it is simply ignored) or be dropped:
 ```sql
--- Optional Arabic display names for category / sub-category dropdowns.
--- NULL = no Arabic name yet (UI falls back to the English name).
--- Set per-category via the admin Settings → Categories tab.
-ALTER TABLE categories ADD COLUMN IF NOT EXISTS name_ar text;
-ALTER TABLE sub_categories ADD COLUMN IF NOT EXISTS name_ar text;
+-- Optional cleanup only if previously added:
+ALTER TABLE categories DROP COLUMN IF EXISTS name_ar;
+ALTER TABLE sub_categories DROP COLUMN IF EXISTS name_ar;
 ```
 
 ### Project Structure
