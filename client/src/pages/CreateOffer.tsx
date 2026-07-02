@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import { getLocalizedCategoryName } from "@/lib/categoryName";
+import { BilingualTabs } from "@/components/BilingualTabs";
 
 interface SubCategory {
   id: string;
@@ -140,7 +141,9 @@ const makeFormSchema = (t: (key: string) => string) => z.object({
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
   title: z.string().min(5, t("validation.titleMin")),
+  titleAr: z.string().min(5, t("validation.titleArMin")),
   description: z.string().optional(),
+  descriptionAr: z.string().optional(),
   claimRules: z.array(z.string()).min(1, t("validation.claimRuleRequired")),
   generalRules: z.array(z.string()).min(1, t("validation.generalRuleRequired")),
   otherRules: z.string().optional(),
@@ -509,7 +512,9 @@ export default function CreateOffer() {
       discountedPrice: "",
       trancheValidity: "",
       title: "",
+      titleAr: "",
       description: "",
+      descriptionAr: "",
       otherRules: "",
       merchantId: "",
       merchantName: "",
@@ -627,7 +632,9 @@ export default function CreateOffer() {
         specificDays: data.specificDays,
         days: data.days,
         title: data.title,
+        titleAr: data.titleAr,
         description: data.description,
+        descriptionAr: data.descriptionAr,
         claimRules: data.claimRules,
         generalRules: data.generalRules,
         otherRules: data.otherRules,
@@ -1151,46 +1158,111 @@ export default function CreateOffer() {
                 <section>
                   <h2 className="text-lg font-bold text-[#00426D] mb-4">{t("description.sectionTitle")}</h2>
                   <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 space-y-6">
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("description.title")} <span className="text-red-500">*</span></FormLabel>
-                          <div className="relative">
-                            <FormControl>
-                              <Input className="h-11 bg-slate-50" maxLength={60} {...field} />
-                            </FormControl>
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{field.value?.length || 0}/60</div>
-                          </div>
-                        </FormItem>
-                      )}
+                    <BilingualTabs
+                      idPrefix="deal-title"
+                      hasEnglishError={!!form.formState.errors.title}
+                      hasArabicError={!!form.formState.errors.titleAr}
+                      english={
+                        <FormField
+                          control={form.control}
+                          name="title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("description.title")} <span className="text-red-500">*</span></FormLabel>
+                              <div className="relative">
+                                <FormControl>
+                                  <Input className="h-11 bg-slate-50" maxLength={60} data-testid="input-deal-title" {...field} />
+                                </FormControl>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{field.value?.length || 0}/60</div>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      }
+                      arabic={
+                        <FormField
+                          control={form.control}
+                          name="titleAr"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("description.titleAr")} <span className="text-red-500">*</span></FormLabel>
+                              <div className="relative">
+                                <FormControl>
+                                  <Input className="h-11 bg-slate-50 text-right" dir="rtl" maxLength={60} placeholder={t("description.titleArPlaceholder")} data-testid="input-deal-title-ar" {...field} />
+                                </FormControl>
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{field.value?.length || 0}/60</div>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      }
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <Label className="text-xs text-slate-500">
-                            {t("description.helper")}
-                          </Label>
-                          <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
-                            <RichTextToolbar />
-                            <FormControl>
-                              <textarea 
-                                className="w-full h-32 p-3 bg-white focus:outline-none resize-none text-sm" 
-                                placeholder={t("description.placeholder")}
-                                maxLength={300}
-                                {...field}
-                              />
-                            </FormControl>
-                            <div className="bg-slate-50 px-2 py-1 text-right text-xs text-slate-400 border-t border-slate-100">
-                              {field.value?.length || 0}/300
-                            </div>
-                          </div>
-                        </FormItem>
-                      )}
+                    <BilingualTabs
+                      idPrefix="deal-description"
+                      hasEnglishError={!!form.formState.errors.description}
+                      hasArabicError={!!form.formState.errors.descriptionAr}
+                      english={
+                        <FormField
+                          control={form.control}
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2">
+                              <Label className="text-xs text-slate-500">
+                                {t("description.helper")}
+                              </Label>
+                              <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                                <RichTextToolbar />
+                                <FormControl>
+                                  <textarea 
+                                    className="w-full h-32 p-3 bg-white focus:outline-none resize-none text-sm" 
+                                    placeholder={t("description.placeholder")}
+                                    maxLength={300}
+                                    data-testid="input-deal-description"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <div className="bg-slate-50 px-2 py-1 text-right text-xs text-slate-400 border-t border-slate-100">
+                                  {field.value?.length || 0}/300
+                                </div>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      }
+                      arabic={
+                        <FormField
+                          control={form.control}
+                          name="descriptionAr"
+                          render={({ field }) => (
+                            <FormItem className="space-y-2">
+                              <Label className="text-xs text-slate-500">
+                                {t("description.helperAr")}
+                              </Label>
+                              <div className="border border-slate-200 rounded-md overflow-hidden bg-slate-50">
+                                <RichTextToolbar />
+                                <FormControl>
+                                  <textarea 
+                                    className="w-full h-32 p-3 bg-white focus:outline-none resize-none text-sm text-right" 
+                                    dir="rtl"
+                                    placeholder={t("description.placeholderAr")}
+                                    maxLength={300}
+                                    data-testid="input-deal-description-ar"
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <div className="bg-slate-50 px-2 py-1 text-left text-xs text-slate-400 border-t border-slate-100">
+                                  {field.value?.length || 0}/300
+                                </div>
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      }
                     />
                   </div>
                 </section>

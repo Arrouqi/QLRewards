@@ -3,6 +3,9 @@
     "english": "English",
     "arabic": "العربية"
   },
+  "bilingual": {
+    "accuracyNote": "يرجى التأكد من دقة الترجمة."
+  },
   "actions": {
     "submit": "إرسال",
     "submitting": "جارٍ الإرسال...",

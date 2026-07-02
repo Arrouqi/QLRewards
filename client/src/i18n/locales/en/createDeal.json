@@ -57,8 +57,12 @@
   "description": {
     "sectionTitle": "Deal Description",
     "title": "Title",
+    "titleAr": "Title (Arabic)",
+    "titleArPlaceholder": "Enter the title in Arabic",
     "helper": "• Clearly mention the deal, validity, and terms so users understand what's included.",
-    "placeholder": "Description"
+    "helperAr": "• اذكر العرض ومدة صلاحيته وشروطه بوضوح باللغة العربية.",
+    "placeholder": "Description",
+    "placeholderAr": "الوصف بالعربية"
   },
   "otherRules": {
     "sectionTitle": "Other Rules",
@@ -131,6 +135,7 @@
     "durationRequired": "Duration is required",
     "redemptionRequired": "Redemption is required",
     "titleMin": "Title must be at least 5 characters",
+    "titleArMin": "Arabic title must be at least 5 characters",
     "claimRuleRequired": "Select at least one claim rule",
     "generalRuleRequired": "Select at least one general rule",
     "merchantRequired": "Please select a merchant",

@@ -21,7 +21,9 @@ export const deals = pgTable("deals", {
   specificDays: boolean("specific_days").notNull().default(false),
   days: text("days").array(),
   title: text("title").notNull(),
+  titleAr: text("title_ar"),
   description: text("description").notNull(),
+  descriptionAr: text("description_ar"),
   claimRules: text("claim_rules").array().notNull(),
   generalRules: text("general_rules").array().notNull(),
   otherRules: text("other_rules"),
@@ -50,6 +52,16 @@ export const insertDealSchema = createInsertSchema(deals).omit({
 });
 
 export type InsertDeal = z.infer<typeof insertDealSchema>;
+
+// Public form submissions must include an Arabic deal title (mirrors the English min-5 rule).
+// Admin edit flows keep using the base insert schemas.
+export const requireArabicDealTitle = <T extends { titleAr?: string | null }>(data: T, ctx: z.RefinementCtx) => {
+  if (!data.titleAr || data.titleAr.trim().length < 5) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["titleAr"], message: "Deal title (Arabic) must be at least 5 characters" });
+  }
+};
+
+export const publicDealSubmissionSchema = insertDealSchema.superRefine(requireArabicDealTitle);
 export type Deal = typeof deals.$inferSelect;
 
 export type DealSummary = Pick<Deal, 
@@ -157,12 +169,17 @@ export const merchants = pgTable("merchants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyType: text("company_type").notNull().default("individual"),
   companyName: text("company_name").notNull(),
+  companyNameAr: text("company_name_ar"),
   crNumber: text("cr_number"),
   brandName: text("brand_name"),
+  brandNameAr: text("brand_name_ar"),
   address: text("address").notNull(),
   contactPerson: text("contact_person").notNull(),
   email: text("email").notNull(),
   phone: text("phone").notNull(),
+  pocName: text("poc_name"),
+  pocPhone: text("poc_phone"),
+  pocEmail: text("poc_email"),
   products: text("products").array(),
   businessCategories: text("business_categories").array(),
   branches: text("branches").array(),
@@ -207,12 +224,18 @@ export const insertMerchantSchema = createInsertSchema(merchants, {
   submittedBy: true,
   createdAt: true,
 }).superRefine((data, ctx) => {
+  if (!data.companyNameAr || data.companyNameAr.trim() === "") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companyNameAr"], message: "Company name (Arabic) is required" });
+  }
   if (data.companyType === "group") return;
   if (!data.crNumber || !/^[a-zA-Z0-9]{4,14}$/.test(data.crNumber)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crNumber"], message: "CR number must be 4-14 alphanumeric characters" });
   }
   if (!data.brandName || data.brandName.trim() === "") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandName"], message: "Brand name is required" });
+  }
+  if (!data.brandNameAr || data.brandNameAr.trim() === "") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandNameAr"], message: "Brand name (Arabic) is required" });
   }
   if (!data.products || data.products.length === 0) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["products"], message: "Products are required" });
@@ -229,6 +252,7 @@ export const merchantBrands = pgTable("merchant_brands", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   merchantId: varchar("merchant_id").notNull().references(() => merchants.id, { onDelete: "cascade" }),
   brandName: text("brand_name"),
+  brandNameAr: text("brand_name_ar"),
   address: text("address"),
   contactPerson: text("contact_person"),
   email: text("email"),
@@ -249,6 +273,7 @@ export const merchantBrands = pgTable("merchant_brands", {
 
 export const brandPayloadSchema = z.object({
   brandName: z.string().max(200).nullable().optional(),
+  brandNameAr: z.string().max(200).nullable().optional(),
   address: z.string().max(500).nullable().optional(),
   contactPerson: z.string().max(200).nullable().optional(),
   email: z.union([z.string().email().max(200), z.literal(""), z.null()]).optional(),
@@ -292,7 +317,9 @@ export const merchantDeals = pgTable("merchant_deals", {
   specificDays: boolean("specific_days").notNull().default(false),
   days: text("days").array(),
   title: text("title").notNull(),
+  titleAr: text("title_ar"),
   description: text("description"),
+  descriptionAr: text("description_ar"),
   claimRules: text("claim_rules").array().notNull(),
   generalRules: text("general_rules").array().notNull(),
   otherRules: text("other_rules"),
@@ -309,6 +336,7 @@ export const insertMerchantDealSchema = createInsertSchema(merchantDeals).omit({
 });
 
 export type InsertMerchantDeal = z.infer<typeof insertMerchantDealSchema>;
+export const publicMerchantDealSchema = insertMerchantDealSchema.superRefine(requireArabicDealTitle);
 export type MerchantDeal = typeof merchantDeals.$inferSelect;
 
 export const merchantNotes = pgTable("merchant_notes", {

@@ -1,7 +1,7 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema, insertMerchantNoteSchema, brandPayloadSchema, insertFeedbackSchema, insertFeedbackCommentSchema } from "@shared/schema";
+import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema, insertMerchantNoteSchema, publicDealSubmissionSchema, publicMerchantDealSchema, brandPayloadSchema, insertFeedbackSchema, insertFeedbackCommentSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -477,7 +477,7 @@ export async function registerRoutes(
   app.post("/api/deals", async (req, res) => {
     const startTime = Date.now();
     try {
-      const validatedData = insertDealSchema.parse(req.body);
+      const validatedData = publicDealSubmissionSchema.parse(req.body);
       
       const tempDeal = await storage.createDeal({ ...validatedData, images: [] });
       
@@ -1431,6 +1431,7 @@ export async function registerRoutes(
       if (isGroup && processedBrands.length > 0) {
         const brandRows = processedBrands.map((b, i) => ({
           brandName: b.brandName || null,
+          brandNameAr: b.brandNameAr || null,
           address: b.address || null,
           contactPerson: b.contactPerson || null,
           email: b.email || null,
@@ -1475,7 +1476,7 @@ export async function registerRoutes(
               discountPercentage: deal.discountedPrice ? null : (deal.discountPercentage || null),
               discountedPrice: deal.discountedPrice || null,
             };
-            const validatedDeal = insertMerchantDealSchema.parse(dealData);
+            const validatedDeal = publicMerchantDealSchema.parse(dealData);
             await storage.createMerchantDeal(validatedDeal);
           } catch (dealError) {
             console.error("Error creating merchant deal:", dealError);
@@ -1626,6 +1627,7 @@ export async function registerRoutes(
           }
           processedBrandRows.push({
             brandName: brand.brandName || null,
+            brandNameAr: brand.brandNameAr || null,
             address: brand.address || null,
             contactPerson: brand.contactPerson || null,
             email: brand.email || null,

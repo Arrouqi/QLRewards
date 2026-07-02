@@ -60,8 +60,12 @@
   "description": {
     "sectionTitle": "وصف العرض",
     "title": "العنوان",
+    "titleAr": "العنوان (بالعربية)",
+    "titleArPlaceholder": "أدخل العنوان بالعربية",
     "helper": "• اذكر العرض ومدة صلاحيته وشروطه بوضوح حتى يفهم المستخدمون ما يتضمنه.",
-    "placeholder": "الوصف"
+    "helperAr": "• اذكر العرض ومدة صلاحيته وشروطه بوضوح باللغة العربية.",
+    "placeholder": "الوصف",
+    "placeholderAr": "الوصف بالعربية"
   },
   "otherRules": {
     "sectionTitle": "قواعد أخرى",
@@ -134,6 +138,7 @@
     "durationRequired": "المدة مطلوبة",
     "redemptionRequired": "الاستبدال مطلوب",
     "titleMin": "يجب ألا يقل العنوان عن 5 أحرف",
+    "titleArMin": "يجب ألا يقل العنوان بالعربية عن 5 أحرف",
     "claimRuleRequired": "اختر قاعدة استفادة واحدة على الأقل",
     "generalRuleRequired": "اختر قاعدة عامة واحدة على الأقل",
     "merchantRequired": "يرجى اختيار تاجر",

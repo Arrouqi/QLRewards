@@ -38,9 +38,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Data Models
 - **deals**: Merchant deal submissions, including category, pricing, discount, rules, and approval status.
-- **merchants**: Merchant onboarding applications with company info, documents, `companyType` (individual/group), and a status flow (`pending` → `moderation` → `created` → `licensing` → `licensed` → `trained`; archivable at any point). Moving to `trained` is done via the training endpoint (not direct status change); both sales and moderation can add trainings (permission: `merchants.training`). Group merchants have specific handling for `crNumber`, `brandName`, and other details managed per-brand.
-- **merchantBrands**: Stores brand-specific details for `companyType='group'` merchants, including name, address, contact, documents, and categories.
-- **merchantDeals**: Deal offers per merchant, with optional `brandId`.
+- **merchants**: Merchant onboarding applications with company info, documents, `companyType` (individual/group), and a status flow (`pending` → `moderation` → `created` → `licensing` → `licensed` → `trained`; archivable at any point). Bilingual data entry: `companyNameAr` (required) and `brandNameAr` (required for individual) are captured via EN/AR tabs on the public form. Optional Point of Contact for Daily Operations: `pocName`, `pocPhone`, `pocEmail`. Moving to `trained` is done via the training endpoint (not direct status change); both sales and moderation can add trainings (permission: `merchants.training`). Group merchants have specific handling for `crNumber`, `brandName`, and other details managed per-brand.
+- **merchantBrands**: Stores brand-specific details for `companyType='group'` merchants, including name (plus optional `brandNameAr`), address, contact, documents, and categories.
+- **merchantDeals**: Deal offers per merchant, with optional `brandId`. Deal title/description have Arabic counterparts `titleAr` (required) and `descriptionAr` (optional), entered via EN/AR tabs on both the onboarding form and the Create Offer form; the public `deals` table has the same two columns.
 - **merchantNotes**: Internal, add-only comments on merchant applications.
 - **merchantTrainings**: Training session logs per merchant. Fields: `trainingDate`, `trainingTime`, `trainerName`, `comment` (optional), `createdBy` (admin username). Adding a training to a `licensed` merchant automatically transitions it to `trained`. Multiple trainings can be added to `trained` merchants. Full history shown in merchant detail view.
 - **adminUsers**: Admin credentials with roles (`sales`, `moderation`, `admin`) and specific permissions.
@@ -50,6 +50,32 @@ Preferred communication style: Simple, everyday language.
 - **feedbacks**: Public feedback submissions. Two types: Mystery Shopper (full multi-section form) and Merchant Referral (Living Deals Staff Interaction form). Shared columns (`merchantName`, `merchantLocation`, `visitDate`, `shopperName`) are reused across both types; merchant referral has its own `referral_*` columns. Status: new/reviewed/archived.
 - **feedbackComments**: Internal comments on feedback entries.
 - **redirectLogs**: Tracks deep-link landing page hits, recording visitor info, platform, outcome, device details, and `linkType` for analytics. Three redirect links exist: `linkType='deals'` (`/ql-deals`, `/ql-deal`, `/deals-app` → app `ql://RewardsScreen` / desktop `qatarliving.com/deals`), `linkType='home'` (`/ql-home`, `/ql-app`, `/qatarliving` → app `ql://` / desktop `qatarliving.com/`), and `linkType='deals-mobile'` (`/ql-deals-mobile` → identical to `deals` on phones, but desktop goes to the **Apple App Store** instead of the website; desktop hits always log outcome `store`, never `web`). All beacon to `POST /api/track/ql-deals`. The Redirect Analytics dashboard has a dropdown to switch between the links; legacy NULL rows are treated as `deals`, and `deals-mobile` is filtered as an exact match so it never mixes with `deals`/NULL rows.
+
+#### Pending Production Migrations (Arabic fields + Point of Contact)
+Run on production DB before deploying:
+```sql
+-- Arabic data-entry fields (EN/AR tabs on public forms) — all nullable text
+ALTER TABLE merchants
+  ADD COLUMN IF NOT EXISTS company_name_ar text,
+  ADD COLUMN IF NOT EXISTS brand_name_ar text;
+
+ALTER TABLE merchant_brands
+  ADD COLUMN IF NOT EXISTS brand_name_ar text;
+
+ALTER TABLE deals
+  ADD COLUMN IF NOT EXISTS title_ar text,
+  ADD COLUMN IF NOT EXISTS description_ar text;
+
+ALTER TABLE merchant_deals
+  ADD COLUMN IF NOT EXISTS title_ar text,
+  ADD COLUMN IF NOT EXISTS description_ar text;
+
+-- Optional "Point of Contact for Daily Operations" on the merchant form
+ALTER TABLE merchants
+  ADD COLUMN IF NOT EXISTS poc_name text,
+  ADD COLUMN IF NOT EXISTS poc_phone text,
+  ADD COLUMN IF NOT EXISTS poc_email text;
+```
 
 #### Pending Production Migrations (Feedbacks feature)
 Run on production DB before deploying:

@@ -45,7 +45,11 @@
     "phone": "Phone Number *",
     "phonePlaceholder": "Phone number",
     "whatsapp": "WhatsApp Number",
-    "whatsappPlaceholder": "WhatsApp number"
+    "whatsappPlaceholder": "WhatsApp number",
+    "companyNameAr": "Company Name (Arabic) *",
+    "companyNameArPlaceholder": "أدخل اسم الشركة",
+    "brandNameAr": "Merchant Brand Name (Arabic) *",
+    "brandNameArPlaceholder": "أدخل اسم العلامة التجارية"
   },
   "conditions": {
     "title": "Conditions",
@@ -94,7 +98,9 @@
     "docMenuPriceList": "Menu / Price List",
     "docTaxCard": "Tax Card",
     "docLogo": "Logo",
-    "docCoverImage": "Cover Image"
+    "docCoverImage": "Cover Image",
+    "brandNameAr": "Brand Name (Arabic)",
+    "brandNameArPlaceholder": "أدخل اسم العلامة التجارية"
   },
   "branches": {
     "title": "Branches",
@@ -179,7 +185,11 @@
     "addImage": "Add Image",
     "replace": "Replace",
     "remove": "Remove",
-    "imageAlt": "Deal image {{num}}"
+    "imageAlt": "Deal image {{num}}",
+    "dealTitleAr": "Deal Title (Arabic) *",
+    "dealTitleArPlaceholder": "مثال: اشترِ 1 واحصل على 1 مجانًا على جميع أنواع البيتزا",
+    "descriptionAr": "Description (Arabic)",
+    "descriptionArPlaceholder": "صف العرض..."
   },
   "days": {
     "Sunday": "Sunday",
@@ -313,7 +323,22 @@
       "deals": "Deal Offers",
       "whatsapp": "WhatsApp",
       "logo": "Logo",
-      "coverImage": "Cover Image"
-    }
+      "coverImage": "Cover Image",
+      "companyNameAr": "Company Name (Arabic)",
+      "brandNameAr": "Brand Name (Arabic)"
+    },
+    "companyNameArRequired": "Company name (Arabic) is required",
+    "brandNameArRequired": "Brand name (Arabic) is required",
+    "titleArMin": "Deal title (Arabic) must be at least 5 characters"
+  },
+  "poc": {
+    "title": "Point of Contact for Daily Operations",
+    "subtitle": "Optional — the person we can reach for day-to-day matters.",
+    "name": "Contact Name",
+    "namePlaceholder": "Full name",
+    "phone": "Contact Phone",
+    "phonePlaceholder": "Phone number",
+    "email": "Contact Email",
+    "emailPlaceholder": "email@company.com"
   }
 }

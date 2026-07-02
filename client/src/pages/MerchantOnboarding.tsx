@@ -1,6 +1,6 @@
 import { useState, useRef, ChangeEvent, useCallback, useMemo, useEffect } from "react";
 import { compressImage, compressImages } from "@/lib/compressImage";
-import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { useForm, useFieldArray, useWatch, useFormState } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useQuery } from "@tanstack/react-query";
@@ -38,6 +38,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { BilingualTabs } from "@/components/BilingualTabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -113,6 +114,7 @@ const makeBranchSchema = (t: TFn) => z.object({
 
 const makeBrandSchema = (_t: TFn) => z.object({
   brandName: z.string().optional(),
+  brandNameAr: z.string().optional(),
   address: z.string().optional(),
   contactPerson: z.string().optional(),
   email: z.string().optional(),
@@ -145,7 +147,9 @@ const makeDealSchema = (t: TFn) => z.object({
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
   title: z.string().min(5, t("validation.titleMin")),
+  titleAr: z.string().min(5, t("validation.titleArMin")),
   description: z.string().optional(),
+  descriptionAr: z.string().optional(),
   claimRules: z.array(z.string()).optional(),
   generalRules: z.array(z.string()).optional(),
   otherRules: z.string().optional(),
@@ -156,12 +160,17 @@ const makeDealSchema = (t: TFn) => z.object({
 const makeMerchantSchema = (t: TFn) => z.object({
   companyType: z.enum(["individual", "group"]).default("individual"),
   companyName: z.string().min(1, t("validation.companyNameRequired")),
+  companyNameAr: z.string().min(1, t("validation.companyNameArRequired")),
   crNumber: z.string().optional(),
   brandName: z.string().optional(),
+  brandNameAr: z.string().optional(),
   address: z.string().min(1, t("validation.addressRequired")),
   contactPerson: z.string().min(1, t("validation.contactPersonRequired")),
   email: z.string().email(t("validation.emailValid")),
   phone: z.string().min(1, t("validation.phoneRequired")),
+  pocName: z.string().optional(),
+  pocPhone: z.string().optional(),
+  pocEmail: z.union([z.string().email(t("validation.emailValid")), z.literal("")]).optional(),
   products: z.array(z.string()).optional(),
   businessCategories: z.array(z.string()).optional(),
   branches: z.array(makeBranchSchema(t)).optional(),
@@ -195,6 +204,9 @@ const makeMerchantSchema = (t: TFn) => z.object({
   }
   if (!data.brandName || data.brandName.trim() === "") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandName"], message: t("validation.brandNameRequired") });
+  }
+  if (!data.brandNameAr || data.brandNameAr.trim() === "") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandNameAr"], message: t("validation.brandNameArRequired") });
   }
   if (!data.products || data.products.length === 0) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["products"], message: t("validation.productRequired") });
@@ -263,12 +275,17 @@ export default function MerchantOnboarding() {
     defaultValues: {
       companyType: "individual",
       companyName: "",
+      companyNameAr: "",
       crNumber: "",
       brandName: "",
+      brandNameAr: "",
       address: "",
       contactPerson: "",
       email: "",
       phone: "",
+      pocName: "",
+      pocPhone: "",
+      pocEmail: "",
       products: [],
       businessCategories: [],
       branches: [],
@@ -308,6 +325,7 @@ export default function MerchantOnboarding() {
   const addBrand = () => {
     appendBrand({
       brandName: "",
+      brandNameAr: "",
       address: "",
       contactPerson: "",
       email: "",
@@ -362,7 +380,9 @@ export default function MerchantOnboarding() {
       specificDays: false,
       days: daysOfWeek,
       title: "",
+      titleAr: "",
       description: "",
+      descriptionAr: "",
       claimRules: [],
       generalRules: [],
       otherRules: "",
@@ -473,6 +493,7 @@ export default function MerchantOnboarding() {
         payload.deals = [];
         payload.crNumber = undefined;
         payload.brandName = undefined;
+        payload.brandNameAr = undefined;
         payload.crDocument = undefined;
         payload.establishmentCard = undefined;
         payload.tradeLicense = undefined;
@@ -577,8 +598,10 @@ export default function MerchantOnboarding() {
             console.log("Form validation errors:", errors);
             const fieldLabels: Record<string, string> = {
               companyName: t("validation.fieldLabels.companyName"),
+              companyNameAr: t("validation.fieldLabels.companyNameAr"),
               crNumber: t("validation.fieldLabels.crNumber"),
               brandName: t("validation.fieldLabels.brandName"),
+              brandNameAr: t("validation.fieldLabels.brandNameAr"),
               address: t("validation.fieldLabels.address"),
               contactPerson: t("validation.fieldLabels.contactPerson"),
               email: t("validation.fieldLabels.email"),
@@ -708,18 +731,40 @@ export default function MerchantOnboarding() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="companyName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{t("companyInfo.companyName")}</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder={t("companyInfo.companyNamePlaceholder")} data-testid="input-company-name" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <BilingualTabs
+                    idPrefix="company-name"
+                    hasEnglishError={!!form.formState.errors.companyName}
+                    hasArabicError={!!form.formState.errors.companyNameAr}
+                    english={
+                      <FormField
+                        control={form.control}
+                        name="companyName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("companyInfo.companyName")}</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder={t("companyInfo.companyNamePlaceholder")} data-testid="input-company-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    }
+                    arabic={
+                      <FormField
+                        control={form.control}
+                        name="companyNameAr"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>{t("companyInfo.companyNameAr")}</FormLabel>
+                            <FormControl>
+                              <Input {...field} dir="rtl" placeholder={t("companyInfo.companyNameArPlaceholder")} data-testid="input-company-name-ar" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    }
                   />
 
                   {!isGroup && (
@@ -746,18 +791,40 @@ export default function MerchantOnboarding() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="brandName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t("companyInfo.brandName")}</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder={t("companyInfo.brandNamePlaceholder")} data-testid="input-brand-name" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                      <BilingualTabs
+                        idPrefix="brand-name"
+                        hasEnglishError={!!form.formState.errors.brandName}
+                        hasArabicError={!!form.formState.errors.brandNameAr}
+                        english={
+                          <FormField
+                            control={form.control}
+                            name="brandName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("companyInfo.brandName")}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder={t("companyInfo.brandNamePlaceholder")} data-testid="input-brand-name" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        }
+                        arabic={
+                          <FormField
+                            control={form.control}
+                            name="brandNameAr"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>{t("companyInfo.brandNameAr")}</FormLabel>
+                                <FormControl>
+                                  <Input {...field} dir="rtl" placeholder={t("companyInfo.brandNameArPlaceholder")} data-testid="input-brand-name-ar" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        }
                       />
                     </>
                   )}
@@ -845,6 +912,59 @@ export default function MerchantOnboarding() {
                       </FormItem>
                     )}
                   />
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h3 className="font-semibold text-[#00426D]">{t("poc.title")}</h3>
+                  <p className="text-sm text-slate-500 mt-1 mb-4">{t("poc.subtitle")}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="pocName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("poc.name")}</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ""} placeholder={t("poc.namePlaceholder")} data-testid="input-poc-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="pocPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("poc.phone")}</FormLabel>
+                          <FormControl>
+                            <PhoneInput
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              placeholder={t("poc.phonePlaceholder")}
+                              data-testid="input-poc-phone"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="pocEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t("poc.email")}</FormLabel>
+                          <FormControl>
+                            <Input {...field} value={field.value || ""} type="email" placeholder={t("poc.emailPlaceholder")} data-testid="input-poc-email" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1534,6 +1654,8 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
 }) {
   const { t } = useTranslation(["onboarding", "common"]);
   const brandCats: string[] = (useWatch({ control: form.control, name: `brands.${index}.businessCategories` as any }) as string[]) || [];
+  const { errors: brandFormErrors } = useFormState({ control: form.control });
+  const brandErrors = (brandFormErrors as any)?.brands?.[index] || {};
 
   return (
     <div className="p-4 border-2 border-[#00426D]/15 rounded-lg space-y-4 relative bg-slate-50/40" data-testid={`brand-section-${index}`}>
@@ -1552,18 +1674,40 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name={`brands.${index}.brandName`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("onboarding:brands.brandName")}</FormLabel>
-              <FormControl>
-                <Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.brandNamePlaceholder")} data-testid={`input-brand-${index}-name`} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+        <BilingualTabs
+          idPrefix={`group-brand-name-${index}`}
+          hasEnglishError={!!brandErrors.brandName}
+          hasArabicError={!!brandErrors.brandNameAr}
+          english={
+            <FormField
+              control={form.control}
+              name={`brands.${index}.brandName`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("onboarding:brands.brandName")}</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.brandNamePlaceholder")} data-testid={`input-brand-${index}-name`} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          }
+          arabic={
+            <FormField
+              control={form.control}
+              name={`brands.${index}.brandNameAr`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("onboarding:brands.brandNameAr")}</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value || ""} dir="rtl" placeholder={t("onboarding:brands.brandNameArPlaceholder")} data-testid={`input-brand-${index}-name-ar`} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          }
         />
         <FormField
           control={form.control}
@@ -2020,6 +2164,8 @@ function DealFormSection({
   const claimRulesValue = useWatch({ control: form.control, name: `deals.${index}.claimRules` }) || [];
   const generalRulesValue = useWatch({ control: form.control, name: `deals.${index}.generalRules` }) || [];
   const branchesValue = useWatch({ control: form.control, name: `deals.${index}.branches` }) || [];
+  const { errors: dealFormErrors } = useFormState({ control: form.control });
+  const dealErrors = (dealFormErrors as any)?.deals?.[index] || {};
   const [discountType, setDiscountType] = useState<"percentage" | "discountedPrice">("percentage");
   
   const selectedCategory = categories.find(c => c.name === categoryValue);
@@ -2052,18 +2198,40 @@ function DealFormSection({
 
       {isExpanded && (
         <div className="p-4 space-y-6">
-          <FormField
-            control={form.control}
-            name={`deals.${index}.title`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("onboarding:deals.dealTitle")}</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder={t("onboarding:deals.dealTitlePlaceholder")} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+          <BilingualTabs
+            idPrefix={`deal-title-${index}`}
+            hasEnglishError={!!dealErrors.title}
+            hasArabicError={!!dealErrors.titleAr}
+            english={
+              <FormField
+                control={form.control}
+                name={`deals.${index}.title`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("onboarding:deals.dealTitle")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder={t("onboarding:deals.dealTitlePlaceholder")} data-testid={`input-deal-title-${index}`} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            }
+            arabic={
+              <FormField
+                control={form.control}
+                name={`deals.${index}.titleAr`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("onboarding:deals.dealTitleAr")}</FormLabel>
+                    <FormControl>
+                      <Input {...field} dir="rtl" placeholder={t("onboarding:deals.dealTitleArPlaceholder")} data-testid={`input-deal-title-ar-${index}`} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            }
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2350,18 +2518,40 @@ function DealFormSection({
             </div>
           )}
 
-          <FormField
-            control={form.control}
-            name={`deals.${index}.description`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("onboarding:deals.description")}</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder={t("onboarding:deals.descriptionPlaceholder")} rows={3} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+          <BilingualTabs
+            idPrefix={`deal-description-${index}`}
+            hasEnglishError={!!dealErrors.description}
+            hasArabicError={!!dealErrors.descriptionAr}
+            english={
+              <FormField
+                control={form.control}
+                name={`deals.${index}.description`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("onboarding:deals.description")}</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} placeholder={t("onboarding:deals.descriptionPlaceholder")} rows={3} data-testid={`textarea-deal-description-${index}`} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            }
+            arabic={
+              <FormField
+                control={form.control}
+                name={`deals.${index}.descriptionAr`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("onboarding:deals.descriptionAr")}</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} dir="rtl" placeholder={t("onboarding:deals.descriptionArPlaceholder")} rows={3} data-testid={`textarea-deal-description-ar-${index}`} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            }
           />
 
           <div>
