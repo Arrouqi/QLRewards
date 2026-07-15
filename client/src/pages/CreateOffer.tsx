@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 import { BilingualTabs } from "@/components/BilingualTabs";
+import { useAutoTranslate } from "@/hooks/useAutoTranslate";
 
 interface SubCategory {
   id: string;
@@ -527,6 +528,9 @@ export default function CreateOffer() {
       agreement: false,
     },
   });
+
+  useAutoTranslate(form, "title", "titleAr");
+  useAutoTranslate(form, "description", "descriptionAr");
 
   const onFormError = (errors: any) => {
     const fieldLabels: Record<string, string> = {

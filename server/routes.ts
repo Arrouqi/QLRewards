@@ -238,6 +238,32 @@ export async function registerRoutes(
 
   // Public merchant search (Feedback form picker): 60 per minute per IP — supports type-as-you-search
   const publicMerchantsRateLimit = makeRateLimiter({ windowMs: 60_000, max: 60 });
+  const translateRateLimit = makeRateLimiter({ windowMs: 60_000, max: 120 });
+
+  // Simple in-memory cache so repeated identical texts don't re-hit the API
+  const translationCache = new Map<string, string>();
+  app.post("/api/public/translate", translateRateLimit, async (req, res) => {
+    try {
+      const text = typeof req.body?.text === "string" ? req.body.text.trim() : "";
+      if (!text) return res.status(400).json({ error: "Text is required" });
+      if (text.length > 1000) return res.status(400).json({ error: "Text too long" });
+      const cached = translationCache.get(text);
+      if (cached) return res.json({ translation: cached });
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|ar`;
+      const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!response.ok) return res.status(502).json({ error: "Translation service unavailable" });
+      const data: any = await response.json();
+      const translation = data?.responseData?.translatedText;
+      if (typeof translation !== "string" || !translation.trim() || data?.responseStatus !== 200) {
+        return res.status(502).json({ error: "Translation failed" });
+      }
+      if (translationCache.size > 2000) translationCache.clear();
+      translationCache.set(text, translation);
+      res.json({ translation });
+    } catch {
+      res.status(502).json({ error: "Translation service unavailable" });
+    }
+  });
 
   // Public tracking endpoint for the ql-deals redirect page (called via sendBeacon)
   app.post("/api/track/ql-deals", trackRateLimit, express.json({ limit: "10kb" }), async (req, res) => {

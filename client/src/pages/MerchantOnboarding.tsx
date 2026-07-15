@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useLocation } from "wouter";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { useAutoTranslate } from "@/hooks/useAutoTranslate";
 
 interface SubCategory {
   id: string;
@@ -355,6 +356,9 @@ export default function MerchantOnboarding() {
   const businessCategoriesValue = useWatch({ control: form.control, name: "businessCategories" }) || [];
 
   
+  useAutoTranslate(form, "companyName", "companyNameAr");
+  useAutoTranslate(form, "brandName", "brandNameAr");
+
   const addBranch = () => {
     appendBranch({ name: "", location: "", phone: "", detail: "" });
   };
@@ -1661,6 +1665,7 @@ function BrandFormSection({ index, form, categories, onRemove, handleFileUpload 
   const brandCats: string[] = (useWatch({ control: form.control, name: `brands.${index}.businessCategories` as any }) as string[]) || [];
   const { errors: brandFormErrors } = useFormState({ control: form.control });
   const brandErrors = (brandFormErrors as any)?.brands?.[index] || {};
+  useAutoTranslate(form, `brands.${index}.brandName`, `brands.${index}.brandNameAr`);
 
   return (
     <div className="p-4 border-2 border-[#00426D]/15 rounded-lg space-y-4 relative bg-slate-50/40" data-testid={`brand-section-${index}`}>
@@ -2168,6 +2173,8 @@ function DealFormSection({
   const categoryValue = useWatch({ control: form.control, name: `deals.${index}.category` });
   const dealTypeValue = useWatch({ control: form.control, name: `deals.${index}.dealType` });
   const redemptionValue = useWatch({ control: form.control, name: `deals.${index}.redemption` });
+  useAutoTranslate(form, `deals.${index}.title`, `deals.${index}.titleAr`);
+  useAutoTranslate(form, `deals.${index}.description`, `deals.${index}.descriptionAr`);
   const isMultipleItemsValue = useWatch({ control: form.control, name: `deals.${index}.isMultipleItems` });
   const claimRulesValue = useWatch({ control: form.control, name: `deals.${index}.claimRules` }) || [];
   const generalRulesValue = useWatch({ control: form.control, name: `deals.${index}.generalRules` }) || [];
