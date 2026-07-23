@@ -576,6 +576,8 @@ export class DatabaseStorage implements IStorage {
       conds.push(eq(redirectLogs.linkType, "home"));
     } else if (linkType === "deals-mobile") {
       conds.push(eq(redirectLogs.linkType, "deals-mobile"));
+    } else if (linkType === "prop-lusail") {
+      conds.push(eq(redirectLogs.linkType, "prop-lusail"));
     } else if (linkType === "deals") {
       conds.push(or(eq(redirectLogs.linkType, "deals"), isNull(redirectLogs.linkType)));
     }
