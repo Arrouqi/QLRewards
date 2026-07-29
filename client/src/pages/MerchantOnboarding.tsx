@@ -363,6 +363,20 @@ export default function MerchantOnboarding() {
     appendBranch({ name: "", location: "", phone: "", detail: "" });
   };
 
+  // Remove a branch and strip its id from every deal's selection
+  const handleRemoveBranch = (index: number) => {
+    const removedId = branchFields[index]?.id;
+    removeBranch(index);
+    if (removedId) {
+      const currentDeals = form.getValues("deals") || [];
+      currentDeals.forEach((deal: any, i: number) => {
+        if (deal?.branches?.includes(removedId)) {
+          form.setValue(`deals.${i}.branches`, deal.branches.filter((v: string) => v !== removedId));
+        }
+      });
+    }
+  };
+
   const addDeal = () => {
     appendDeal({
       category: "",
@@ -454,6 +468,16 @@ export default function MerchantOnboarding() {
     try {
       const formattedBranches = data.branches?.map(b => JSON.stringify(b)) || [];
 
+      // Deal checkboxes store stable field-array ids while editing; convert to
+      // branch names for the server payload (DB stores names).
+      const branchIdToName = new Map<string, string>(
+        branchFields.map((f, i) => [f.id, data.branches?.[i]?.name || `Branch ${i + 1}`])
+      );
+      const dealsWithBranchNames = data.deals?.map(d => ({
+        ...d,
+        branches: (d.branches || []).map((id: string) => branchIdToName.get(id) ?? id),
+      }));
+
       const isGroupSubmit = data.companyType === "group";
       if (isGroupSubmit) {
         if (!data.brands || data.brands.length === 0) {
@@ -505,6 +529,7 @@ export default function MerchantOnboarding() {
         payload.businessCategories = [];
       } else {
         payload.brands = [];
+        payload.deals = dealsWithBranchNames || [];
       }
 
       const response = await fetch("/api/merchants", {
@@ -1144,7 +1169,7 @@ export default function MerchantOnboarding() {
                       variant="ghost"
                       size="icon"
                       className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                      onClick={() => removeBranch(index)}
+                      onClick={() => handleRemoveBranch(index)}
                       data-testid={`button-remove-branch-${index}`}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -2179,6 +2204,9 @@ function DealFormSection({
   const claimRulesValue = useWatch({ control: form.control, name: `deals.${index}.claimRules` }) || [];
   const generalRulesValue = useWatch({ control: form.control, name: `deals.${index}.generalRules` }) || [];
   const branchesValue = useWatch({ control: form.control, name: `deals.${index}.branches` }) || [];
+  // Live branch values (updates as the user types) — the `branches` prop is a
+  // useFieldArray snapshot whose names go stale until a structural change.
+  const liveBranchValues = useWatch({ control: form.control, name: "branches" }) || [];
   const { errors: dealFormErrors } = useFormState({ control: form.control });
   const dealErrors = (dealFormErrors as any)?.deals?.[index] || {};
   const [discountType, setDiscountType] = useState<"percentage" | "discountedPrice">("percentage");
@@ -2650,7 +2678,7 @@ function DealFormSection({
             <div>
               <Label>{t("onboarding:deals.applicableBranch")}</Label>
               <p className="text-sm text-slate-600 mt-2 p-2 bg-slate-50 rounded border">
-                {branches[0]?.name || t("onboarding:branches.branchFallback", { num: 1 })} {t("onboarding:deals.autoSelected")}
+                {liveBranchValues[0]?.name || t("onboarding:branches.branchFallback", { num: 1 })} {t("onboarding:deals.autoSelected")}
               </p>
             </div>
           ) : (
@@ -2659,12 +2687,13 @@ function DealFormSection({
               <p className="text-xs text-slate-500 mb-2">{t("onboarding:deals.selectAtLeastOneBranch")}</p>
               <div className="space-y-2">
                 {branches.map((branch: any, branchIndex: number) => {
-                  const displayName = branch?.name || `Branch ${branchIndex + 1}`;
-                  const branchLabel = branch?.name || t("onboarding:branches.branchFallback", { num: branchIndex + 1 });
-                  const isSelected = branchesValue.includes(displayName);
+                  // Select by stable field-array id (not name) so renames/duplicates can't break links
+                  const branchId = branch?.id ?? String(branchIndex);
+                  const branchLabel = liveBranchValues[branchIndex]?.name || t("onboarding:branches.branchFallback", { num: branchIndex + 1 });
+                  const isSelected = branchesValue.includes(branchId);
                   return (
                     <label
-                      key={branchIndex}
+                      key={branchId}
                       className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
                     >
                       <input
@@ -2672,9 +2701,9 @@ function DealFormSection({
                         checked={isSelected}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            form.setValue(`deals.${index}.branches`, [...branchesValue, displayName]);
+                            form.setValue(`deals.${index}.branches`, [...branchesValue, branchId]);
                           } else {
-                            form.setValue(`deals.${index}.branches`, branchesValue.filter((v: string) => v !== displayName));
+                            form.setValue(`deals.${index}.branches`, branchesValue.filter((v: string) => v !== branchId));
                           }
                         }}
                         className="h-4 w-4 accent-[#FF7F39]"

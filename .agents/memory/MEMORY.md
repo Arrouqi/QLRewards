@@ -5,3 +5,4 @@
 - [Bilingual form validation](bilingual-form-validation.md) — Arabic requiredness enforced only on public submission paths via separate superRefine schema exports; never run db:push (drops session table).
 - [Categories are English-only](categories-english-only.md) — never add Arabic to categories; new columns on shared tables break prod reads until the manual SQL migration runs.
 - [Auto-translate via MyMemory](auto-translate-mymemory.md) — free EN→AR API chosen after user declined managed AI billing; swap upstream only, client hook stays.
+- [Deal–branch linking](deal-branch-linking.md) — DB stores branch names; editors must link deals by stable client ids and map to names only at save, never by name.

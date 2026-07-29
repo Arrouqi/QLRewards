@@ -213,7 +213,12 @@ export default function MerchantEdit() {
             try { return typeof b === "string" ? JSON.parse(b) : b; } catch { return { name: String(b), location: "", phone: "", detail: "" }; }
           })
         : [];
+      // Give each branch a stable client-side id (stripped before saving) so deal
+      // links survive renames while editing.
+      parsedBranches.forEach((b: any) => { b._uid = b._uid || crypto.randomUUID(); });
       setBranches(parsedBranches);
+      // Maps a stored branch name to its branch _uid (first match wins for duplicates)
+      const nameToUid = (name: string) => parsedBranches.find((b: any) => b?.name === name)?._uid;
       setFormData({
         companyName: data.companyName || "",
         companyNameAr: data.companyNameAr || "",
@@ -263,7 +268,9 @@ export default function MerchantEdit() {
             claimRules: deal.claimRules || [],
             generalRules: deal.generalRules || [],
             otherRules: deal.otherRules || "",
-            branches: deal.branches || [],
+            // Convert stored branch names to stable uids for editing; keep
+            // unmatched names as-is (they were already broken links).
+            branches: (deal.branches || []).map((n: string) => nameToUid(n) || n),
             images: deal.images || [],
             brandId: deal.brandId ?? null,
           };
@@ -672,7 +679,32 @@ export default function MerchantEdit() {
         ...formData,
         products: formData.products.split(",").map(p => p.trim()).filter(Boolean),
         businessCategories: formData.businessCategories.split(",").map(c => c.trim()).filter(Boolean),
-        deals: deals,
+        // Deal selections hold branch _uids while editing; convert back to names
+        // for the server payload (DB stores names). Keep unknown values as-is.
+        deals: deals.map((d) => {
+          let dealBranchUids: string[] = d.branches || [];
+          // Auto-fill when exactly one applicable branch exists and none selected
+          // (matches the "automatically selected" UI text).
+          if (dealBranchUids.length === 0) {
+            const brandIdx = isGroup && d.brandId
+              ? brands.findIndex((b: any, i: number) => b.id === d.brandId || String(i) === d.brandId)
+              : -1;
+            const applicable = brandIdx >= 0
+              ? branches.filter((br: any) => {
+                  const refIdx = brands.findIndex((b: any, i: number) => b.id === br?.brandId || String(i) === br?.brandId);
+                  return refIdx === brandIdx;
+                })
+              : branches;
+            if (applicable.length === 1) dealBranchUids = [applicable[0]._uid];
+          }
+          return {
+            ...d,
+            branches: dealBranchUids.map((v: string) => {
+              const idx = branches.findIndex((b: any) => b._uid === v);
+              return idx >= 0 ? (branches[idx]?.name || `Branch ${idx + 1}`) : v;
+            }),
+          };
+        }),
         taxCardDocument: merchant.taxCardDocument || null,
         logo: merchant.logo || null,
         coverImage: merchant.coverImage || null,
@@ -687,7 +719,7 @@ export default function MerchantEdit() {
                 : []),
         }));
       }
-      updateData.branches = branches.map((b) => JSON.stringify(b));
+      updateData.branches = branches.map((b) => { const { _uid, ...rest } = b; return JSON.stringify(rest); });
       if (merchant.crDocument) updateData.crDocument = merchant.crDocument;
       if (merchant.establishmentCard) updateData.establishmentCard = merchant.establishmentCard;
       if (merchant.tradeLicense) updateData.tradeLicense = merchant.tradeLicense;
@@ -1438,7 +1470,7 @@ export default function MerchantEdit() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setBranchesOpen(true); setBranches([...branches, { name: "", location: "", phone: "", detail: "", ...(isGroup ? { brandId: "" } : {}) }]); }}
+              onClick={() => { setBranchesOpen(true); setBranches([...branches, { _uid: crypto.randomUUID(), name: "", location: "", phone: "", detail: "", ...(isGroup ? { brandId: "" } : {}) }]); }}
               data-testid="button-add-branch"
             >
               <Plus className="h-4 w-4 mr-1" /> Add Branch
@@ -1457,7 +1489,13 @@ export default function MerchantEdit() {
                     variant="ghost"
                     size="icon"
                     className="text-red-500"
-                    onClick={() => setBranches(branches.filter((_, i) => i !== idx))}
+                    onClick={() => {
+                      const removedUid = branches[idx]?._uid;
+                      setBranches(branches.filter((_, i) => i !== idx));
+                      if (removedUid) {
+                        setDeals(prev => prev.map(d => ({ ...d, branches: (d.branches || []).filter((v: string) => v !== removedUid) })));
+                      }
+                    }}
                     data-testid={`button-remove-branch-${idx}`}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -1971,14 +2009,14 @@ export default function MerchantEdit() {
                               if (newBrandId) {
                                 const brandIdx = brands.findIndex((b: any, i: number) => b.id === newBrandId || String(i) === newBrandId);
                                 if (brandIdx >= 0) {
-                                  const allowedNames = branches
-                                    .filter((br: any, bi: number) => {
+                                  const allowedUids = branches
+                                    .filter((br: any) => {
                                       const ref = br?.brandId;
                                       const refIdx = brands.findIndex((b: any, i: number) => b.id === ref || String(i) === ref);
                                       return refIdx === brandIdx;
                                     })
-                                    .map((br: any, bi: number) => br?.name || `Branch ${bi + 1}`);
-                                  const filtered = (deal.branches || []).filter((n: string) => allowedNames.includes(n));
+                                    .map((br: any) => br?._uid);
+                                  const filtered = (deal.branches || []).filter((v: string) => allowedUids.includes(v));
                                   if (filtered.length !== (deal.branches || []).length) {
                                     handleDealChange(index, "branches", filtered);
                                   }
@@ -2039,11 +2077,12 @@ export default function MerchantEdit() {
                             <div className="space-y-2">
                               {visibleBranches.map(({ br: branch, bi: branchIndex }) => {
                                 const displayName = branch?.name || `Branch ${branchIndex + 1}`;
+                                const branchUid = branch?._uid ?? String(branchIndex);
                                 const dealBranches = deal.branches || [];
-                                const isSelected = dealBranches.includes(displayName);
+                                const isSelected = dealBranches.includes(branchUid);
                                 return (
                                   <label
-                                    key={branchIndex}
+                                    key={branchUid}
                                     className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
                                     data-testid={`label-deal-${index}-branch-${branchIndex}`}
                                   >
@@ -2052,8 +2091,8 @@ export default function MerchantEdit() {
                                       checked={isSelected}
                                       onChange={(e) => {
                                         const next = e.target.checked
-                                          ? [...dealBranches, displayName]
-                                          : dealBranches.filter((v: string) => v !== displayName);
+                                          ? [...dealBranches, branchUid]
+                                          : dealBranches.filter((v: string) => v !== branchUid);
                                         handleDealChange(index, "branches", next);
                                       }}
                                       className="h-4 w-4 accent-[#00426D]"
