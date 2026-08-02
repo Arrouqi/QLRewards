@@ -351,12 +351,13 @@ export default function MerchantView() {
     const currentLabel = statusLabels[merchant.status] || merchant.status;
     const targetLabel = statusLabels[targetStatus] || targetStatus;
     const isArchive = targetStatus === "archived";
+    const merchantLabel = merchant.companyType === "group" ? "Group merchant" : (merchant.brandName || merchant.companyName);
     setStatusConfirmDialog({
       targetStatus,
       title: isArchive ? "Archive Merchant?" : `Change Status: ${currentLabel} → ${targetLabel}?`,
       description: isArchive
-        ? `Are you sure you want to archive "${merchant.companyName}" (${merchant.brandName})? You can restore it later from the Archived tab.`
-        : `Are you sure you want to move "${merchant.companyName}" (${merchant.brandName}) from "${currentLabel}" to "${targetLabel}"?`,
+        ? `Are you sure you want to archive "${merchant.companyName}" (${merchantLabel})? You can restore it later from the Archived tab.`
+        : `Are you sure you want to move "${merchant.companyName}" (${merchantLabel}) from "${currentLabel}" to "${targetLabel}"?`,
     });
   };
 

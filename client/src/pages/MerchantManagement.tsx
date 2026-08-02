@@ -60,6 +60,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 
 interface Merchant {
   id: string;
+  companyType?: string;
   companyName: string;
   crNumber: string;
   brandName: string;
@@ -469,10 +470,10 @@ export default function MerchantManagement() {
                     <TableCell>
                       <div>
                         <p className="font-medium">{merchant.companyName}</p>
-                        <p className="text-xs text-slate-500">CR: {merchant.crNumber}</p>
+                        <p className="text-xs text-slate-500">{merchant.companyType === "group" ? "Group (multi-brand)" : `CR: ${merchant.crNumber || "—"}`}</p>
                       </div>
                     </TableCell>
-                    <TableCell>{merchant.brandName}</TableCell>
+                    <TableCell>{merchant.companyType === "group" ? <span className="text-slate-500 italic">Group brands</span> : merchant.brandName}</TableCell>
                     <TableCell>
                       <div className="text-sm">
                         <p>{merchant.contactPerson}</p>

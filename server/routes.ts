@@ -1425,12 +1425,12 @@ export async function registerRoutes(
       // For group: upload all brand documents to Azure before creating merchant
       const brandDocFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'taxCardDocument', 'logo', 'coverImage'];
       const processedBrands: any[] = [];
+      if (isGroup && (!Array.isArray(brands) || brands.length < 1)) {
+        const errorMsg = "Group merchants must have at least one brand";
+        await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
+        return res.status(400).json({ error: errorMsg });
+      }
       if (isGroup && Array.isArray(brands)) {
-        if (brands.length < 1) {
-          const errorMsg = "Group merchants must have at least one brand";
-          await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
-          return res.status(400).json({ error: errorMsg });
-        }
         if (brands.length > 50) {
           const errorMsg = "Group merchants cannot have more than 50 brands";
           await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
@@ -1721,9 +1721,20 @@ export async function registerRoutes(
         merchant = updated;
       }
 
-      // Replace brands if provided
+      // Replace brands if provided. Replacement regenerates brand ids, so build a
+      // map from the ids the client knows (old ids / index strings) to the new ids,
+      // so deal.brandId references can be remapped instead of silently orphaned.
+      const brandIdRemap = new Map<string, string>();
       if (processedBrandRows !== null) {
-        await storage.replaceMerchantBrands(req.params.id, processedBrandRows);
+        const newBrandRows = await storage.replaceMerchantBrands(req.params.id, processedBrandRows);
+        if (Array.isArray(brandUpdates)) {
+          brandUpdates.forEach((b: any, i: number) => {
+            if (newBrandRows[i]) {
+              if (b?.id) brandIdRemap.set(String(b.id), newBrandRows[i].id);
+              brandIdRemap.set(String(i), newBrandRows[i].id);
+            }
+          });
+        }
       }
       
       // Update deals if provided
@@ -1744,6 +1755,30 @@ export async function registerRoutes(
           const imgCount = (deal.images || []).length;
           if (imgCount < 4) {
             return res.status(400).json({ error: `Each deal requires at least 4 images. "${deal.title || 'Untitled Deal'}" has ${imgCount}.` });
+          }
+        }
+
+        // For group merchants: remap deal brandIds to current brand rows (brand
+        // replacement regenerates ids) and reject references to foreign brands.
+        if (isGroup) {
+          const merchantBrandRows = await storage.getMerchantBrandsByMerchantId(merchant.id);
+          const validBrandIds = new Set(merchantBrandRows.map(b => b.id));
+          for (const deal of dealUpdates) {
+            // Only null/undefined/empty-string mean "no brand" (numeric 0 is a legacy index)
+            if (deal.brandId === null || deal.brandId === undefined || deal.brandId === "") {
+              deal.brandId = null;
+              continue;
+            }
+            deal.brandId = String(deal.brandId);
+            if (brandIdRemap.has(deal.brandId)) {
+              deal.brandId = brandIdRemap.get(deal.brandId);
+            } else if (/^\d+$/.test(String(deal.brandId)) && merchantBrandRows[Number(deal.brandId)]) {
+              // Legacy index-style brand reference → current brand at that display position
+              deal.brandId = merchantBrandRows[Number(deal.brandId)].id;
+            }
+            if (!validBrandIds.has(deal.brandId)) {
+              return res.status(400).json({ error: `Deal "${deal.title || 'Untitled Deal'}" references a brand that does not belong to this merchant` });
+            }
           }
         }
 
