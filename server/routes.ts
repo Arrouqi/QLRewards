@@ -2065,7 +2065,20 @@ export async function registerRoutes(
       
       if (status === "moderation") {
         const missingDocs: string[] = [];
-        if (!existingMerchant.crDocument) missingDocs.push("CR Document");
+        if (existingMerchant.companyType === "group") {
+          // Group merchants keep CR documents per brand, not at the merchant level
+          const groupBrands = await storage.getMerchantBrandsByMerchantId(req.params.id);
+          if (groupBrands.length === 0) {
+            missingDocs.push("At least one brand");
+          } else {
+            const brandsMissingCr = groupBrands.filter(b => !b.crDocument);
+            if (brandsMissingCr.length > 0) {
+              missingDocs.push(...brandsMissingCr.map(b => `CR Document (${b.brandName || "unnamed brand"})`));
+            }
+          }
+        } else {
+          if (!existingMerchant.crDocument) missingDocs.push("CR Document");
+        }
         
         if (missingDocs.length > 0) {
           return res.status(400).json({ 
