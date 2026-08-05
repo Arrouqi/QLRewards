@@ -106,26 +106,6 @@ const makeBranchSchema = (t: TFn) => z.object({
   location: z.string().optional(),
   phone: z.string().min(1, t("validation.branchPhoneRequired")),
   detail: z.string().optional(),
-  brandId: z.string().optional(),
-});
-
-const makeBrandSchema = (_t: TFn) => z.object({
-  brandName: z.string().optional(),
-  brandNameAr: z.string().optional(),
-  address: z.string().optional(),
-  contactPerson: z.string().optional(),
-  email: z.string().optional(),
-  phone: z.string().optional(),
-  whatsapp: z.string().optional(),
-  crNumber: z.string().optional(),
-  crDocument: z.string().optional(),
-  establishmentCard: z.string().optional(),
-  tradeLicense: z.string().optional(),
-  taxCardDocument: z.string().optional(),
-  menuPriceList: z.string().optional(),
-  logo: z.string().optional(),
-  coverImage: z.string().optional(),
-  businessCategories: z.array(z.string()).optional(),
 });
 
 const makeDealSchema = (t: TFn) => z.object({
@@ -155,7 +135,6 @@ const makeDealSchema = (t: TFn) => z.object({
 });
 
 const makeMerchantSchema = (t: TFn) => z.object({
-  companyType: z.enum(["individual", "group"]).default("individual"),
   companyName: z.string().min(1, t("validation.companyNameRequired")),
   companyNameAr: z.string().min(1, t("validation.companyNameArRequired")),
   crNumber: z.string().optional(),
@@ -171,7 +150,6 @@ const makeMerchantSchema = (t: TFn) => z.object({
   products: z.array(z.string()).optional(),
   businessCategories: z.array(z.string()).optional(),
   branches: z.array(makeBranchSchema(t)).optional(),
-  brands: z.array(makeBrandSchema(t)).optional(),
   subscriptionFee: z.string().default("0"),
   transactionFee: z.string().default("3.00"),
   crDocument: z.string().optional(),
@@ -182,20 +160,11 @@ const makeMerchantSchema = (t: TFn) => z.object({
   logo: z.string().optional(),
   coverImage: z.string().optional(),
   whatsapp: z.string().optional(),
-  merchantSignatoryName: z.string().min(1, t("validation.signatoryRequired")),
-  commencementDate: z.string().min(1, t("validation.commencementDateRequired")),
   termsAccepted: z.boolean().refine(val => val === true, {
     message: t("validation.termsRequired"),
   }),
   deals: z.array(makeDealSchema(t)).optional(),
 }).superRefine((data, ctx) => {
-  if (data.companyType === "group") {
-    if (!data.brands || data.brands.length < 1) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brands"], message: t("validation.brandRequiredGroup") });
-    }
-    return;
-  }
-  // Individual: keep all the original required fields
   if (!data.crNumber || !/^[a-zA-Z0-9]{4,14}$/.test(data.crNumber)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crNumber"], message: t("validation.crNumberFormat") });
   }
@@ -270,7 +239,6 @@ export default function MerchantOnboarding() {
   const form = useForm<MerchantFormValues>({
     resolver: zodResolver(merchantSchema),
     defaultValues: {
-      companyType: "individual",
       companyName: "",
       companyNameAr: "",
       crNumber: "",
@@ -286,7 +254,6 @@ export default function MerchantOnboarding() {
       products: [],
       businessCategories: [],
       branches: [],
-      brands: [],
       subscriptionFee: "0",
       transactionFee: "3.00",
       deals: [],
@@ -298,54 +265,14 @@ export default function MerchantOnboarding() {
       logo: "",
       coverImage: "",
       whatsapp: "",
-      commencementDate: new Date().toISOString().split('T')[0],
       termsAccepted: false,
-      merchantSignatoryName: "",
     },
   });
-
-  const companyType = useWatch({ control: form.control, name: "companyType" }) || "individual";
-  const isGroup = companyType === "group";
 
   const { fields: branchFields, append: appendBranch, remove: removeBranch } = useFieldArray({
     control: form.control,
     name: "branches",
   });
-
-  const { fields: brandFields, append: appendBrand, remove: removeBrand } = useFieldArray({
-    control: form.control,
-    name: "brands",
-  });
-
-  const brandsValue = useWatch({ control: form.control, name: "brands" }) || [];
-
-  const addBrand = () => {
-    appendBrand({
-      brandName: "",
-      brandNameAr: "",
-      address: "",
-      contactPerson: "",
-      email: "",
-      phone: "",
-      whatsapp: "",
-      crNumber: "",
-      crDocument: "",
-      establishmentCard: "",
-      tradeLicense: "",
-      taxCardDocument: "",
-      menuPriceList: "",
-      logo: "",
-      coverImage: "",
-      businessCategories: [],
-    });
-  };
-
-  // Auto-add the first brand when switching to group
-  useEffect(() => {
-    if (isGroup && brandFields.length === 0) {
-      addBrand();
-    }
-  }, [isGroup]);
 
   const { fields: dealFields, append: appendDeal, remove: removeDeal } = useFieldArray({
     control: form.control,
@@ -432,7 +359,7 @@ export default function MerchantOnboarding() {
 
     const { file: fileToUpload, error } = isImage
       ? await compressImage(file, "merchant")
-      : { file, error: undefined, compressed: false };
+      : { file, error: undefined };
 
     if (error) {
       if (onError) onError(error);
@@ -478,22 +405,8 @@ export default function MerchantOnboarding() {
         branches: (d.branches || []).map((id: string) => branchIdToName.get(id) ?? id),
       }));
 
-      const isGroupSubmit = data.companyType === "group";
-      if (isGroupSubmit) {
-        if (!data.brands || data.brands.length === 0) {
-          toast({ title: t("toast.atLeastOneBrandTitle"), description: t("toast.atLeastOneBrandDesc"), variant: "destructive" });
-          setIsSubmitting(false);
-          return;
-        }
-        if (data.brands.length > 50) {
-          toast({ title: t("toast.tooManyBrandsTitle"), description: t("toast.tooManyBrandsDesc"), variant: "destructive" });
-          setIsSubmitting(false);
-          return;
-        }
-      }
-      
       // Validate that multi-branch merchants have selected branches for each deal
-      if (!isGroupSubmit && (data.branches?.length || 0) > 1 && data.deals && data.deals.length > 0) {
+      if ((data.branches?.length || 0) > 1 && data.deals && data.deals.length > 0) {
         for (let i = 0; i < data.deals.length; i++) {
           const deal = data.deals[i];
           if (!deal.branches || deal.branches.length === 0) {
@@ -510,27 +423,11 @@ export default function MerchantOnboarding() {
 
       const payload: any = {
         ...data,
+        companyType: "individual",
         branches: formattedBranches,
+        brands: [],
+        deals: dealsWithBranchNames || [],
       };
-      if (isGroupSubmit) {
-        // Strip individual-only fields & blank deals on group
-        payload.deals = [];
-        payload.crNumber = undefined;
-        payload.brandName = undefined;
-        payload.brandNameAr = undefined;
-        payload.crDocument = undefined;
-        payload.establishmentCard = undefined;
-        payload.tradeLicense = undefined;
-        payload.menuPriceList = undefined;
-        payload.taxCardDocument = undefined;
-        payload.logo = undefined;
-        payload.coverImage = undefined;
-        payload.products = [];
-        payload.businessCategories = [];
-      } else {
-        payload.brands = [];
-        payload.deals = dealsWithBranchNames || [];
-      }
 
       const response = await fetch("/api/merchants", {
         method: "POST",
@@ -634,8 +531,6 @@ export default function MerchantOnboarding() {
               products: t("validation.fieldLabels.products"),
               businessCategories: t("validation.fieldLabels.businessCategories"),
               crDocument: t("validation.fieldLabels.crDocument"),
-              merchantSignatoryName: t("validation.fieldLabels.merchantSignatoryName"),
-              commencementDate: t("validation.fieldLabels.commencementDate"),
               termsAccepted: t("validation.fieldLabels.termsAccepted"),
               deals: t("validation.fieldLabels.deals"),
               whatsapp: t("validation.fieldLabels.whatsapp"),
@@ -669,89 +564,12 @@ export default function MerchantOnboarding() {
             }
           })} className="space-y-8">
             
-            {/* Agreement Header */}
-            <Card className="border-[#00426D]/20 bg-[#00426D]/5">
-              <CardContent className="pt-6">
-                <div className="text-center space-y-4">
-                  <p className="text-sm text-slate-700 leading-relaxed">
-                    {t("agreement.intro")} <span className="font-semibold">{t("agreement.agreementWord")}</span> {t("agreement.madeOn")}{" "}
-                    <FormField
-                      control={form.control}
-                      name="commencementDate"
-                      render={({ field }) => (
-                        <span className="inline-block">
-                          <Input 
-                            {...field} 
-                            type="date" 
-                            className="w-40 inline-block mx-1 h-8 text-sm border-[#00426D]/30"
-                            data-testid="input-commencement-date"
-                          />
-                        </span>
-                      )}
-                    />
-                    {" "}("<span className="font-semibold">{t("agreement.commencementDateWord")}</span>") {t("agreement.between")}{" "}
-                    <span className="font-semibold">{t("agreement.companyName")}</span> ("{t("agreement.livingDeals")}"){" "}
-                    {t("agreement.address")}{" "}
-                    {t("agreement.crNo")}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Company Type */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-[#00426D]">{t("companyType.title")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={form.control}
-                  name="companyType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {(["individual", "group"] as const).map((opt) => {
-                          const selected = field.value === opt;
-                          return (
-                            <label
-                              key={opt}
-                              className={cn(
-                                "flex flex-col gap-1 p-4 rounded-lg border-2 cursor-pointer transition-all",
-                                selected ? "border-[#FF7F39] bg-[#FF7F39]/10" : "border-slate-200 hover:border-[#FF7F39]/50"
-                              )}
-                              data-testid={`radio-company-type-${opt}`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  checked={selected}
-                                  onChange={() => field.onChange(opt)}
-                                  className="h-4 w-4 accent-[#FF7F39]"
-                                />
-                                <span className="font-semibold capitalize">{t(`companyType.${opt}`)}</span>
-                              </div>
-                              <span className="text-xs text-slate-600 ml-6">
-                                {opt === "individual"
-                                  ? t("companyType.individualDesc")
-                                  : t("companyType.groupDesc")}
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
             {/* Company Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-[#00426D]">
                   <Building2 className="h-5 w-5" />
-                  {isGroup ? t("companyInfo.groupTitle") : t("companyInfo.companyTitle")}
+                  {t("companyInfo.companyTitle")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -792,8 +610,7 @@ export default function MerchantOnboarding() {
                     }
                   />
 
-                  {!isGroup && (
-                    <>
+                  <>
                       <FormField
                         control={form.control}
                         name="crNumber"
@@ -852,7 +669,6 @@ export default function MerchantOnboarding() {
                         }
                       />
                     </>
-                  )}
                 </div>
 
                 <FormField
@@ -1017,8 +833,7 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
-            {/* Products Selection - Individual only */}
-            {!isGroup && (
+            {/* Products Selection */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-[#00426D]">{t("products.title")} <span className="text-sm font-normal text-slate-500">{t("products.selectAll")}</span></CardTitle>
@@ -1058,10 +873,7 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
-            )}
-
-            {/* Business Categories - Individual only */}
-            {!isGroup && (
+            {/* Business Categories */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-[#00426D]">{t("businessCategories.title")}</CardTitle>
@@ -1109,45 +921,6 @@ export default function MerchantOnboarding() {
                 </div>
               </CardContent>
             </Card>
-
-            )}
-
-            {/* Brands - Group only */}
-            {isGroup && (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-[#00426D]">
-                    {t("brands.title")} <span className="text-slate-400 font-normal text-sm">({brandFields.length}/50)</span>
-                  </CardTitle>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addBrand}
-                    disabled={brandFields.length >= 50}
-                    data-testid="button-add-brand"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    {t("brands.addBrand")}
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {brandFields.length === 0 && (
-                    <p className="text-slate-500 text-sm text-center py-4">{t("brands.empty")}</p>
-                  )}
-                  {brandFields.map((brand, bIdx) => (
-                    <BrandFormSection
-                      key={brand.id}
-                      index={bIdx}
-                      form={form}
-                      categories={categories}
-                      onRemove={() => removeBrand(bIdx)}
-                      handleFileUpload={handleFileUpload}
-                    />
-                  ))}
-                </CardContent>
-              </Card>
-            )}
 
             {/* Branches */}
             <Card>
@@ -1240,41 +1013,13 @@ export default function MerchantOnboarding() {
                           </FormItem>
                         )}
                       />
-                      {isGroup && (
-                        <FormField
-                          control={form.control}
-                          name={`branches.${index}.brandId`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{t("branches.brand")}</FormLabel>
-                              <FormControl>
-                                <select
-                                  value={field.value || ""}
-                                  onChange={(e) => field.onChange(e.target.value || undefined)}
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                  data-testid={`select-branch-brand-${index}`}
-                                >
-                                  <option value="">{t("brands.unassigned")}</option>
-                                  {brandsValue.map((b: any, bIdx: number) => (
-                                    <option key={bIdx} value={String(bIdx)}>
-                                      {b.brandName?.trim() || t("brands.brandLabel", { num: bIdx + 1 })}
-                                    </option>
-                                  ))}
-                                </select>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
                     </div>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            {/* Deals Section - Individual only */}
-            {!isGroup && (
+            {/* Deals Section */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-[#00426D]">
@@ -1315,8 +1060,6 @@ export default function MerchantOnboarding() {
                 ))}
               </CardContent>
             </Card>
-
-            )}
 
             {/* Fee Information */}
             <Card>
@@ -1396,8 +1139,7 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
-            {/* Documents - Individual only (group documents are per-brand) */}
-            {!isGroup && (
+            {/* Documents */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-[#00426D]">
@@ -1463,8 +1205,6 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
-            )}
-
             {/* Terms */}
             <Card>
               <CardHeader>
@@ -1513,31 +1253,6 @@ export default function MerchantOnboarding() {
                         </FormDescription>
                         <FormMessage />
                       </div>
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Authorized Signatory */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-[#00426D]">{t("signatory.title")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={form.control}
-                  name="merchantSignatoryName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t("signatory.name")}</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder={t("signatory.namePlaceholder")} data-testid="input-signatory-name" />
-                      </FormControl>
-                      <FormDescription className="text-xs text-slate-500">
-                        {t("signatory.description")}
-                      </FormDescription>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -1675,202 +1390,6 @@ function DocumentUpload({ label, field, form, onChange, accept }: {
       {fieldError && !uploadError && (
         <p className="text-sm text-red-500" data-testid={`text-error-${field}`}>{fieldError.message as string}</p>
       )}
-    </div>
-  );
-}
-
-function BrandFormSection({ index, form, categories, onRemove, handleFileUpload }: {
-  index: number;
-  form: any;
-  categories: Category[];
-  onRemove: () => void;
-  handleFileUpload: (field: any, e: ChangeEvent<HTMLInputElement>, onError?: (msg: string) => void) => void;
-}) {
-  const { t } = useTranslation(["onboarding", "common"]);
-  const brandCats: string[] = (useWatch({ control: form.control, name: `brands.${index}.businessCategories` as any }) as string[]) || [];
-  const { errors: brandFormErrors } = useFormState({ control: form.control });
-  const brandErrors = (brandFormErrors as any)?.brands?.[index] || {};
-  useAutoTranslate(form, `brands.${index}.brandName`, `brands.${index}.brandNameAr`);
-
-  return (
-    <div className="p-4 border-2 border-[#00426D]/15 rounded-lg space-y-4 relative bg-slate-50/40" data-testid={`brand-section-${index}`}>
-      <div className="flex items-center justify-between">
-        <h4 className="font-semibold text-[#00426D]">{t("onboarding:brands.brandLabel", { num: index + 1 })}</h4>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="text-red-500 hover:text-red-700"
-          onClick={onRemove}
-          data-testid={`button-remove-brand-${index}`}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <BilingualTabs
-          idPrefix={`group-brand-name-${index}`}
-          hasEnglishError={!!brandErrors.brandName}
-          hasArabicError={!!brandErrors.brandNameAr}
-          english={
-            <FormField
-              control={form.control}
-              name={`brands.${index}.brandName`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("onboarding:brands.brandName")}</FormLabel>
-                  <FormControl>
-                    <Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.brandNamePlaceholder")} data-testid={`input-brand-${index}-name`} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          }
-          arabic={
-            <FormField
-              control={form.control}
-              name={`brands.${index}.brandNameAr`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("onboarding:brands.brandNameAr")}</FormLabel>
-                  <FormControl>
-                    <Input {...field} value={field.value || ""} dir="rtl" placeholder={t("onboarding:brands.brandNameArPlaceholder")} data-testid={`input-brand-${index}-name-ar`} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          }
-        />
-        <FormField
-          control={form.control}
-          name={`brands.${index}.crNumber`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("onboarding:brands.crNumber")}</FormLabel>
-              <FormControl>
-                <Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.crNumberPlaceholder")} maxLength={14} data-testid={`input-brand-${index}-cr`} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      <FormField
-        control={form.control}
-        name={`brands.${index}.address`}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{t("onboarding:brands.address")}</FormLabel>
-            <FormControl>
-              <Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.addressPlaceholder")} data-testid={`input-brand-${index}-address`} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <Separator />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name={`brands.${index}.contactPerson`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("onboarding:brands.contactPerson")}</FormLabel>
-              <FormControl><Input {...field} value={field.value || ""} placeholder={t("onboarding:brands.contactPersonPlaceholder")} data-testid={`input-brand-${index}-contact`} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name={`brands.${index}.email`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("onboarding:brands.email")}</FormLabel>
-              <FormControl><Input {...field} value={field.value || ""} type="email" placeholder={t("onboarding:brands.emailPlaceholder")} data-testid={`input-brand-${index}-email`} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name={`brands.${index}.phone`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("onboarding:brands.phone")}</FormLabel>
-              <FormControl>
-                <PhoneInput value={field.value || ""} onChange={field.onChange} placeholder={t("onboarding:brands.phonePlaceholder")} data-testid={`input-brand-${index}-phone`} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name={`brands.${index}.whatsapp`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("onboarding:brands.whatsapp")}</FormLabel>
-              <FormControl>
-                <PhoneInput value={field.value || ""} onChange={field.onChange} placeholder={t("onboarding:brands.whatsappPlaceholder")} data-testid={`input-brand-${index}-whatsapp`} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      <Separator />
-
-      <div>
-        <Label className="text-sm font-medium text-[#00426D]">{t("onboarding:brands.businessCategories")}</Label>
-        {categories.length === 0 && (
-          <p className="text-xs text-slate-500 mt-2" data-testid={`text-brand-${index}-categories-empty`}>{t("onboarding:businessCategories.empty")}</p>
-        )}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-          {categories.map((c) => {
-            const sel = brandCats.includes(c.name);
-            return (
-              <label key={c.id} className={cn(
-                "flex items-center gap-2 p-2 rounded border cursor-pointer text-xs",
-                sel ? "border-[#FF7F39] bg-[#FF7F39]/10" : "border-slate-200"
-              )} data-testid={`checkbox-brand-${index}-cat-${c.id}`}>
-                <input
-                  type="checkbox"
-                  checked={sel}
-                  onChange={(e) => {
-                    if (e.target.checked) form.setValue(`brands.${index}.businessCategories`, [...brandCats, c.name]);
-                    else form.setValue(`brands.${index}.businessCategories`, brandCats.filter((v) => v !== c.name));
-                  }}
-                  className="h-3 w-3 accent-[#FF7F39]"
-                />
-                <span>{c.name}</span>
-              </label>
-            );
-          })}
-        </div>
-      </div>
-
-      <Separator />
-
-      <div>
-        <Label className="text-sm font-medium text-[#00426D]">{t("onboarding:brands.documents")}</Label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          <DocumentUpload label={t("onboarding:brands.docCrDocument")} field={`brands.${index}.crDocument` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label={t("onboarding:brands.docEstablishmentCard")} field={`brands.${index}.establishmentCard` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label={t("onboarding:brands.docTradeLicense")} field={`brands.${index}.tradeLicense` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label={t("onboarding:brands.docMenuPriceList")} field={`brands.${index}.menuPriceList` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label={t("onboarding:brands.docTaxCard")} field={`brands.${index}.taxCardDocument` as any} form={form} onChange={handleFileUpload} />
-          <DocumentUpload label={t("onboarding:brands.docLogo")} field={`brands.${index}.logo` as any} form={form} onChange={handleFileUpload} accept="image/*" />
-          <DocumentUpload label={t("onboarding:brands.docCoverImage")} field={`brands.${index}.coverImage` as any} form={form} onChange={handleFileUpload} accept="image/*" />
-        </div>
-      </div>
     </div>
   );
 }

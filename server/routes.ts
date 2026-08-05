@@ -1403,7 +1403,14 @@ export async function registerRoutes(
     const startTime = Date.now();
     try {
       const { deals, brands, ...merchantData } = req.body;
-      const isGroup = merchantData.companyType === "group";
+      // Public form no longer offers group merchants; reject new group submissions.
+      // (Existing group merchants remain fully supported via admin routes.)
+      if (merchantData.companyType === "group") {
+        const errorMsg = "Group merchant registration is no longer available";
+        await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
+        return res.status(400).json({ error: errorMsg });
+      }
+      const isGroup = false;
       
       const documentFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'companyStamp', 'signedContractUpload', 'taxCardDocument', 'logo', 'coverImage'];
       for (const field of documentFields) {
