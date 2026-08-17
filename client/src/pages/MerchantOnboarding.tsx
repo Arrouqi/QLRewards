@@ -2003,35 +2003,6 @@ function DealFormSection({
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name={`deals.${index}.startDate`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("onboarding:deals.startDate")}</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="date" data-testid={`input-deal-start-date-${index}`} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name={`deals.${index}.endDate`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("onboarding:deals.endDate")}</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="date" data-testid={`input-deal-end-date-${index}`} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
           {!isMultipleItemsValue && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
