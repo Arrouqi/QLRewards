@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { format } from "date-fns";
-import { ArrowLeft, Download, Copy, Check, Calendar, Tag, MapPin, User, Mail, Phone, FileText, Image as ImageIcon, FileDown } from "lucide-react";
+import { ArrowLeft, Download, Copy, Check, Calendar, Tag, MapPin, User, Mail, Phone, FileText, Image as ImageIcon, FileDown, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import * as XLSX from "xlsx";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -110,6 +114,115 @@ export default function DealView() {
     }
   };
 
+  const exportFileBase = () =>
+    `${(deal?.merchantName || deal?.title || "Deal").replace(/\s+/g, "_")}`;
+
+  // General template: full deal form data
+  const exportGeneralForm = () => {
+    if (!deal) return;
+    const wb = XLSX.utils.book_new();
+    const infoRows: (string | number)[][] = [
+      ["Field", "Value"],
+      ["Status", deal.status],
+      ["Merchant Name", deal.merchantName || ""],
+      ["Merchant Email", deal.merchantEmail || ""],
+      ["Merchant Phone", deal.merchantPhone || ""],
+      ["Title", deal.title || ""],
+      ["Title (Arabic)", deal.titleAr || ""],
+      ["Category", deal.category || ""],
+      ["Sub-Category", deal.subCategory || ""],
+      ["Deal Type", getDealTypeLabel(deal.dealType)],
+      ["Duration", deal.duration || ""],
+      ["Redemption", deal.redemption || ""],
+      ["Limit Per User", deal.limitPerUser || ""],
+      ["Original Price (QAR)", deal.originalPrice || ""],
+      ["Discount %", deal.discountPercentage || ""],
+      ["Discounted Price (QAR)", deal.discountedPrice || ""],
+      ["Estimated Savings (QAR)", deal.estimatedSavings || ""],
+      ["Estimated Savings Note", deal.estimatedSavingsNote || ""],
+      ["Estimated Savings Note (Arabic)", deal.estimatedSavingsNoteAr || ""],
+      ["Multiple Items", deal.isMultipleItems ? "Yes" : "No"],
+      ["Two Tranches", deal.isTwoTranches ? "Yes" : "No"],
+      ["Tranche Validity (weeks)", deal.trancheValidity || ""],
+      ["Specific Days", deal.specificDays ? "Yes" : "No"],
+      ["Valid Days", (deal.days || []).join(", ")],
+      ["Description", deal.description || ""],
+      ["Description (Arabic)", deal.descriptionAr || ""],
+      ["Claim Rules", (deal.claimRules || []).join("; ")],
+      ["General Rules", (deal.generalRules || []).join("; ")],
+      ["Other Rules", deal.otherRules || ""],
+      ["Branches", (deal.branches || []).join(", ")],
+      ["Offer Start Date", deal.offerStartDate || ""],
+      ["Offer End Date", deal.offerEndDate || ""],
+      ["Image URLs", (deal.images || []).join(", ")],
+      ["Submitted At", deal.createdAt ? format(new Date(deal.createdAt), "dd MMM yyyy HH:mm") : ""],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(infoRows);
+    ws["!cols"] = [{ wch: 30 }, { wch: 70 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Deal Form");
+    const fileName = `${exportFileBase()}_Deal_Export_${format(new Date(), "yyyyMMdd")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast({ title: "Excel Exported", description: `${fileName} downloaded.` });
+  };
+
+  // CEO template: Offers - Pre-Ministry Approval Review
+  const exportManagementApprovalOffers = () => {
+    if (!deal) return;
+    const headers = [
+      "#", "Account Type", "Offer Duration", "Merchant Name", "Offer Title",
+      "Category", "Sub-Category", "Offer Type", "Original Price (QAR)",
+      "Discounted Price (QAR)", "Redemption Type", "Limit Per User",
+      "Claim Rules | General T&C", "Other T&C / Rules",
+      "UP", "ENT", "MB", "CEO Remarks", "CEO Comments & Notes", "Remarks",
+    ];
+    const rows = [[
+      1,
+      "Existing Merchant",
+      deal.duration || "",
+      deal.merchantName || "",
+      deal.title || "",
+      deal.category || "",
+      deal.subCategory || "",
+      getDealTypeLabel(deal.dealType),
+      deal.originalPrice || "",
+      deal.discountedPrice || "",
+      deal.redemption || "",
+      deal.limitPerUser || "",
+      [...(deal.claimRules || []), ...(deal.generalRules || [])].join("; "),
+      deal.otherRules || "",
+      "", "", "", "", "", "",
+    ]];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = headers.map((h, i) => ({ wch: i === 0 ? 5 : h.length > 20 ? 40 : 22 }));
+    XLSX.utils.book_append_sheet(wb, ws, "Offers");
+    const fileName = `${exportFileBase()}_Management_Approval_Offers_${format(new Date(), "yyyyMMdd")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast({ title: "Excel Exported", description: `${fileName} downloaded.` });
+  };
+
+  // Ministry template: Offers - Ministry Approval Submission
+  const exportOffersForLicensing = () => {
+    if (!deal) return;
+    const headers = ["Merchant Name", "CR", "Offer Type", "Title", "Price (Offer)", "Duration", "Remarks"];
+    const rows = [[
+      deal.merchantName || "",
+      "",
+      getDealTypeLabel(deal.dealType),
+      deal.title || "",
+      deal.discountedPrice || deal.originalPrice || "",
+      deal.duration || "",
+      "",
+    ]];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = headers.map(() => ({ wch: 24 }));
+    XLSX.utils.book_append_sheet(wb, ws, "Offers");
+    const fileName = `${exportFileBase()}_Offers_For_Licensing_${format(new Date(), "yyyyMMdd")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast({ title: "Excel Exported", description: `${fileName} downloaded.` });
+  };
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -150,6 +263,26 @@ export default function DealView() {
             <Badge className={getStatusColor(deal.status)}>
               {deal.status === "approved" ? "Sent to Moderation" : deal.status.charAt(0).toUpperCase() + deal.status.slice(1)}
             </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" data-testid="button-export-excel">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export to Excel
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportManagementApprovalOffers} data-testid="menu-export-management">
+                  Management Approval Offers
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportOffersForLicensing} data-testid="menu-export-licensing">
+                  Offers for Licensing
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportGeneralForm} data-testid="menu-export-general">
+                  General Form
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               onClick={() => window.open(`/admin/deals/${deal.id}/print`, '_blank')}
