@@ -204,10 +204,9 @@ export default function DealView() {
   // Ministry template: Offers - Ministry Approval Submission
   const exportOffersForLicensing = () => {
     if (!deal) return;
-    const headers = ["Merchant Name", "CR", "Offer Type", "Title", "Price (Offer)", "Duration", "Remarks"];
+    const headers = ["Merchant Name", "Offer Type", "Title", "Price (Offer)", "Duration", "Remarks"];
     const rows = [[
       deal.merchantName || "",
-      "",
       getDealTypeLabel(deal.dealType),
       deal.title || "",
       deal.discountedPrice || deal.originalPrice || "",
