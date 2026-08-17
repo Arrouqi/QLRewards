@@ -38,6 +38,7 @@ import {
 
 import { BilingualTabs } from "@/components/BilingualTabs";
 import { useAutoTranslate } from "@/hooks/useAutoTranslate";
+import { Textarea } from "@/components/ui/textarea";
 
 interface SubCategory {
   id: string;
@@ -149,6 +150,9 @@ const makeFormSchema = (t: (key: string) => string) => z.object({
   merchantName: z.string().min(1, t("validation.merchantNameRequired")),
   merchantEmail: z.string().optional(),
   merchantPhone: z.string().optional(),
+  estimatedSavings: z.string().min(1, t("validation.estimatedSavingsRequired")),
+  estimatedSavingsNote: z.string().max(200, t("validation.estimatedSavingsNoteMax")).optional(),
+  estimatedSavingsNoteAr: z.string().max(200, t("validation.estimatedSavingsNoteMax")).optional(),
   branches: z.array(z.string()).min(1, t("validation.branchRequired")),
   agreement: z.boolean().refine(val => val === true, t("validation.agreementRequired")),
 });
@@ -518,6 +522,9 @@ export default function CreateOffer() {
       merchantName: "",
       merchantEmail: "",
       merchantPhone: "",
+      estimatedSavings: "",
+      estimatedSavingsNote: "",
+      estimatedSavingsNoteAr: "",
       branches: [],
       specificDays: false,
       isMultipleItems: false,
@@ -531,6 +538,7 @@ export default function CreateOffer() {
 
   useAutoTranslate(form, "title", "titleAr");
   useAutoTranslate(form, "description", "descriptionAr");
+  useAutoTranslate(form, "estimatedSavingsNote", "estimatedSavingsNoteAr");
 
   const onFormError = (errors: any) => {
     const fieldLabels: Record<string, string> = {
@@ -554,6 +562,9 @@ export default function CreateOffer() {
       merchantName: t("fieldLabels.merchantName"),
       merchantEmail: t("fieldLabels.merchantEmail"),
       merchantPhone: t("fieldLabels.merchantPhone"),
+      estimatedSavings: t("fieldLabels.estimatedSavings"),
+      estimatedSavingsNote: t("fieldLabels.estimatedSavingsNote"),
+      estimatedSavingsNoteAr: t("fieldLabels.estimatedSavingsNoteAr"),
       agreement: t("fieldLabels.agreement"),
     };
     const errorMessages = Object.entries(errors)
@@ -643,6 +654,9 @@ export default function CreateOffer() {
         merchantName: data.merchantName,
         merchantEmail: data.merchantEmail,
         merchantPhone: data.merchantPhone,
+        estimatedSavings: data.estimatedSavings,
+        estimatedSavingsNote: data.estimatedSavingsNote,
+        estimatedSavingsNoteAr: data.estimatedSavingsNoteAr,
         branches: data.branches,
         images: imageBase64Array,
       };
@@ -1083,6 +1097,54 @@ export default function CreateOffer() {
                         )}
                       </div>
                     )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="estimatedSavings"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.estimatedSavings")} <span className="text-red-500">*</span></FormLabel>
+                            <div className="relative">
+                              <FormControl>
+                                <Input placeholder="0.00" className="h-11 bg-slate-50 pr-12" {...field} data-testid="input-estimated-savings" />
+                              </FormControl>
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">QAR</div>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="estimatedSavingsNote"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.estimatedSavingsNote")}</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder={t("dealDetails.estimatedSavingsNotePlaceholder")} maxLength={200} className="bg-slate-50" {...field} data-testid="input-estimated-savings-note" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="estimatedSavingsNoteAr"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-bold text-slate-500 uppercase">{t("dealDetails.estimatedSavingsNoteAr")}</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder={t("dealDetails.estimatedSavingsNoteArPlaceholder")} maxLength={200} dir="rtl" className="bg-slate-50" {...field} data-testid="input-estimated-savings-note-ar" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
                     <div className="bg-slate-50 p-4 rounded-md border border-slate-100">
                       <FormField

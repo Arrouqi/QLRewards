@@ -3,8 +3,10 @@ import { useLocation } from "wouter";
 import { format } from "date-fns";
 import {
   Search, ChevronLeft, ChevronRight, Trash2, FileDown, Send,
-  ArrowUpDown, ArrowUp, ArrowDown, Pencil, ExternalLink, Archive,
+  ArrowUpDown, ArrowUp, ArrowDown, Pencil, ExternalLink, Archive, Download, Loader2,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/export";
+import type { Deal } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -69,6 +71,70 @@ export default function AdminDashboard() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dealToDelete, setDealToDelete] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>("");
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/deals", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch deals for export");
+      const allDeals: Deal[] = await res.json();
+      const query = searchQuery.toLowerCase();
+      const matchesFilter = (d: Deal) => {
+        const matchesSearch =
+          d.title.toLowerCase().includes(query) ||
+          d.category.toLowerCase().includes(query) ||
+          d.dealType.toLowerCase().includes(query) ||
+          d.status.toLowerCase().includes(query) ||
+          (d.merchantName?.toLowerCase().includes(query) ?? false);
+        const matchesStatus = statusFilter === "all" || d.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      };
+      const rows = allDeals.filter(matchesFilter).map((d) => ({
+        "Merchant Name": d.merchantName || "",
+        "Merchant Email": d.merchantEmail || "",
+        "Merchant Phone": d.merchantPhone || "",
+        "Title": d.title || "",
+        "Title (Arabic)": d.titleAr || "",
+        "Category": d.category || "",
+        "Sub Category": d.subCategory || "",
+        "Offer Type": d.dealType || "",
+        "Duration": d.duration || "",
+        "Redemption": d.redemption || "",
+        "Limit Per User": d.limitPerUser || "",
+        "Original Price (QAR)": d.originalPrice || "",
+        "Discount %": d.discountPercentage || "",
+        "Discounted Price (QAR)": d.discountedPrice || "",
+        "Estimated Savings (QAR)": d.estimatedSavings || "",
+        "Estimated Savings Note": d.estimatedSavingsNote || "",
+        "Estimated Savings Note (Arabic)": d.estimatedSavingsNoteAr || "",
+        "Description": d.description || "",
+        "Description (Arabic)": d.descriptionAr || "",
+        "Branches": (d.branches || []).join(", "),
+        "Claim Rules": (d.claimRules || []).join(" | "),
+        "General Rules": (d.generalRules || []).join(" | "),
+        "Other Rules": d.otherRules || "",
+        "Specific Days": d.specificDays ? (d.days || []).join(", ") : "All days",
+        "Offer Start Date": d.offerStartDate || "",
+        "Offer End Date": d.offerEndDate || "",
+        "Status": STATUS_LABELS[d.status] || d.status,
+        "Submitted At": d.createdAt ? format(new Date(d.createdAt), "yyyy-MM-dd HH:mm") : "",
+      }));
+      if (rows.length === 0) {
+        toast({ title: "Nothing to export", description: "No deal submissions match the current filter." });
+        return;
+      }
+      exportToExcel(rows, `Deal_Submissions_${statusFilter}_${format(new Date(), "yyyyMMdd")}`);
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "Could not export deals",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     checkAuthAndFetchDeals();
@@ -307,14 +373,25 @@ export default function AdminDashboard() {
               <h1 className="text-xl md:text-2xl font-bold text-[#00426D]">Deal Requests</h1>
               <p className="text-slate-500 text-sm md:text-base mt-1">Manage all deal submissions</p>
             </div>
-            <Button
-              onClick={() => window.open("/create-deal", "_blank")}
-              className="bg-[#00426D] hover:bg-[#003356]"
-              data-testid="button-deal-form"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Deal Form
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleExportExcel}
+                disabled={isExporting}
+                data-testid="button-export-deals-excel"
+              >
+                {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                Export to Excel
+              </Button>
+              <Button
+                onClick={() => window.open("/create-deal", "_blank")}
+                className="bg-[#00426D] hover:bg-[#003356]"
+                data-testid="button-deal-form"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Deal Form
+              </Button>
+            </div>
           </div>
         </div>
 

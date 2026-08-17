@@ -103,7 +103,7 @@ type TFn = (key: string, options?: any) => string;
 
 const makeBranchSchema = (t: TFn) => z.object({
   name: z.string().min(1, t("validation.branchNameRequired")),
-  location: z.string().optional(),
+  location: z.string().min(1, t("validation.branchLocationRequired")),
   phone: z.string().min(1, t("validation.branchPhoneRequired")),
   detail: z.string().optional(),
 });
@@ -992,7 +992,7 @@ export default function MerchantOnboarding() {
                         name={`branches.${index}.location`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>{t("branches.location")}</FormLabel>
+                            <FormLabel>{t("branches.location")} *</FormLabel>
                             <FormControl>
                               <Input {...field} placeholder={t("branches.locationPlaceholder")} data-testid={`input-branch-location-${index}`} />
                             </FormControl>

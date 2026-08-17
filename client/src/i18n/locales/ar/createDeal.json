@@ -35,7 +35,12 @@
     "discountPercentage": "نسبة الخصم",
     "discountedPrice": "السعر بعد الخصم",
     "specificDays": "متاح في أيام محددة فقط",
-    "specificDaysHelper": "إذا كان عرضك صالحاً في أيام محددة فقط، فيرجى اختيارها. وإلا فسيكون فعّالاً كل يوم."
+    "specificDaysHelper": "إذا كان عرضك صالحاً في أيام محددة فقط، فيرجى اختيارها. وإلا فسيكون فعّالاً كل يوم.",
+    "estimatedSavings": "التوفير المقدر",
+    "estimatedSavingsNote": "ملاحظة التوفير المقدر (بالإنجليزية)",
+    "estimatedSavingsNoteAr": "ملاحظة التوفير المقدر (بالعربية)",
+    "estimatedSavingsNotePlaceholder": "Optional note about the savings (max 200 characters)",
+    "estimatedSavingsNoteArPlaceholder": "ملاحظة اختيارية حول التوفير (200 حرف كحد أقصى)"
   },
   "dealTypes": {
     "bogo": "اشترِ 1 واحصل على 1",
@@ -144,7 +149,9 @@
     "merchantRequired": "يرجى اختيار تاجر",
     "merchantNameRequired": "اسم التاجر مطلوب",
     "branchRequired": "مطلوب فرع واحد على الأقل",
-    "agreementRequired": "يجب الموافقة على الشروط"
+    "agreementRequired": "يجب الموافقة على الشروط",
+    "estimatedSavingsRequired": "التوفير المقدر مطلوب",
+    "estimatedSavingsNoteMax": "يجب ألا تتجاوز الملاحظة 200 حرف"
   },
   "fieldLabels": {
     "title": "العنوان",
@@ -167,7 +174,10 @@
     "merchantName": "اسم التاجر",
     "merchantEmail": "البريد الإلكتروني للتاجر",
     "merchantPhone": "هاتف التاجر",
-    "agreement": "الشروط والأحكام"
+    "agreement": "الشروط والأحكام",
+    "estimatedSavings": "التوفير المقدر",
+    "estimatedSavingsNote": "ملاحظة التوفير المقدر",
+    "estimatedSavingsNoteAr": "ملاحظة التوفير المقدر (بالعربية)"
   },
   "toast": {
     "errorLoadingCategoriesTitle": "خطأ في تحميل الفئات",

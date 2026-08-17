@@ -260,6 +260,21 @@ export default function DealView() {
               </div>
             )}
 
+            {(deal.estimatedSavings || deal.estimatedSavingsNote || deal.estimatedSavingsNoteAr) && (
+              <div className="bg-slate-50 rounded-lg p-4">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Estimated Savings</p>
+                {deal.estimatedSavings && (
+                  <p className="font-medium text-slate-800" data-testid="text-estimated-savings">{deal.estimatedSavings} QAR</p>
+                )}
+                {deal.estimatedSavingsNote && (
+                  <p className="text-slate-700 text-sm mt-2">{deal.estimatedSavingsNote}</p>
+                )}
+                {deal.estimatedSavingsNoteAr && (
+                  <p className="text-slate-700 text-sm mt-2" dir="rtl">{deal.estimatedSavingsNoteAr}</p>
+                )}
+              </div>
+            )}
+
             <Separator />
 
             <div>

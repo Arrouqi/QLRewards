@@ -345,7 +345,8 @@
     "pocNameRequired": "اسم جهة اتصال خدمة العملاء مطلوب",
     "pocPhoneRequired": "هاتف جهة اتصال خدمة العملاء مطلوب",
     "logoRequired": "الشعار مطلوب",
-    "coverImageRequired": "صورة الغلاف مطلوبة"
+    "coverImageRequired": "صورة الغلاف مطلوبة",
+    "branchLocationRequired": "موقع الفرع (رابط خرائط جوجل) مطلوب"
   },
   "poc": {
     "title": "جهة اتصال خدمة العملاء",

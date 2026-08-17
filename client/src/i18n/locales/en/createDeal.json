@@ -35,7 +35,12 @@
     "discountPercentage": "Discount Percentage",
     "discountedPrice": "Discounted Price",
     "specificDays": "Available on specific days only",
-    "specificDaysHelper": "If your deal is valid only on specific days, please select them. Otherwise, it will be active every day."
+    "specificDaysHelper": "If your deal is valid only on specific days, please select them. Otherwise, it will be active every day.",
+    "estimatedSavings": "Estimated Savings",
+    "estimatedSavingsNote": "Estimated Savings Note (English)",
+    "estimatedSavingsNoteAr": "Estimated Savings Note (Arabic)",
+    "estimatedSavingsNotePlaceholder": "Optional note about the savings (max 200 characters)",
+    "estimatedSavingsNoteArPlaceholder": "ملاحظة اختيارية حول التوفير (200 حرف كحد أقصى)"
   },
   "dealTypes": {
     "bogo": "Buy 1 Get 1",
@@ -141,7 +146,9 @@
     "merchantRequired": "Please select a merchant",
     "merchantNameRequired": "Merchant name is required",
     "branchRequired": "At least one branch is required",
-    "agreementRequired": "You must agree to the terms"
+    "agreementRequired": "You must agree to the terms",
+    "estimatedSavingsRequired": "Estimated savings is required",
+    "estimatedSavingsNoteMax": "Note must be 200 characters or fewer"
   },
   "fieldLabels": {
     "title": "Title",
@@ -164,7 +171,10 @@
     "merchantName": "Merchant Name",
     "merchantEmail": "Merchant Email",
     "merchantPhone": "Merchant Phone",
-    "agreement": "Terms & Conditions"
+    "agreement": "Terms & Conditions",
+    "estimatedSavings": "Estimated Savings",
+    "estimatedSavingsNote": "Estimated Savings Note",
+    "estimatedSavingsNoteAr": "Estimated Savings Note (Arabic)"
   },
   "toast": {
     "errorLoadingCategoriesTitle": "Error loading categories",

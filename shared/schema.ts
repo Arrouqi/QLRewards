@@ -33,6 +33,9 @@ export const deals = pgTable("deals", {
   merchantEmail: text("merchant_email"),
   merchantPhone: text("merchant_phone"),
   images: text("images").array(),
+  estimatedSavings: text("estimated_savings"),
+  estimatedSavingsNote: text("estimated_savings_note"),
+  estimatedSavingsNoteAr: text("estimated_savings_note_ar"),
   offerStartDate: text("offer_start_date"),
   offerEndDate: text("offer_end_date"),
   merchantUserId: text("merchant_user_id"),
@@ -61,7 +64,23 @@ export const requireArabicDealTitle = <T extends { titleAr?: string | null }>(da
   }
 };
 
-export const publicDealSubmissionSchema = insertDealSchema.superRefine(requireArabicDealTitle);
+// Public submissions also require estimated savings (with 200-char note caps).
+// Admin edit flows keep using insertDealSchema so legacy deals stay editable.
+export const requireEstimatedSavings = <T extends { estimatedSavings?: string | null; estimatedSavingsNote?: string | null; estimatedSavingsNoteAr?: string | null }>(data: T, ctx: z.RefinementCtx) => {
+  if (!data.estimatedSavings || String(data.estimatedSavings).trim() === "") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["estimatedSavings"], message: "Estimated savings is required" });
+  }
+  if (data.estimatedSavingsNote && data.estimatedSavingsNote.length > 200) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["estimatedSavingsNote"], message: "Estimated savings note must be 200 characters or fewer" });
+  }
+  if (data.estimatedSavingsNoteAr && data.estimatedSavingsNoteAr.length > 200) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["estimatedSavingsNoteAr"], message: "Arabic estimated savings note must be 200 characters or fewer" });
+  }
+};
+
+export const publicDealSubmissionSchema = insertDealSchema
+  .superRefine(requireArabicDealTitle)
+  .superRefine(requireEstimatedSavings);
 export type Deal = typeof deals.$inferSelect;
 
 export type DealSummary = Pick<Deal, 
@@ -343,17 +362,7 @@ export type InsertMerchantDeal = z.infer<typeof insertMerchantDealSchema>;
 // Admin edits use insertMerchantDealSchema so legacy deals stay editable.
 export const publicMerchantDealSchema = insertMerchantDealSchema
   .superRefine(requireArabicDealTitle)
-  .superRefine((data, ctx) => {
-    if (!data.estimatedSavings || String(data.estimatedSavings).trim() === "") {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["estimatedSavings"], message: "Estimated savings is required" });
-    }
-    if (data.estimatedSavingsNote && data.estimatedSavingsNote.length > 200) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["estimatedSavingsNote"], message: "Estimated savings note must be 200 characters or fewer" });
-    }
-    if (data.estimatedSavingsNoteAr && data.estimatedSavingsNoteAr.length > 200) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["estimatedSavingsNoteAr"], message: "Arabic estimated savings note must be 200 characters or fewer" });
-    }
-  });
+  .superRefine(requireEstimatedSavings);
 export type MerchantDeal = typeof merchantDeals.$inferSelect;
 
 export const merchantNotes = pgTable("merchant_notes", {

@@ -1532,6 +1532,24 @@ export async function registerRoutes(
         }
       }
 
+      // New public submissions also require a Google Maps location on every branch.
+      if (Array.isArray(merchantData.branches)) {
+        for (let bIdx = 0; bIdx < merchantData.branches.length; bIdx++) {
+          try {
+            const branch = typeof merchantData.branches[bIdx] === "string"
+              ? JSON.parse(merchantData.branches[bIdx])
+              : merchantData.branches[bIdx];
+            if (branch && typeof branch === "object" && (!branch.location || String(branch.location).trim() === "")) {
+              const message = `Branch ${bIdx + 1} ("${branch.name || "Unnamed"}"): location (Google Maps URL) is required`;
+              await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: message });
+              return res.status(400).json({ error: message });
+            }
+          } catch {
+            // Non-JSON branch entries (legacy format) are left untouched.
+          }
+        }
+      }
+
       const validatedMerchant = insertMerchantSchema.parse(merchantData);
       const merchant = await storage.createMerchant(validatedMerchant);
 

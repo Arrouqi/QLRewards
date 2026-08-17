@@ -345,7 +345,8 @@
     "pocNameRequired": "Customer care contact name is required",
     "pocPhoneRequired": "Customer care contact phone is required",
     "logoRequired": "Logo is required",
-    "coverImageRequired": "Cover image is required"
+    "coverImageRequired": "Cover image is required",
+    "branchLocationRequired": "Branch location (Google Maps URL) is required"
   },
   "poc": {
     "title": "Customer Care Contact",

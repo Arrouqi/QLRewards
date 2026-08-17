@@ -159,6 +159,12 @@ ALTER TABLE merchant_deals
   ADD COLUMN IF NOT EXISTS estimated_savings text,
   ADD COLUMN IF NOT EXISTS estimated_savings_note text,
   ADD COLUMN IF NOT EXISTS estimated_savings_note_ar text;
+
+-- Standalone deal submissions (Create Deal form) get the same estimated savings fields.
+ALTER TABLE deals
+  ADD COLUMN IF NOT EXISTS estimated_savings text,
+  ADD COLUMN IF NOT EXISTS estimated_savings_note text,
+  ADD COLUMN IF NOT EXISTS estimated_savings_note_ar text;
 ```
 
 #### Pending Production Migrations (Merchant Soft Delete)
