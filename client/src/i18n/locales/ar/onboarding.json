@@ -192,7 +192,15 @@
     "dealTitleAr": "عنوان العرض (بالعربية) *",
     "dealTitleArPlaceholder": "مثال: اشترِ 1 واحصل على 1 مجانًا على جميع أنواع البيتزا",
     "descriptionAr": "الوصف (بالعربية)",
-    "descriptionArPlaceholder": "صف العرض..."
+    "descriptionArPlaceholder": "صف العرض...",
+    "startDate": "تاريخ البدء",
+    "endDate": "تاريخ الانتهاء",
+    "estimatedSavings": "التوفير المقدر",
+    "estimatedSavingsPlaceholder": "مثال: 47",
+    "estimatedSavingsNote": "ملاحظة التوفير المقدر (بالإنجليزية)",
+    "estimatedSavingsNoteAr": "ملاحظة التوفير المقدر (بالعربية)",
+    "estimatedSavingsNotePlaceholder": "Optional note (max 200 characters)",
+    "estimatedSavingsNoteArPlaceholder": "ملاحظة اختيارية (بحد أقصى 200 حرف)"
   },
   "days": {
     "Sunday": "الأحد",
@@ -222,7 +230,7 @@
     "tradeLicense": "الرخصة التجارية (اختياري)",
     "menuPriceList": "قائمة الطعام / قائمة الأسعار (اختياري)",
     "taxCard": "البطاقة الضريبية (اختياري)",
-    "brandAssets": "أصول العلامة التجارية (اختياري)",
+    "brandAssets": "أصول العلامة التجارية",
     "logo": "الشعار",
     "coverImage": "صورة الغلاف"
   },
@@ -332,11 +340,16 @@
     },
     "companyNameArRequired": "اسم الشركة بالعربية مطلوب",
     "brandNameArRequired": "اسم العلامة التجارية بالعربية مطلوب",
-    "titleArMin": "يجب أن يكون عنوان العرض بالعربية 5 أحرف على الأقل"
+    "titleArMin": "يجب أن يكون عنوان العرض بالعربية 5 أحرف على الأقل",
+    "estimatedSavingsRequired": "التوفير المقدر مطلوب",
+    "pocNameRequired": "اسم جهة اتصال خدمة العملاء مطلوب",
+    "pocPhoneRequired": "هاتف جهة اتصال خدمة العملاء مطلوب",
+    "logoRequired": "الشعار مطلوب",
+    "coverImageRequired": "صورة الغلاف مطلوبة"
   },
   "poc": {
-    "title": "جهة الاتصال للعمليات اليومية",
-    "subtitle": "اختياري — الشخص الذي يمكننا التواصل معه للأمور اليومية.",
+    "title": "جهة اتصال خدمة العملاء",
+    "subtitle": "إلزامي — الشخص الذي يمكننا التواصل معه لشؤون خدمة العملاء.",
     "name": "اسم جهة الاتصال",
     "namePlaceholder": "الاسم الكامل",
     "phone": "هاتف جهة الاتصال",

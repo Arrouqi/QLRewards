@@ -192,7 +192,15 @@
     "dealTitleAr": "Deal Title (Arabic) *",
     "dealTitleArPlaceholder": "مثال: اشترِ 1 واحصل على 1 مجانًا على جميع أنواع البيتزا",
     "descriptionAr": "Description (Arabic)",
-    "descriptionArPlaceholder": "صف العرض..."
+    "descriptionArPlaceholder": "صف العرض...",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "estimatedSavings": "Estimated Savings",
+    "estimatedSavingsPlaceholder": "e.g. 47",
+    "estimatedSavingsNote": "Estimated Savings Note",
+    "estimatedSavingsNoteAr": "Arabic Estimated Savings Note",
+    "estimatedSavingsNotePlaceholder": "Optional note (max 200 characters)",
+    "estimatedSavingsNoteArPlaceholder": "ملاحظة اختيارية (بحد أقصى 200 حرف)"
   },
   "days": {
     "Sunday": "Sunday",
@@ -222,7 +230,7 @@
     "tradeLicense": "Trade License (Optional)",
     "menuPriceList": "Menu / Price List (Optional)",
     "taxCard": "Tax Card (Optional)",
-    "brandAssets": "Brand Assets (Optional)",
+    "brandAssets": "Brand Assets",
     "logo": "Logo",
     "coverImage": "Cover Image"
   },
@@ -332,11 +340,16 @@
     },
     "companyNameArRequired": "Company name (Arabic) is required",
     "brandNameArRequired": "Brand name (Arabic) is required",
-    "titleArMin": "Deal title (Arabic) must be at least 5 characters"
+    "titleArMin": "Deal title (Arabic) must be at least 5 characters",
+    "estimatedSavingsRequired": "Estimated savings is required",
+    "pocNameRequired": "Customer care contact name is required",
+    "pocPhoneRequired": "Customer care contact phone is required",
+    "logoRequired": "Logo is required",
+    "coverImageRequired": "Cover image is required"
   },
   "poc": {
-    "title": "Point of Contact for Daily Operations",
-    "subtitle": "Optional — the person we can reach for day-to-day matters.",
+    "title": "Customer Care Contact",
+    "subtitle": "Required — the person we can reach for customer care matters.",
     "name": "Contact Name",
     "namePlaceholder": "Full name",
     "phone": "Contact Phone",

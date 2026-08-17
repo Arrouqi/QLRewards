@@ -324,6 +324,11 @@ export const merchantDeals = pgTable("merchant_deals", {
   branches: text("branches").array().notNull(),
   images: text("images").array(),
   status: text("status").notNull().default("pending"),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
+  estimatedSavings: text("estimated_savings"),
+  estimatedSavingsNote: text("estimated_savings_note"),
+  estimatedSavingsNoteAr: text("estimated_savings_note_ar"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -334,7 +339,21 @@ export const insertMerchantDealSchema = createInsertSchema(merchantDeals).omit({
 });
 
 export type InsertMerchantDeal = z.infer<typeof insertMerchantDealSchema>;
-export const publicMerchantDealSchema = insertMerchantDealSchema.superRefine(requireArabicDealTitle);
+// Public submissions additionally require Arabic title and estimated savings.
+// Admin edits use insertMerchantDealSchema so legacy deals stay editable.
+export const publicMerchantDealSchema = insertMerchantDealSchema
+  .superRefine(requireArabicDealTitle)
+  .superRefine((data, ctx) => {
+    if (!data.estimatedSavings || String(data.estimatedSavings).trim() === "") {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["estimatedSavings"], message: "Estimated savings is required" });
+    }
+    if (data.estimatedSavingsNote && data.estimatedSavingsNote.length > 200) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["estimatedSavingsNote"], message: "Estimated savings note must be 200 characters or fewer" });
+    }
+    if (data.estimatedSavingsNoteAr && data.estimatedSavingsNoteAr.length > 200) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["estimatedSavingsNoteAr"], message: "Arabic estimated savings note must be 200 characters or fewer" });
+    }
+  });
 export type MerchantDeal = typeof merchantDeals.$inferSelect;
 
 export const merchantNotes = pgTable("merchant_notes", {

@@ -1495,6 +1495,43 @@ export async function registerRoutes(
         }
       }
       
+      // Pre-validate all deals BEFORE creating the merchant so a bad deal fails
+      // the whole submission with a 400 instead of being silently dropped.
+      if (!isGroup && deals && Array.isArray(deals)) {
+        for (let dIdx = 0; dIdx < deals.length; dIdx++) {
+          const deal = deals[dIdx];
+          const preflight = publicMerchantDealSchema.safeParse({
+            ...deal,
+            merchantId: "preflight",
+            images: deal.images || [],
+            branches: deal.branches || [],
+            discountPercentage: deal.discountedPrice ? null : (deal.discountPercentage || null),
+            discountedPrice: deal.discountedPrice || null,
+          });
+          if (!preflight.success) {
+            const fieldErrors = preflight.error.issues.map((issue: any) => `${issue.path.join(".")}: ${issue.message}`);
+            const errorMsg = `Deal ${dIdx + 1} ("${deal.title || "Untitled"}") validation failed: ${fieldErrors.join("; ")}`;
+            await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
+            return res.status(400).json({ error: errorMsg, details: preflight.error.issues });
+          }
+        }
+      }
+
+      // New public submissions require customer care contact and brand assets.
+      // (Admin edits of existing merchants are not subject to these rules.)
+      const publicRequiredFields: Array<[string, string]> = [
+        ["pocName", "Customer care contact name is required"],
+        ["pocPhone", "Customer care contact phone is required"],
+        ["logo", "Logo is required"],
+        ["coverImage", "Cover image is required"],
+      ];
+      for (const [field, message] of publicRequiredFields) {
+        if (!merchantData[field] || String(merchantData[field]).trim() === "") {
+          await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: message });
+          return res.status(400).json({ error: message });
+        }
+      }
+
       const validatedMerchant = insertMerchantSchema.parse(merchantData);
       const merchant = await storage.createMerchant(validatedMerchant);
 
@@ -1857,6 +1894,11 @@ export async function registerRoutes(
               branches: deal.branches || [],
               images,
               brandId: deal.brandId || null,
+              startDate: deal.startDate || null,
+              endDate: deal.endDate || null,
+              estimatedSavings: deal.estimatedSavings || null,
+              estimatedSavingsNote: deal.estimatedSavingsNote || null,
+              estimatedSavingsNoteAr: deal.estimatedSavingsNoteAr || null,
             });
           }
         }

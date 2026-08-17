@@ -44,6 +44,11 @@ interface Deal {
   subCategory: string;
   dealType: string;
   duration: string;
+  startDate?: string;
+  endDate?: string;
+  estimatedSavings?: string;
+  estimatedSavingsNote?: string;
+  estimatedSavingsNoteAr?: string;
   redemption: string;
   limitPerUser?: string;
   originalPrice?: string;
@@ -251,6 +256,11 @@ export default function MerchantEdit() {
             subCategory: deal.subCategory || "",
             dealType: deal.dealType || "",
             duration: deal.duration || "",
+            startDate: deal.startDate || "",
+            endDate: deal.endDate || "",
+            estimatedSavings: deal.estimatedSavings || "",
+            estimatedSavingsNote: deal.estimatedSavingsNote || "",
+            estimatedSavingsNoteAr: deal.estimatedSavingsNoteAr || "",
             redemption: deal.redemption || "",
             limitPerUser: deal.limitPerUser || "",
             originalPrice: deal.originalPrice || "",
@@ -386,6 +396,11 @@ export default function MerchantEdit() {
       subCategory: "",
       dealType: "",
       duration: "",
+      startDate: "",
+      endDate: "",
+      estimatedSavings: "",
+      estimatedSavingsNote: "",
+      estimatedSavingsNoteAr: "",
       redemption: "",
       title: "",
       titleAr: "",
@@ -1050,7 +1065,7 @@ export default function MerchantEdit() {
             </div>
 
             <div className="pt-4 border-t">
-              <p className="text-sm font-semibold text-[#00426D] mb-3">Point of Contact for Daily Operations</p>
+              <p className="text-sm font-semibold text-[#00426D] mb-3">Customer Care Contact</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="pocName">Contact Name</Label>
@@ -1238,8 +1253,8 @@ export default function MerchantEdit() {
                 { label: "Trade License", field: "tradeLicense", required: true },
                 { label: "Menu/Price List", field: "menuPriceList", required: true },
                 { label: "Tax Card", field: "taxCardDocument", required: false },
-                { label: "Logo", field: "logo", required: false },
-                { label: "Cover Image", field: "coverImage", required: false },
+                { label: "Logo", field: "logo", required: true },
+                { label: "Cover Image", field: "coverImage", required: true },
               ].map((doc) => {
                 const value = merchant[doc.field as keyof Merchant] as string | undefined;
                 const isUploaded = !!value;
@@ -1718,6 +1733,59 @@ export default function MerchantEdit() {
                             onChange={(e) => handleDealChange(index, "duration", e.target.value)}
                             placeholder="e.g., 3 months, 6 weeks"
                             data-testid={`input-deal-duration-${index}`}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Start Date</Label>
+                          <Input
+                            type="date"
+                            value={deal.startDate || ""}
+                            onChange={(e) => handleDealChange(index, "startDate", e.target.value)}
+                            data-testid={`input-deal-start-date-${index}`}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>End Date</Label>
+                          <Input
+                            type="date"
+                            value={deal.endDate || ""}
+                            onChange={(e) => handleDealChange(index, "endDate", e.target.value)}
+                            data-testid={`input-deal-end-date-${index}`}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Estimated Savings (QAR)</Label>
+                          <Input
+                            type="number"
+                            value={deal.estimatedSavings || ""}
+                            onChange={(e) => handleDealChange(index, "estimatedSavings", e.target.value)}
+                            data-testid={`input-deal-estimated-savings-${index}`}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Estimated Savings Note</Label>
+                          <Textarea
+                            value={deal.estimatedSavingsNote || ""}
+                            maxLength={200}
+                            rows={2}
+                            onChange={(e) => handleDealChange(index, "estimatedSavingsNote", e.target.value)}
+                            data-testid={`textarea-deal-estimated-savings-note-${index}`}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>Arabic Estimated Savings Note</Label>
+                          <Textarea
+                            dir="rtl"
+                            value={deal.estimatedSavingsNoteAr || ""}
+                            maxLength={200}
+                            rows={2}
+                            onChange={(e) => handleDealChange(index, "estimatedSavingsNoteAr", e.target.value)}
+                            data-testid={`textarea-deal-estimated-savings-note-ar-${index}`}
                           />
                         </div>
                         

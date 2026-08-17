@@ -28,8 +28,15 @@ import {
   GraduationCap,
   Plus,
   Check,
-  Clock
+  Clock,
+  ChevronDown
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -960,7 +967,8 @@ export default function MerchantView() {
     if (deals.length > 0) {
       const dealHeaders = [
         "Deal #", "Title", "Category", "Sub-Category", "Deal Type",
-        "Duration", "Original Price (QAR)", "Discounted Price (QAR)", "Discount %",
+        "Duration", "Start Date", "End Date", "Original Price (QAR)", "Discounted Price (QAR)", "Discount %",
+        "Estimated Savings (QAR)", "Estimated Savings Note", "Arabic Estimated Savings Note",
         "Redemption", "Limit Per User", "Two Tranches", "Tranche Validity (weeks)",
         "Multiple Items", "Specific Days", "Valid Days",
         "Description", "Claim Rules", "General Rules", "Other Rules",
@@ -975,9 +983,14 @@ export default function MerchantView() {
           deal.subCategory || "",
           deal.dealType || "",
           deal.duration || "",
+          deal.startDate || "",
+          deal.endDate || "",
           deal.originalPrice || "",
           deal.discountedPrice || "",
           deal.discountPercentage || "",
+          deal.estimatedSavings || "",
+          deal.estimatedSavingsNote || "",
+          deal.estimatedSavingsNoteAr || "",
           deal.redemption === "limited"
             ? `Limited`
             : deal.redemption || "",
@@ -1005,6 +1018,87 @@ export default function MerchantView() {
     }
 
     const fileName = `${merchant.companyName.replace(/\s+/g, "_")}_Export_${format(new Date(), "yyyyMMdd")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast({ title: "Excel Exported", description: `${fileName} downloaded.` });
+  };
+
+  const getParsedDeals = (): any[] =>
+    (merchant?.deals || []).map((d: any) => (typeof d === "string" ? JSON.parse(d) : d));
+
+  const dealTypeLabel = (type: string) => {
+    switch (type) {
+      case "bogo": return "Buy 1 Get 1";
+      case "discount": return "Discount";
+      case "voucher": return "Voucher";
+      case "bundle": return "Bundle";
+      default: return type || "";
+    }
+  };
+
+  // CEO template: Offers - Pre-Ministry Approval Review
+  const exportManagementApprovalOffers = () => {
+    if (!merchant) return;
+    const deals = getParsedDeals();
+    if (deals.length === 0) {
+      toast({ title: "No deals to export", variant: "destructive" });
+      return;
+    }
+    const headers = [
+      "#", "Account Type", "Offer Duration", "Merchant Name", "Offer Title",
+      "Category", "Sub-Category", "Offer Type", "Original Price (QAR)",
+      "Discounted Price (QAR)", "Redemption Type", "Limit Per User",
+      "Claim Rules | General T&C", "Other T&C / Rules",
+      "UP", "ENT", "MB", "CEO Remarks", "CEO Comments & Notes", "Remarks",
+    ];
+    const rows = deals.map((deal: any, idx: number) => [
+      idx + 1,
+      "New Merchant",
+      deal.duration || "",
+      merchant.brandName || merchant.companyName,
+      deal.title || "",
+      deal.category || "",
+      deal.subCategory || "",
+      dealTypeLabel(deal.dealType),
+      deal.originalPrice || "",
+      deal.discountedPrice || "",
+      deal.redemption || "",
+      deal.limitPerUser || "",
+      [...(deal.claimRules || []), ...(deal.generalRules || [])].join("; "),
+      deal.otherRules || "",
+      "", "", "", "", "", "",
+    ]);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = headers.map((h, i) => ({ wch: i === 0 ? 5 : h.length > 20 ? 40 : 22 }));
+    XLSX.utils.book_append_sheet(wb, ws, "Offers");
+    const fileName = `${merchant.companyName.replace(/\s+/g, "_")}_Management_Approval_Offers_${format(new Date(), "yyyyMMdd")}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast({ title: "Excel Exported", description: `${fileName} downloaded.` });
+  };
+
+  // Ministry template: Offers - Ministry Approval Submission
+  const exportOffersForLicensing = () => {
+    if (!merchant) return;
+    const deals = getParsedDeals();
+    if (deals.length === 0) {
+      toast({ title: "No deals to export", variant: "destructive" });
+      return;
+    }
+    const headers = ["Merchant Name", "CR", "Offer Type", "Title", "Price (Offer)", "Duration", "Remarks"];
+    const rows = deals.map((deal: any) => [
+      merchant.brandName || merchant.companyName,
+      merchant.crNumber || "",
+      dealTypeLabel(deal.dealType),
+      deal.title || "",
+      deal.discountedPrice || deal.originalPrice || "",
+      deal.duration || "",
+      "",
+    ]);
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = headers.map(() => ({ wch: 24 }));
+    XLSX.utils.book_append_sheet(wb, ws, "Offers");
+    const fileName = `${merchant.companyName.replace(/\s+/g, "_")}_Offers_For_Licensing_${format(new Date(), "yyyyMMdd")}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast({ title: "Excel Exported", description: `${fileName} downloaded.` });
   };
@@ -1078,14 +1172,26 @@ export default function MerchantView() {
               </Button>
             )}
             
-            <Button
-              variant="outline"
-              onClick={exportToExcel}
-              data-testid="button-export-excel"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Export to Excel
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" data-testid="button-export-excel">
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export to Excel
+                  <ChevronDown className="h-4 w-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportManagementApprovalOffers} data-testid="menu-export-management-approval">
+                  Management Approval Offers
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportOffersForLicensing} data-testid="menu-export-licensing">
+                  Offers for Licensing
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToExcel} data-testid="menu-export-general">
+                  General Form
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Button
               variant="outline"
@@ -1205,7 +1311,7 @@ export default function MerchantView() {
               <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4" data-testid="section-poc">
                 <h4 className="font-medium mb-3 flex items-center gap-2 text-[#00426D]">
                   <User className="h-4 w-4" />
-                  Point of Contact for Daily Operations
+                  Customer Care Contact
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {merchant.pocName && (
@@ -1458,6 +1564,36 @@ export default function MerchantView() {
                           <div className="bg-white p-3 rounded border">
                             <span className="text-slate-500 block text-xs mb-1">Duration</span>
                             <span className="font-medium">{deal.duration}</span>
+                          </div>
+                        )}
+                        {deal.startDate && (
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">Start Date</span>
+                            <span className="font-medium">{deal.startDate}</span>
+                          </div>
+                        )}
+                        {deal.endDate && (
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">End Date</span>
+                            <span className="font-medium">{deal.endDate}</span>
+                          </div>
+                        )}
+                        {deal.estimatedSavings && (
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-slate-500 block text-xs mb-1">Estimated Savings</span>
+                            <span className="font-medium text-green-600">QAR {deal.estimatedSavings}</span>
+                          </div>
+                        )}
+                        {deal.estimatedSavingsNote && (
+                          <div className="bg-white p-3 rounded border col-span-full">
+                            <span className="text-slate-500 block text-xs mb-1">Estimated Savings Note</span>
+                            <span className="font-medium">{deal.estimatedSavingsNote}</span>
+                          </div>
+                        )}
+                        {deal.estimatedSavingsNoteAr && (
+                          <div className="bg-white p-3 rounded border col-span-full" dir="rtl">
+                            <span className="text-slate-500 block text-xs mb-1">ملاحظة التوفير المقدر</span>
+                            <span className="font-medium">{deal.estimatedSavingsNoteAr}</span>
                           </div>
                         )}
                         {deal.redemption && (

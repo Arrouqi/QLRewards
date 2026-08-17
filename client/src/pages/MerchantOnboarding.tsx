@@ -113,6 +113,11 @@ const makeDealSchema = (t: TFn) => z.object({
   subCategory: z.string().min(1, t("validation.subCategoryRequired")),
   dealType: z.string().min(1, t("validation.dealTypeRequired")),
   duration: z.string().min(1, t("validation.durationRequired")),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  estimatedSavings: z.string().min(1, t("validation.estimatedSavingsRequired")),
+  estimatedSavingsNote: z.string().max(200).optional(),
+  estimatedSavingsNoteAr: z.string().max(200).optional(),
   redemption: z.string().min(1, t("validation.redemptionRequired")),
   limitPerUser: z.string().optional(),
   originalPrice: z.string().optional(),
@@ -144,8 +149,8 @@ const makeMerchantSchema = (t: TFn) => z.object({
   contactPerson: z.string().min(1, t("validation.contactPersonRequired")),
   email: z.string().email(t("validation.emailValid")),
   phone: z.string().min(1, t("validation.phoneRequired")),
-  pocName: z.string().optional(),
-  pocPhone: z.string().optional(),
+  pocName: z.string().min(1, t("validation.pocNameRequired")),
+  pocPhone: z.string().min(1, t("validation.pocPhoneRequired")),
   pocEmail: z.union([z.string().email(t("validation.emailValid")), z.literal("")]).optional(),
   products: z.array(z.string()).optional(),
   businessCategories: z.array(z.string()).optional(),
@@ -182,6 +187,12 @@ const makeMerchantSchema = (t: TFn) => z.object({
   }
   if (!data.crDocument || data.crDocument.trim() === "") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crDocument"], message: t("validation.crDocumentRequired") });
+  }
+  if (!data.logo || data.logo.trim() === "") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["logo"], message: t("validation.logoRequired") });
+  }
+  if (!data.coverImage || data.coverImage.trim() === "") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["coverImage"], message: t("validation.coverImageRequired") });
   }
 });
 
@@ -310,6 +321,11 @@ export default function MerchantOnboarding() {
       subCategory: "",
       dealType: "",
       duration: "",
+      startDate: "",
+      endDate: "",
+      estimatedSavings: "",
+      estimatedSavingsNote: "",
+      estimatedSavingsNoteAr: "",
       redemption: "",
       limitPerUser: "",
       originalPrice: "",
@@ -536,6 +552,8 @@ export default function MerchantOnboarding() {
               whatsapp: t("validation.fieldLabels.whatsapp"),
               logo: t("validation.fieldLabels.logo"),
               coverImage: t("validation.fieldLabels.coverImage"),
+              pocName: t("poc.name"),
+              pocPhone: t("poc.phone"),
             };
             const messages = Object.keys(errors).map(key => {
               const label = fieldLabels[key] || key;
@@ -766,7 +784,7 @@ export default function MerchantOnboarding() {
                       name="pocName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("poc.name")}</FormLabel>
+                          <FormLabel>{t("poc.name")} *</FormLabel>
                           <FormControl>
                             <Input {...field} value={field.value || ""} placeholder={t("poc.namePlaceholder")} data-testid="input-poc-name" />
                           </FormControl>
@@ -779,7 +797,7 @@ export default function MerchantOnboarding() {
                       name="pocPhone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{t("poc.phone")}</FormLabel>
+                          <FormLabel>{t("poc.phone")} *</FormLabel>
                           <FormControl>
                             <PhoneInput
                               value={field.value || ""}
@@ -1187,14 +1205,14 @@ export default function MerchantOnboarding() {
                   <h4 className="font-medium text-[#00426D] mb-4">{t("documents.brandAssets")}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <DocumentUpload
-                      label={t("documents.logo")}
+                      label={`${t("documents.logo")} *`}
                       field="logo"
                       form={form}
                       onChange={handleFileUpload}
                       accept="image/*"
                     />
                     <DocumentUpload
-                      label={t("documents.coverImage")}
+                      label={`${t("documents.coverImage")} *`}
                       field="coverImage"
                       form={form}
                       onChange={handleFileUpload}
@@ -1985,6 +2003,35 @@ function DealFormSection({
             </div>
           )}
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name={`deals.${index}.startDate`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("onboarding:deals.startDate")}</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" data-testid={`input-deal-start-date-${index}`} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`deals.${index}.endDate`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("onboarding:deals.endDate")}</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" data-testid={`input-deal-end-date-${index}`} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           {!isMultipleItemsValue && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
@@ -2079,6 +2126,52 @@ function DealFormSection({
               )}
             </div>
           )}
+
+          <FormField
+            control={form.control}
+            name={`deals.${index}.estimatedSavings`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("onboarding:deals.estimatedSavings")} *</FormLabel>
+                <div className="relative md:w-1/2">
+                  <FormControl>
+                    <Input {...field} type="number" placeholder={t("onboarding:deals.estimatedSavingsPlaceholder")} className="pr-12" data-testid={`input-deal-estimated-savings-${index}`} />
+                  </FormControl>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">{t("onboarding:fees.qar")}</div>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name={`deals.${index}.estimatedSavingsNote`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("onboarding:deals.estimatedSavingsNote")}</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} maxLength={200} rows={3} placeholder={t("onboarding:deals.estimatedSavingsNotePlaceholder")} data-testid={`textarea-deal-estimated-savings-note-${index}`} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name={`deals.${index}.estimatedSavingsNoteAr`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("onboarding:deals.estimatedSavingsNoteAr")}</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} dir="rtl" maxLength={200} rows={3} placeholder={t("onboarding:deals.estimatedSavingsNoteArPlaceholder")} data-testid={`textarea-deal-estimated-savings-note-ar-${index}`} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <BilingualTabs
             idPrefix={`deal-description-${index}`}

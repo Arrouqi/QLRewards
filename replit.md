@@ -148,6 +148,19 @@ ALTER TABLE redirect_logs ADD COLUMN IF NOT EXISTS link_type text;
 UPDATE redirect_logs SET link_type = 'deals' WHERE link_type IS NULL;
 ```
 
+#### Pending Production Migrations (Deal dates + Estimated Savings)
+Run on production DB before deploying:
+```sql
+-- New per-deal fields: offer start/end dates and estimated savings (+ notes EN/AR).
+-- All nullable/additive; legacy deals keep NULL values.
+ALTER TABLE merchant_deals
+  ADD COLUMN IF NOT EXISTS start_date text,
+  ADD COLUMN IF NOT EXISTS end_date text,
+  ADD COLUMN IF NOT EXISTS estimated_savings text,
+  ADD COLUMN IF NOT EXISTS estimated_savings_note text,
+  ADD COLUMN IF NOT EXISTS estimated_savings_note_ar text;
+```
+
 #### Pending Production Migrations (Merchant Soft Delete)
 Run on production DB before deploying:
 ```sql
