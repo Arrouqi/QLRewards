@@ -17,14 +17,11 @@ import {
   ChevronDown,
   ChevronUp,
   Pencil,
-  Gift,
-  Percent,
-  Tag,
-  ShoppingBag,
   Check,
   Info,
   ImageIcon,
   HelpCircle,
+  Download,
   Users,
   TrendingUp,
   Zap,
@@ -67,6 +64,7 @@ import {
 import { useLocation } from "wouter";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { useAutoTranslate } from "@/hooks/useAutoTranslate";
+import * as XLSX from "xlsx";
 
 interface SubCategory {
   id: string;
@@ -109,9 +107,9 @@ const makeBranchSchema = (t: TFn) => z.object({
 });
 
 const makeDealSchema = (t: TFn) => z.object({
-  category: z.string().min(1, t("validation.categoryRequired")),
-  subCategory: z.string().min(1, t("validation.subCategoryRequired")),
-  dealType: z.string().min(1, t("validation.dealTypeRequired")),
+  category: z.string().default(""),
+  subCategory: z.string().default(""),
+  dealType: z.string().default(""),
   duration: z.string().min(1, t("validation.durationRequired")),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
@@ -129,7 +127,10 @@ const makeDealSchema = (t: TFn) => z.object({
   specificDays: z.boolean().default(false),
   days: z.array(z.string()).optional(),
   title: z.string().min(5, t("validation.titleMin")),
-  titleAr: z.string().min(5, t("validation.titleArMin")),
+  titleAr: z.string().refine(
+    (value) => value.trim() === "" || value.trim().length >= 5,
+    t("validation.titleArMin"),
+  ).optional(),
   description: z.string().optional(),
   descriptionAr: z.string().optional(),
   claimRules: z.array(z.string()).optional(),
@@ -137,11 +138,19 @@ const makeDealSchema = (t: TFn) => z.object({
   otherRules: z.string().optional(),
   branches: z.array(z.string()).optional(),
   images: z.array(z.string()).min(4, t("validation.imagesMin")),
+}).superRefine((deal, ctx) => {
+  if (deal.specificDays && (!deal.days || deal.days.length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["days"],
+      message: t("validation.validDaysRequired"),
+    });
+  }
 });
 
 const makeMerchantSchema = (t: TFn) => z.object({
   companyName: z.string().min(1, t("validation.companyNameRequired")),
-  companyNameAr: z.string().min(1, t("validation.companyNameArRequired")),
+  companyNameAr: z.string().optional(),
   crNumber: z.string().optional(),
   brandName: z.string().optional(),
   brandNameAr: z.string().optional(),
@@ -176,15 +185,6 @@ const makeMerchantSchema = (t: TFn) => z.object({
   if (!data.brandName || data.brandName.trim() === "") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandName"], message: t("validation.brandNameRequired") });
   }
-  if (!data.brandNameAr || data.brandNameAr.trim() === "") {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandNameAr"], message: t("validation.brandNameArRequired") });
-  }
-  if (!data.products || data.products.length === 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["products"], message: t("validation.productRequired") });
-  }
-  if (!data.businessCategories || data.businessCategories.length === 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["businessCategories"], message: t("validation.categorySelectRequired") });
-  }
   if (!data.crDocument || data.crDocument.trim() === "") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crDocument"], message: t("validation.crDocumentRequired") });
   }
@@ -202,15 +202,60 @@ const merchantSchemaBase = makeMerchantSchema(passthroughT);
 type MerchantFormValues = z.infer<typeof merchantSchemaBase>;
 type DealFormValues = z.infer<ReturnType<typeof makeDealSchema>>;
 
-const productTypes = [
-  { id: "bogo" },
-  { id: "discount" },
-  { id: "voucher" },
-  { id: "bundle" },
-];
-
-
 const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+type TemplateRow = Record<string, unknown>;
+
+const readTemplateRows = async (file: File): Promise<TemplateRow[]> => {
+  const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!firstSheet) return [];
+  return XLSX.utils.sheet_to_json<TemplateRow>(firstSheet, { defval: "" });
+};
+
+const normalizeTemplateHeader = (value: string) =>
+  value.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const templateCell = (row: TemplateRow, ...headers: string[]) => {
+  const normalized = new Map(
+    Object.entries(row).map(([key, value]) => [normalizeTemplateHeader(key), value]),
+  );
+  for (const header of headers) {
+    const value = normalized.get(normalizeTemplateHeader(header));
+    if (value !== undefined && value !== null) return String(value).trim();
+  }
+  return "";
+};
+
+const templateList = (value: string, splitCommas = false) =>
+  value
+    .split(splitCommas ? /\r?\n|[|;,]/ : /\r?\n|[|;]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const templateBoolean = (value: string) =>
+  ["yes", "true", "1", "y"].includes(value.trim().toLowerCase());
+
+const normalizeTemplateOption = (value: string) =>
+  value
+    .replace(/&amp;/gi, "&")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+const matchTemplateOption = (value: string, options: string[]) => {
+  const normalizedValue = normalizeTemplateOption(value);
+  if (!normalizedValue) return "";
+  return options.find((option) => normalizeTemplateOption(option) === normalizedValue) || value.trim();
+};
+
+const matchTemplateTerms = (
+  value: string,
+  terms: { text: string }[],
+) =>
+  templateList(value).map((item) =>
+    matchTemplateOption(item, terms.map((term) => term.text)),
+  );
 
 export default function MerchantOnboarding() {
   const { t, i18n } = useTranslation(["onboarding", "common"]);
@@ -219,21 +264,15 @@ export default function MerchantOnboarding() {
   const [, setLocation] = useLocation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedDeals, setExpandedDeals] = useState<number[]>([0]);
+  const branchTemplateInputRef = useRef<HTMLInputElement>(null);
+  const dealTemplateInputRef = useRef<HTMLInputElement>(null);
+  const [isImportingTemplate, setIsImportingTemplate] = useState<"branches" | "deals" | null>(null);
     
   const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
       const res = await fetch("/api/categories");
       if (!res.ok) throw new Error("Failed to fetch categories");
-      return res.json();
-    },
-  });
-
-  const { data: claimTerms = [] } = useQuery<{ id: number; type: string; text: string }[]>({
-    queryKey: ["terms", "claim"],
-    queryFn: async () => {
-      const res = await fetch("/api/terms/claim");
-      if (!res.ok) throw new Error("Failed to fetch claim terms");
       return res.json();
     },
   });
@@ -290,15 +329,152 @@ export default function MerchantOnboarding() {
     name: "deals",
   });
 
-  const productsValue = useWatch({ control: form.control, name: "products" }) || [];
-  const businessCategoriesValue = useWatch({ control: form.control, name: "businessCategories" }) || [];
-
-  
   useAutoTranslate(form, "companyName", "companyNameAr");
   useAutoTranslate(form, "brandName", "brandNameAr");
 
   const addBranch = () => {
     appendBranch({ name: "", location: "", phone: "", detail: "" });
+  };
+
+  const importBranchesTemplate = async (file: File) => {
+    setIsImportingTemplate("branches");
+    try {
+      const rows = await readTemplateRows(file);
+      const importedBranches = rows
+        .filter((row) => Object.values(row).some((value) => String(value ?? "").trim() !== ""))
+        .map((row) => ({
+          name: templateCell(row, "Branch Name"),
+          location: templateCell(row, "Google Location", "Location"),
+          phone: templateCell(row, "Branch Manager Phone Number", "Phone number", "Phone"),
+          detail: templateCell(row, "Address Details", "Address Detail"),
+        }));
+
+      if (importedBranches.length === 0) {
+        throw new Error(t("toast.templateNoRows"));
+      }
+      appendBranch(importedBranches);
+      toast({
+        title: t("toast.templateImportedTitle"),
+        description: t("toast.branchesImported", { count: importedBranches.length }),
+      });
+    } catch (error) {
+      toast({
+        title: t("toast.templateImportFailedTitle"),
+        description: error instanceof Error ? error.message : t("toast.templateImportFailed"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsImportingTemplate(null);
+      if (branchTemplateInputRef.current) branchTemplateInputRef.current.value = "";
+    }
+  };
+
+  const importDealsTemplate = async (file: File) => {
+    setIsImportingTemplate("deals");
+    try {
+      const rows = await readTemplateRows(file);
+      const importedDeals: DealFormValues[] = rows
+        .filter((row) => Object.values(row).some((value) => String(value ?? "").trim() !== ""))
+        .slice(0, Math.max(0, 20 - dealFields.length))
+        .map((row) => {
+          const redemptionValue = templateCell(row, "Redemption", "Redemption (Unlimited/Limited)").toLowerCase();
+          const dealTypeValue = templateCell(row, "Deal Type").toLowerCase().replace(/[\s_-]/g, "");
+          const categoryValue = templateCell(row, "Category");
+          const matchedCategory = categories.find(
+            (category) =>
+              normalizeTemplateOption(category.name) === normalizeTemplateOption(categoryValue),
+          );
+          const subCategoryValue = templateCell(row, "Sub-Category", "Sub Category");
+          const matchedSubCategory = matchedCategory?.subCategories.find(
+            (subCategory) =>
+              normalizeTemplateOption(subCategory.name) === normalizeTemplateOption(subCategoryValue),
+          );
+          const normalizedDealType =
+            ["buy1get1", "buyonegetone", "bogo"].includes(dealTypeValue)
+              ? "bogo"
+              : ["discount", "voucher", "bundle"].includes(dealTypeValue)
+                ? dealTypeValue
+                : "";
+          const validDays = templateList(
+            templateCell(row, "Valid Days (Required if Specific Days = Yes)", "Valid Days", "Days"),
+            true,
+          )
+            .map((day) => matchTemplateOption(day, daysOfWeek))
+            .filter((day) => daysOfWeek.includes(day));
+          const additionalTerms = [
+            ...templateList(templateCell(row, "Claim Rules")),
+            templateCell(row, "Other Rules / Additional Terms", "Additional Terms", "Other (Optional)", "Other"),
+          ].filter(Boolean).join("; ");
+          return {
+            category: matchedCategory?.name || categoryValue,
+            subCategory: matchedSubCategory?.name || subCategoryValue,
+            dealType: normalizedDealType,
+            duration: templateCell(row, "Duration (Days/Weeks/Months/Years)", "Duration"),
+            startDate: "",
+            endDate: "",
+            estimatedSavings: templateCell(row, "EST.Savings", "Estimated Savings"),
+            estimatedSavingsNote: templateCell(row, "Estimated Savings Note", "Estimated Savings Note (English)"),
+            estimatedSavingsNoteAr: templateCell(row, "Estimated Savings Note (Arabic)", "Arabic Estimated Savings Note"),
+            redemption: redemptionValue.includes("limited") && !redemptionValue.includes("unlimited")
+              ? "limited"
+              : redemptionValue.includes("unlimited")
+                ? "unlimited"
+                : "",
+            limitPerUser: templateCell(row, "Limit Per User"),
+            originalPrice: templateCell(row, "Original Price"),
+            isMultipleItems: templateBoolean(templateCell(row, "Is Multiple Items (Yes/No)", "Is Multiple Items", "Multiple Items")),
+            discountPercentage: templateCell(row, "Discount Percentage", "Discount %"),
+            discountedPrice: templateCell(row, "Discounted Price"),
+            isTwoTranches: templateBoolean(templateCell(row, "Is Two Tranches (Yes/No)", "Is Two Tranches", "Two Tranches")),
+            trancheValidity: templateCell(row, "Tranche Validity").replace(/\s*weeks?\s*$/i, ""),
+            specificDays: templateBoolean(templateCell(row, "Specific Days Only (Yes/No)", "Specific Days Only", "Specific Days")) || validDays.length > 0,
+            days: validDays.length > 0
+              ? validDays
+              : templateBoolean(templateCell(row, "Specific Days Only (Yes/No)", "Specific Days Only", "Specific Days"))
+                ? []
+                : daysOfWeek,
+            title: templateCell(row, "Deal title", "Deal Title", "Title"),
+            titleAr: templateCell(row, "Deal Title (Arabic) (Optional)", "Deal Title (Arabic)", "Title (Arabic)", "Arabic Deal Title"),
+            description: templateCell(row, "Description"),
+            descriptionAr: templateCell(row, "Description (Arabic) (Optional)", "Description (Arabic)", "Arabic Description"),
+            claimRules: [],
+            generalRules: matchTemplateTerms(templateCell(row, "General Rules"), generalTerms),
+            otherRules: additionalTerms,
+            branches: [],
+            images: Array.from({ length: 10 }, (_, imageIndex) =>
+              templateCell(row, `Image ${imageIndex + 1} URL`, `Image ${imageIndex + 1}`),
+            ).filter(Boolean),
+          };
+        });
+
+      if (importedDeals.length === 0) {
+        throw new Error(t("toast.templateNoRows"));
+      }
+      appendDeal(importedDeals);
+      setExpandedDeals((previous) => [
+        ...previous,
+        ...importedDeals.map((_, index) => dealFields.length + index),
+      ]);
+      toast({
+        title: t("toast.templateImportedTitle"),
+        description: t("toast.dealsImported", { count: importedDeals.length }),
+      });
+      if (rows.length > importedDeals.length) {
+        toast({
+          title: t("toast.dealImportLimitTitle"),
+          description: t("toast.dealImportLimit"),
+        });
+      }
+    } catch (error) {
+      toast({
+        title: t("toast.templateImportFailedTitle"),
+        description: error instanceof Error ? error.message : t("toast.templateImportFailed"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsImportingTemplate(null);
+      if (dealTemplateInputRef.current) dealTemplateInputRef.current.value = "";
+    }
   };
 
   // Remove a branch and strip its id from every deal's selection
@@ -411,31 +587,10 @@ export default function MerchantOnboarding() {
     try {
       const formattedBranches = data.branches?.map(b => JSON.stringify(b)) || [];
 
-      // Deal checkboxes store stable field-array ids while editing; convert to
-      // branch names for the server payload (DB stores names).
-      const branchIdToName = new Map<string, string>(
-        branchFields.map((f, i) => [f.id, data.branches?.[i]?.name || `Branch ${i + 1}`])
-      );
       const dealsWithBranchNames = data.deals?.map(d => ({
         ...d,
-        branches: (d.branches || []).map((id: string) => branchIdToName.get(id) ?? id),
+        branches: [],
       }));
-
-      // Validate that multi-branch merchants have selected branches for each deal
-      if ((data.branches?.length || 0) > 1 && data.deals && data.deals.length > 0) {
-        for (let i = 0; i < data.deals.length; i++) {
-          const deal = data.deals[i];
-          if (!deal.branches || deal.branches.length === 0) {
-            toast({
-              title: t("toast.branchSelectionTitle"),
-              description: t("toast.branchSelectionDesc", { num: i + 1, title: deal.title }),
-              variant: "destructive",
-            });
-            setIsSubmitting(false);
-            return;
-          }
-        }
-      }
 
       const payload: any = {
         ...data,
@@ -544,8 +699,6 @@ export default function MerchantOnboarding() {
               contactPerson: t("validation.fieldLabels.contactPerson"),
               email: t("validation.fieldLabels.email"),
               phone: t("validation.fieldLabels.phone"),
-              products: t("validation.fieldLabels.products"),
-              businessCategories: t("validation.fieldLabels.businessCategories"),
               crDocument: t("validation.fieldLabels.crDocument"),
               termsAccepted: t("validation.fieldLabels.termsAccepted"),
               deals: t("validation.fieldLabels.deals"),
@@ -851,105 +1004,47 @@ export default function MerchantOnboarding() {
               </CardContent>
             </Card>
 
-            {/* Products Selection */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-[#00426D]">{t("products.title")} <span className="text-sm font-normal text-slate-500">{t("products.selectAll")}</span></CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {productTypes.map((product) => {
-                    const isSelected = productsValue.includes(product.id);
-                    return (
-                      <label
-                        key={product.id}
-                        className={cn(
-                          "flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all",
-                          isSelected
-                            ? "border-[#FF7F39] bg-[#FF7F39]/10"
-                            : "border-slate-200 hover:border-[#FF7F39]/50"
-                        )}
-                        data-testid={`checkbox-product-${product.id}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              form.setValue("products", [...productsValue, product.id], { shouldValidate: true });
-                            } else {
-                              form.setValue("products", productsValue.filter((v: string) => v !== product.id), { shouldValidate: true });
-                            }
-                          }}
-                          className="h-4 w-4 accent-[#FF7F39]"
-                        />
-                        <span className="font-medium text-sm">{t(`products.types.${product.id}`)}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Business Categories */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-[#00426D]">{t("businessCategories.title")}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {categoriesLoading && (
-                  <p className="text-sm text-slate-500" data-testid="text-categories-loading">{t("businessCategories.loading")}</p>
-                )}
-                {!categoriesLoading && categoriesError != null && (
-                  <p className="text-sm text-destructive" data-testid="text-categories-error">{t("businessCategories.loadError")}</p>
-                )}
-                {!categoriesLoading && !categoriesError && categories.length === 0 && (
-                  <p className="text-sm text-slate-500" data-testid="text-categories-empty">{t("businessCategories.empty")}</p>
-                )}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {categories.map((category: Category, idx: number) => {
-                    const isSelected = businessCategoriesValue.includes(category.name);
-                    return (
-                      <label
-                        key={category.id}
-                        className={cn(
-                          "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                          isSelected
-                            ? "border-[#FF7F39] bg-[#FF7F39]/10"
-                            : "border-slate-200 hover:border-[#FF7F39]/50"
-                        )}
-                        data-testid={`checkbox-category-${idx}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              form.setValue("businessCategories", [...businessCategoriesValue, category.name], { shouldValidate: true });
-                            } else {
-                              form.setValue("businessCategories", businessCategoriesValue.filter((v: string) => v !== category.name), { shouldValidate: true });
-                            }
-                          }}
-                          className="h-4 w-4 accent-[#FF7F39]"
-                        />
-                        <span className="text-sm">{category.name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Branches */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
                 <CardTitle className="text-[#00426D]">{t("branches.title")}</CardTitle>
-                <Button type="button" variant="outline" size="sm" onClick={addBranch} data-testid="button-add-branch">
-                  <Plus className="h-4 w-4 mr-1" />
-                  {t("branches.addBranch")}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" asChild data-testid="button-download-branch-template">
+                    <a href="/templates/Address_Template_for_Merchants.xlsx" download>
+                      <Download className="h-4 w-4 mr-1" />
+                      {t("branches.downloadTemplate")}
+                    </a>
+                  </Button>
+                  <input
+                    ref={branchTemplateInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void importBranchesTemplate(file);
+                    }}
+                    data-testid="input-branch-template"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => branchTemplateInputRef.current?.click()}
+                    disabled={isImportingTemplate !== null}
+                    data-testid="button-upload-branch-template"
+                  >
+                    <Upload className="h-4 w-4 mr-1" />
+                    {isImportingTemplate === "branches" ? t("branches.importing") : t("branches.uploadTemplate")}
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={addBranch} data-testid="button-add-branch">
+                    <Plus className="h-4 w-4 mr-1" />
+                    {t("branches.addBranch")}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                <p className="text-sm text-slate-500">{t("branches.templateGuide")}</p>
                 {branchFields.length === 0 && (
                   <p className="text-slate-500 text-sm text-center py-4">{t("branches.empty")}</p>
                 )}
@@ -1039,23 +1134,54 @@ export default function MerchantOnboarding() {
 
             {/* Deals Section */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
                 <CardTitle className="text-[#00426D]">
                   {t("deals.title")} {dealFields.length > 0 && <span className="text-slate-400 font-normal text-sm">({dealFields.length}/20)</span>}
                 </CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addDeal}
-                  disabled={dealFields.length >= 20}
-                  data-testid="button-add-deal"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  {t("deals.addDeal")}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" asChild data-testid="button-download-deal-template">
+                    <a href="/templates/Deals_Offers_Template.xlsx" download>
+                      <Download className="h-4 w-4 mr-1" />
+                      {t("deals.downloadTemplate")}
+                    </a>
+                  </Button>
+                  <input
+                    ref={dealTemplateInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void importDealsTemplate(file);
+                    }}
+                    data-testid="input-deal-template"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => dealTemplateInputRef.current?.click()}
+                    disabled={isImportingTemplate !== null || dealFields.length >= 20}
+                    data-testid="button-upload-deal-template"
+                  >
+                    <Upload className="h-4 w-4 mr-1" />
+                    {isImportingTemplate === "deals" ? t("deals.importing") : t("deals.uploadTemplate")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addDeal}
+                    disabled={dealFields.length >= 20}
+                    data-testid="button-add-deal"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    {t("deals.addDeal")}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                <p className="text-sm text-slate-500">{t("deals.templateGuide")}</p>
                 {dealFields.length === 0 && (
                   <p className="text-slate-500 text-sm text-center py-4">{t("deals.empty")}</p>
                 )}
@@ -1067,93 +1193,12 @@ export default function MerchantOnboarding() {
                     key={deal.id}
                     index={index}
                     form={form}
-                    categories={categories}
-                    claimTerms={claimTerms}
                     generalTerms={generalTerms}
-                    branches={branchFields}
                     isExpanded={expandedDeals.includes(index)}
                     onToggle={() => toggleDealExpansion(index)}
                     onRemove={() => removeDeal(index)}
                   />
                 ))}
-              </CardContent>
-            </Card>
-
-            {/* Fee Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-[#00426D]">{t("fees.title")}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="bg-gradient-to-r from-[#00426D]/5 to-[#FF7F39]/5 p-4 sm:p-6 rounded-xl border border-[#00426D]/10">
-                  <div className="space-y-4">
-                    <div className="flex flex-col gap-2">
-                      <span className="text-base sm:text-lg font-bold text-[#00426D]">{t("fees.subscriptionFee")}</span>
-                      <FormField
-                        control={form.control}
-                        name="subscriptionFee"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="flex items-center gap-2">
-                                <Input 
-                                  {...field} 
-                                  type="number" 
-                                  min="0"
-                                  step="0.01"
-                                  className="w-32 text-xl font-bold text-[#FF7F39] border-[#00426D]/30" 
-                                  data-testid="input-subscription-fee"
-                                />
-                                <span className="text-base text-slate-600">{t("fees.qar")}</span>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-base sm:text-lg font-bold text-[#00426D]">{t("fees.transactionFee")}</span>
-                      <FormField
-                        control={form.control}
-                        name="transactionFee"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="flex items-center gap-2">
-                                <Input 
-                                  {...field} 
-                                  type="number" 
-                                  min="0"
-                                  step="0.01"
-                                  className="w-32 text-xl font-bold text-[#FF7F39] border-[#00426D]/30" 
-                                  data-testid="input-transaction-fee"
-                                />
-                                <span className="text-base text-slate-600">{t("fees.qarPerTransaction")}</span>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <ul className="space-y-3 text-sm text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
-                    <span><strong>{t("fees.subPaymentLabel")}</strong> {t("fees.subPaymentText")}</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
-                    <span><strong>{t("fees.redemptionFeesLabel")}</strong> {t("fees.redemptionFeesText")}</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#FF7F39] font-bold mt-0.5">•</span>
-                    <span>{t("fees.unpaid")}</span>
-                  </li>
-                </ul>
               </CardContent>
             </Card>
 
@@ -1706,50 +1751,43 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
 function DealFormSection({ 
   index, 
   form, 
-  categories, 
-  claimTerms, 
   generalTerms,
-  branches,
   isExpanded, 
   onToggle, 
   onRemove 
 }: {
   index: number;
   form: any;
-  categories: Category[];
-  claimTerms: { id: number; type: string; text: string }[];
   generalTerms: { id: number; type: string; text: string }[];
-  branches: any[];
   isExpanded: boolean;
   onToggle: () => void;
   onRemove: () => void;
 }) {
   const { t } = useTranslation(["onboarding", "common"]);
-  const offerTypes = [
-    { id: "bogo", label: t("onboarding:deals.offers.bogo"), icon: Gift },
-    { id: "discount", label: t("onboarding:deals.offers.discount"), icon: Percent },
-    { id: "voucher", label: t("onboarding:deals.offers.voucher"), icon: Tag },
-    { id: "bundle", label: t("onboarding:deals.offers.bundle"), icon: ShoppingBag },
-  ];
 
-  const categoryValue = useWatch({ control: form.control, name: `deals.${index}.category` });
   const dealTypeValue = useWatch({ control: form.control, name: `deals.${index}.dealType` });
   const redemptionValue = useWatch({ control: form.control, name: `deals.${index}.redemption` });
   useAutoTranslate(form, `deals.${index}.title`, `deals.${index}.titleAr`);
   useAutoTranslate(form, `deals.${index}.description`, `deals.${index}.descriptionAr`);
   const isMultipleItemsValue = useWatch({ control: form.control, name: `deals.${index}.isMultipleItems` });
-  const claimRulesValue = useWatch({ control: form.control, name: `deals.${index}.claimRules` }) || [];
   const generalRulesValue = useWatch({ control: form.control, name: `deals.${index}.generalRules` }) || [];
-  const branchesValue = useWatch({ control: form.control, name: `deals.${index}.branches` }) || [];
-  // Live branch values (updates as the user types) — the `branches` prop is a
-  // useFieldArray snapshot whose names go stale until a structural change.
-  const liveBranchValues = useWatch({ control: form.control, name: "branches" }) || [];
+  const generalRuleOptions = [
+    ...generalTerms,
+    ...generalRulesValue
+      .filter((value: string) =>
+        !generalTerms.some(
+          (term) => normalizeTemplateOption(term.text) === normalizeTemplateOption(value),
+        ),
+      )
+      .map((text: string, importedIndex: number) => ({
+        id: `imported-general-${importedIndex}`,
+        type: "general",
+        text,
+      })),
+  ];
   const { errors: dealFormErrors } = useFormState({ control: form.control });
   const dealErrors = (dealFormErrors as any)?.deals?.[index] || {};
   const [discountType, setDiscountType] = useState<"percentage" | "discountedPrice">("percentage");
-  
-  const selectedCategory = categories.find(c => c.name === categoryValue);
-  const subCategories = selectedCategory?.subCategories || [];
   
   const isBogo = dealTypeValue === "bogo";
   const isDiscount = dealTypeValue === "discount";
@@ -1812,84 +1850,6 @@ function DealFormSection({
                 )}
               />
             }
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name={`deals.${index}.category`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("onboarding:deals.category")}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("onboarding:deals.categoryPlaceholder")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name={`deals.${index}.subCategory`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("onboarding:deals.subCategory")}</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={!categoryValue}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("onboarding:deals.subCategoryPlaceholder")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {subCategories.map((sub) => (
-                        <SelectItem key={sub.id} value={sub.name}>{sub.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name={`deals.${index}.dealType`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("onboarding:deals.dealType")}</FormLabel>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {offerTypes.map((type) => {
-                    const Icon = type.icon;
-                    const isSelected = field.value === type.id;
-                    return (
-                      <div
-                        key={type.id}
-                        onClick={() => field.onChange(type.id)}
-                        className={cn(
-                          "flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all",
-                          isSelected ? "border-[#FF7F39] bg-[#FF7F39]/10" : "border-slate-200 hover:border-[#FF7F39]/50"
-                        )}
-                      >
-                        <Icon className={cn("h-4 w-4", isSelected ? "text-[#FF7F39]" : "text-slate-500")} />
-                        <span className="text-sm">{type.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2115,35 +2075,6 @@ function DealFormSection({
             )}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name={`deals.${index}.estimatedSavingsNote`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("onboarding:deals.estimatedSavingsNote")}</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} maxLength={200} rows={3} placeholder={t("onboarding:deals.estimatedSavingsNotePlaceholder")} data-testid={`textarea-deal-estimated-savings-note-${index}`} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name={`deals.${index}.estimatedSavingsNoteAr`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("onboarding:deals.estimatedSavingsNoteAr")}</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} dir="rtl" maxLength={200} rows={3} placeholder={t("onboarding:deals.estimatedSavingsNoteArPlaceholder")} data-testid={`textarea-deal-estimated-savings-note-ar-${index}`} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
           <BilingualTabs
             idPrefix={`deal-description-${index}`}
             hasEnglishError={!!dealErrors.description}
@@ -2181,38 +2112,9 @@ function DealFormSection({
           />
 
           <div>
-            <Label>{t("onboarding:deals.claimRules")}</Label>
-            <div className="space-y-2 mt-2">
-              {claimTerms.map((term) => {
-                const isSelected = claimRulesValue.includes(term.text);
-                return (
-                  <label
-                    key={term.id}
-                    className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          form.setValue(`deals.${index}.claimRules`, [...claimRulesValue, term.text]);
-                        } else {
-                          form.setValue(`deals.${index}.claimRules`, claimRulesValue.filter((v: string) => v !== term.text));
-                        }
-                      }}
-                      className="h-4 w-4 accent-[#FF7F39]"
-                    />
-                    <span className="text-sm" dangerouslySetInnerHTML={{ __html: term.text }} />
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
             <Label>{t("onboarding:deals.generalRules")}</Label>
             <div className="space-y-2 mt-2">
-              {generalTerms.map((term) => {
+              {generalRuleOptions.map((term) => {
                 const isSelected = generalRulesValue.includes(term.text);
                 return (
                   <label
@@ -2238,69 +2140,25 @@ function DealFormSection({
             </div>
           </div>
 
-          <FormField
-            control={form.control}
-            name={`deals.${index}.otherRules`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("onboarding:deals.otherRules")}</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder={t("onboarding:deals.otherRulesPlaceholder")} rows={3} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {branches.length === 0 ? (
-            <div>
-              <Label>{t("onboarding:deals.applicableBranches")}</Label>
-              <p className="text-sm text-slate-500 mt-2">{t("onboarding:deals.addBranchesFirst")}</p>
-            </div>
-          ) : branches.length === 1 ? (
-            <div>
-              <Label>{t("onboarding:deals.applicableBranch")}</Label>
-              <p className="text-sm text-slate-600 mt-2 p-2 bg-slate-50 rounded border">
-                {liveBranchValues[0]?.name || t("onboarding:branches.branchFallback", { num: 1 })} {t("onboarding:deals.autoSelected")}
-              </p>
-            </div>
-          ) : (
-            <div>
-              <Label>{t("onboarding:deals.applicableBranchesRequired")}</Label>
-              <p className="text-xs text-slate-500 mb-2">{t("onboarding:deals.selectAtLeastOneBranch")}</p>
-              <div className="space-y-2">
-                {branches.map((branch: any, branchIndex: number) => {
-                  // Select by stable field-array id (not name) so renames/duplicates can't break links
-                  const branchId = branch?.id ?? String(branchIndex);
-                  const branchLabel = liveBranchValues[branchIndex]?.name || t("onboarding:branches.branchFallback", { num: branchIndex + 1 });
-                  const isSelected = branchesValue.includes(branchId);
-                  return (
-                    <label
-                      key={branchId}
-                      className="flex items-center gap-2 p-2 rounded border cursor-pointer hover:bg-slate-50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            form.setValue(`deals.${index}.branches`, [...branchesValue, branchId]);
-                          } else {
-                            form.setValue(`deals.${index}.branches`, branchesValue.filter((v: string) => v !== branchId));
-                          }
-                        }}
-                        className="h-4 w-4 accent-[#FF7F39]"
-                      />
-                      <span className="text-sm">{branchLabel}</span>
-                    </label>
-                  );
-                })}
-              </div>
-              {branchesValue.length === 0 && (
-                <p className="text-sm text-red-500 mt-1">{t("onboarding:deals.pleaseSelectBranch")}</p>
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_280px] gap-4 items-start">
+            <FormField
+              control={form.control}
+              name={`deals.${index}.otherRules`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("onboarding:deals.otherRules")}</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder={t("onboarding:deals.otherRulesPlaceholder")} rows={5} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
+            />
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+              <p className="font-medium mb-1">{t("onboarding:deals.additionalTermsNoteTitle")}</p>
+              <p className="text-xs leading-relaxed">{t("onboarding:deals.additionalTermsNote")}</p>
             </div>
-          )}
+          </div>
 
           <DealImageUpload form={form} index={index} />
         </div>

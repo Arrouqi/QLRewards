@@ -56,10 +56,10 @@ export const insertDealSchema = createInsertSchema(deals).omit({
 
 export type InsertDeal = z.infer<typeof insertDealSchema>;
 
-// Public form submissions must include an Arabic deal title (mirrors the English min-5 rule).
-// Admin edit flows keep using the base insert schemas.
+// Arabic deal titles are optional on public forms, but entered values must
+// still meet the same minimum length used by the browser form.
 export const requireArabicDealTitle = <T extends { titleAr?: string | null }>(data: T, ctx: z.RefinementCtx) => {
-  if (!data.titleAr || data.titleAr.trim().length < 5) {
+  if (data.titleAr && data.titleAr.trim().length > 0 && data.titleAr.trim().length < 5) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["titleAr"], message: "Deal title (Arabic) must be at least 5 characters" });
   }
 };
@@ -78,9 +78,20 @@ export const requireEstimatedSavings = <T extends { estimatedSavings?: string | 
   }
 };
 
+export const requireValidDaysWhenSpecific = <T extends { specificDays?: boolean | null; days?: string[] | null }>(data: T, ctx: z.RefinementCtx) => {
+  if (data.specificDays && (!data.days || data.days.length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["days"],
+      message: "At least one valid day is required when Specific Days Only is Yes",
+    });
+  }
+};
+
 export const publicDealSubmissionSchema = insertDealSchema
   .superRefine(requireArabicDealTitle)
-  .superRefine(requireEstimatedSavings);
+  .superRefine(requireEstimatedSavings)
+  .superRefine(requireValidDaysWhenSpecific);
 export type Deal = typeof deals.$inferSelect;
 
 export type DealSummary = Pick<Deal, 
@@ -241,24 +252,12 @@ export const insertMerchantSchema = createInsertSchema(merchants, {
   submittedBy: true,
   createdAt: true,
 }).superRefine((data, ctx) => {
-  if (!data.companyNameAr || data.companyNameAr.trim() === "") {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companyNameAr"], message: "Company name (Arabic) is required" });
-  }
   if (data.companyType === "group") return;
   if (!data.crNumber || !/^[a-zA-Z0-9]{4,14}$/.test(data.crNumber)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crNumber"], message: "CR number must be 4-14 alphanumeric characters" });
   }
   if (!data.brandName || data.brandName.trim() === "") {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandName"], message: "Brand name is required" });
-  }
-  if (!data.brandNameAr || data.brandNameAr.trim() === "") {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["brandNameAr"], message: "Brand name (Arabic) is required" });
-  }
-  if (!data.products || data.products.length === 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["products"], message: "Products are required" });
-  }
-  if (!data.businessCategories || data.businessCategories.length === 0) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["businessCategories"], message: "Business categories are required" });
   }
 });
 
@@ -358,11 +357,12 @@ export const insertMerchantDealSchema = createInsertSchema(merchantDeals).omit({
 });
 
 export type InsertMerchantDeal = z.infer<typeof insertMerchantDealSchema>;
-// Public submissions additionally require Arabic title and estimated savings.
+// Public submissions require estimated savings; Arabic title remains optional.
 // Admin edits use insertMerchantDealSchema so legacy deals stay editable.
 export const publicMerchantDealSchema = insertMerchantDealSchema
   .superRefine(requireArabicDealTitle)
-  .superRefine(requireEstimatedSavings);
+  .superRefine(requireEstimatedSavings)
+  .superRefine(requireValidDaysWhenSpecific);
 export type MerchantDeal = typeof merchantDeals.$inferSelect;
 
 export const merchantNotes = pgTable("merchant_notes", {
