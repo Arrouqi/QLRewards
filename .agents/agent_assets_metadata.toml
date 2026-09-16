@@ -1,0 +1,128 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "GwhBSX-QZCjUkvVco2CKb"
+uri = "file://attached_assets/Address_Template_for_Merchants_with_sample.xlsx"
+type = "table"
+title = "Address Template with Sample Row"
+description = "Updated branch address template with one sample row for testing the branch Excel upload."
+logical_id = "e31b842d-5030-404c-8098-06b056fd16e8"
+content_hash = "sha256:4b9c6a0edf642a2d98c750bb3f348c6693f64bc2cf509ceae0a269fd0582f53c"
+size = 16862
+mtime_ms = 1788257974885
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b394de88-7ddf-4ef4-a4ce-ed4d9d0f175d/e31b842d-5030-404c-8098-06b056fd16e8/49d3af77-87ae-4b5b-83ac-a24299de5d79"
+storage_version_token = "1788257982695364"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "W9IQm917QEHHwnPZnpyTi"
+uri = "file://attached_assets/Deals_Offers_Template_with_sample.xlsx"
+type = "table"
+title = "Deals Offers Template with Sample Row"
+description = "Updated deals and offers template with one sample row for testing the deal Excel upload."
+logical_id = "ff9cc744-f965-43e0-addb-6d247eb3e1c8"
+content_hash = "sha256:be5827e7c75510c7f1e154fea3d94c7cda4c227cfaa0e6654d6fedb6fd79e47f"
+size = 17073
+mtime_ms = 1788257974901
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b394de88-7ddf-4ef4-a4ce-ed4d9d0f175d/ff9cc744-f965-43e0-addb-6d247eb3e1c8/e12e0c77-b4bf-41ad-9424-f27348265a3e"
+storage_version_token = "1788257984118926"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "UeT1hE6q0T-oLLyKp25Mq"
+uri = "file://client/public/templates/Deals_Offers_Template.xlsx"
+type = "table"
+title = "Deal Template — Duration Guidance"
+description = "Duration now clearly accepts days, weeks, months, or years, with examples in the Instructions sheet."
+logical_id = "b17a6e55-2dc6-4b35-b7b8-8809fa172684"
+content_hash = "sha256:e164a61308a1fccc47ed7241485c4fe71317e6f98b81abe6355f87e3765f75ee"
+size = 24132
+mtime_ms = 1788779865364
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b394de88-7ddf-4ef4-a4ce-ed4d9d0f175d/b17a6e55-2dc6-4b35-b7b8-8809fa172684/5b26603e-9713-4707-8c11-3ab98320e7b7"
+storage_version_token = "1788779911588543"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "VXAIyfSPTqzQM1IDixJt6"
+uri = "file://attached_assets/Deals_Offers_Template_All_Fields_with_sample.xlsx"
+type = "table"
+title = "Deals & Offers Template — Sample Without Image Columns"
+description = "25-column sample workbook with one completed deal row and no image URL columns."
+logical_id = "29acb221-0a91-465b-acab-433bb3170b30"
+content_hash = "sha256:18629547a9b10591b890796ef75c3d716c92d08c2a06f9912c7523727612a344"
+size = 19644
+mtime_ms = 1788266680802
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b394de88-7ddf-4ef4-a4ce-ed4d9d0f175d/29acb221-0a91-465b-acab-433bb3170b30/edf47c3d-a04b-45f4-8218-ae1bb722201b"
+storage_version_token = "1788266704175722"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "4WU0Xr_XQ99TlUoD5u8UL"
+uri = "file://attached_assets/Deals_Offers_Template_Test_Data.xlsx"
+type = "table"
+title = "Deal Import — Corrected Test Data"
+description = "Corrected 3-row deal workbook using live categories, sub-categories, rule options, and valid dropdown values."
+logical_id = "06d04d57-1fd8-4343-a95a-2ff7eb895125"
+content_hash = "sha256:cec02030242d6a64e6feafb1ae45aa0664bd7efb57b320d2387fb05d74965f14"
+size = 22383
+mtime_ms = 1788269352274
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b394de88-7ddf-4ef4-a4ce-ed4d9d0f175d/06d04d57-1fd8-4343-a95a-2ff7eb895125/01be716f-b837-432b-8199-282d3347a975"
+storage_version_token = "1788269401229594"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "5ozNLcrkyLGe_DsGzKwxQ"
+uri = "file://attached_assets/Address_Template_Test_Data.xlsx"
+type = "table"
+title = "Branch Import — Matching Test Data"
+description = "Import this first. It adds West Bay, Al Sadd, and The Pearl branches used by the deal test file."
+logical_id = "602a13d3-4c67-49ca-a022-12f4b08dc49d"
+content_hash = "sha256:c9d4c62107780f5e642c83662c544e89b1d4a61d9680fff4dfd4d63bf03d9159"
+size = 16909
+mtime_ms = 1788269352258
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b394de88-7ddf-4ef4-a4ce-ed4d9d0f175d/602a13d3-4c67-49ca-a022-12f4b08dc49d/72d40997-fc47-44bc-b380-cf9627eaf08d"
+storage_version_token = "1788269400022497"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "7tPEf-7Orcm59byW-eaiH"
+uri = "file://attached_assets/Address_Template_Test_Data_Corrected.xlsx"
+type = "table"
+title = "Corrected Branch Test Data"
+description = "Four-column branch workbook. The original Phone field is renamed to Branch Manager Phone Number; no extra phone field was added."
+logical_id = "c387399a-08ef-422f-b2ed-a18b6010cc28"
+content_hash = "sha256:7236da6486c34427f3eab9a3d3ee0da1645aee8b8971da0d10a771bb5e3b2fc6"
+size = 16924
+mtime_ms = 1788770739872
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b394de88-7ddf-4ef4-a4ce-ed4d9d0f175d/c387399a-08ef-422f-b2ed-a18b6010cc28/eac6a544-b226-4567-8b0b-7c51bee25a3a"
+storage_version_token = "1788770773638708"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "gLPVdqtlUynYWFiHXsjH8"
+uri = "file://attached_assets/Deals_Offers_Template_Test_Data_Corrected.xlsx"
+type = "table"
+title = "Deal Test Data — Duration Guidance"
+description = "Updated sample workbook matching the latest Duration format."
+logical_id = "36fd0fd1-cd63-4b73-9871-52b4b3d93570"
+content_hash = "sha256:e882cbf7488e232a49ee5d35161914a21dfe36bacc0024a026ec7c9b9b5007c3"
+size = 26499
+mtime_ms = 1788779865392
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b394de88-7ddf-4ef4-a4ce-ed4d9d0f175d/36fd0fd1-cd63-4b73-9871-52b4b3d93570/6125aa23-d216-423c-8d5d-dcaf8b27e188"
+storage_version_token = "1788779912847371"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+[[outputs]]
+id = "V7IwBgc95ZyVBhPnyddwy"
+uri = "file://client/public/templates/Address_Template_for_Merchants.xlsx"
+type = "table"
+title = "Improved Branch Import Template"
+description = "Includes Branches Data and Instructions sheets with required fields, accepted formats, and examples."
+logical_id = "4d7998ac-d71f-4fb1-9e61-ae73f41e89c8"
+content_hash = "sha256:031ac040cf2cde336af1ff971252a2aead6c02268b111a2b0007ee12e8a0febe"
+size = 19570
+mtime_ms = 1788772776484
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:b394de88-7ddf-4ef4-a4ce-ed4d9d0f175d/4d7998ac-d71f-4fb1-9e61-ae73f41e89c8/f7b5de74-7489-4f91-9afc-abfcd0fa0d41"
+storage_version_token = "1788772851841635"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
