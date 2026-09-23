@@ -1411,6 +1411,18 @@ export async function registerRoutes(
         return res.status(400).json({ error: errorMsg });
       }
       const isGroup = false;
+
+      if (!Array.isArray(merchantData.branches) || merchantData.branches.length === 0) {
+        const errorMsg = "At least one branch is required";
+        await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
+        return res.status(400).json({ error: errorMsg });
+      }
+
+      if (!Array.isArray(deals) || deals.length === 0) {
+        const errorMsg = "At least one deal is required";
+        await logFormSubmission("merchant_onboarding", "validation_error", req, startTime, { errorMessage: errorMsg });
+        return res.status(400).json({ error: errorMsg });
+      }
       
       const documentFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'companyStamp', 'signedContractUpload', 'taxCardDocument', 'logo', 'coverImage'];
       for (const field of documentFields) {

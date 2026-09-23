@@ -163,7 +163,7 @@ const makeMerchantSchema = (t: TFn) => z.object({
   pocEmail: z.union([z.string().email(t("validation.emailValid")), z.literal("")]).optional(),
   products: z.array(z.string()).optional(),
   businessCategories: z.array(z.string()).optional(),
-  branches: z.array(makeBranchSchema(t)).optional(),
+  branches: z.array(makeBranchSchema(t)).min(1, t("validation.branchesRequired")),
   subscriptionFee: z.string().default("0"),
   transactionFee: z.string().default("3.00"),
   crDocument: z.string().optional(),
@@ -177,7 +177,7 @@ const makeMerchantSchema = (t: TFn) => z.object({
   termsAccepted: z.boolean().refine(val => val === true, {
     message: t("validation.termsRequired"),
   }),
-  deals: z.array(makeDealSchema(t)).optional(),
+  deals: z.array(makeDealSchema(t)).min(1, t("validation.dealsRequired")),
 }).superRefine((data, ctx) => {
   if (!data.crNumber || !/^[a-zA-Z0-9]{4,14}$/.test(data.crNumber)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crNumber"], message: t("validation.crNumberFormat") });
@@ -701,6 +701,7 @@ export default function MerchantOnboarding() {
               phone: t("validation.fieldLabels.phone"),
               crDocument: t("validation.fieldLabels.crDocument"),
               termsAccepted: t("validation.fieldLabels.termsAccepted"),
+              branches: t("validation.fieldLabels.branches"),
               deals: t("validation.fieldLabels.deals"),
               whatsapp: t("validation.fieldLabels.whatsapp"),
               logo: t("validation.fieldLabels.logo"),
@@ -1007,7 +1008,7 @@ export default function MerchantOnboarding() {
             {/* Branches */}
             <Card>
               <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-                <CardTitle className="text-[#00426D]">{t("branches.title")}</CardTitle>
+                <CardTitle className="text-[#00426D]">{t("branches.title")} *</CardTitle>
                 <div className="flex items-center gap-2">
                   <Button type="button" variant="outline" size="sm" asChild data-testid="button-download-branch-template">
                     <a href="/templates/Address_Template_for_Merchants.xlsx" download>
@@ -1136,7 +1137,7 @@ export default function MerchantOnboarding() {
             <Card>
               <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
                 <CardTitle className="text-[#00426D]">
-                  {t("deals.title")} {dealFields.length > 0 && <span className="text-slate-400 font-normal text-sm">({dealFields.length}/20)</span>}
+                  {t("deals.title")} * {dealFields.length > 0 && <span className="text-slate-400 font-normal text-sm">({dealFields.length}/20)</span>}
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <Button type="button" variant="outline" size="sm" asChild data-testid="button-download-deal-template">

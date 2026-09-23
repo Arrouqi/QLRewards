@@ -311,6 +311,8 @@
   "validation": {
     "branchNameRequired": "Branch name is required",
     "branchPhoneRequired": "Branch manager phone number is required",
+    "branchesRequired": "Add at least one branch",
+    "dealsRequired": "Add at least one deal",
     "categoryRequired": "Category is required",
     "subCategoryRequired": "Sub-category is required",
     "dealTypeRequired": "Deal type is required",
@@ -349,6 +351,7 @@
       "merchantSignatoryName": "Authorized Signatory Name",
       "commencementDate": "Commencement Date",
       "termsAccepted": "Terms & Conditions",
+      "branches": "Branches",
       "deals": "Deal Offers",
       "whatsapp": "WhatsApp",
       "logo": "Logo",

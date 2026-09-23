@@ -311,6 +311,8 @@
   "validation": {
     "branchNameRequired": "اسم الفرع مطلوب",
     "branchPhoneRequired": "رقم هاتف مدير الفرع مطلوب",
+    "branchesRequired": "أضف فرعاً واحداً على الأقل",
+    "dealsRequired": "أضف عرضاً واحداً على الأقل",
     "categoryRequired": "الفئة مطلوبة",
     "subCategoryRequired": "الفئة الفرعية مطلوبة",
     "dealTypeRequired": "نوع العرض مطلوب",
@@ -349,6 +351,7 @@
       "merchantSignatoryName": "اسم المفوّض بالتوقيع",
       "commencementDate": "تاريخ البدء",
       "termsAccepted": "الشروط والأحكام",
+      "branches": "الفروع",
       "deals": "العروض",
       "whatsapp": "واتساب",
       "logo": "الشعار",
