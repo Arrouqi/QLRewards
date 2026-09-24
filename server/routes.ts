@@ -2178,6 +2178,22 @@ export async function registerRoutes(
       }
       
       if (status === "moderation") {
+        const merchantDeals = await storage.getMerchantDealsByMerchantId(req.params.id);
+        const dealsMissingFields = merchantDeals.flatMap((deal, index) => {
+          const missing: string[] = [];
+          if (!deal.subCategory?.trim()) missing.push("Sub-Category");
+          if (!deal.dealType?.trim()) missing.push("Deal Type");
+          return missing.length > 0
+            ? [`Deal ${index + 1} (${deal.title || "Untitled Deal"}): ${missing.join(" and ")}`]
+            : [];
+        });
+        if (dealsMissingFields.length > 0) {
+          return res.status(400).json({
+            error: `Complete Sub-Category and Deal Type before forwarding to Moderation: ${dealsMissingFields.join("; ")}`,
+            dealsMissingFields,
+          });
+        }
+
         const missingDocs: string[] = [];
         if (existingMerchant.companyType === "group") {
           // Group merchants keep CR documents per brand, not at the merchant level
@@ -2201,7 +2217,6 @@ export async function registerRoutes(
           });
         }
         
-        const merchantDeals = await storage.getMerchantDealsByMerchantId(req.params.id);
         const dealsWithFewImages = merchantDeals.filter(d => !d.images || d.images.length < 4);
         if (dealsWithFewImages.length > 0) {
           return res.status(400).json({ 

@@ -636,7 +636,8 @@ export default function MerchantEdit() {
       const de: string[] = [];
       if (!deal.title?.trim()) de.push("Title is required");
       if (!deal.category) de.push("Category is required");
-      if (!deal.dealType) de.push("Deal type is required");
+      if (!deal.subCategory?.trim()) de.push("Sub-category is required");
+      if (!deal.dealType?.trim()) de.push("Deal type is required");
       if (!deal.duration?.trim()) de.push("Duration is required");
       if (!deal.redemption) de.push("Redemption type is required");
       if (deal.redemption === "limited" && !deal.limitPerUser?.trim()) de.push("Limit per user is required when redemption is Limited");
@@ -1691,7 +1692,7 @@ export default function MerchantEdit() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label>Sub-Category</Label>
+                          <Label>Sub-Category <span className="text-red-500">*</span></Label>
                           <Select
                             value={deal.subCategory}
                             onValueChange={(value) => handleDealChange(index, "subCategory", value)}
@@ -1709,7 +1710,7 @@ export default function MerchantEdit() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label>Deal Type</Label>
+                          <Label>Deal Type <span className="text-red-500">*</span></Label>
                           <Select
                             value={deal.dealType}
                             onValueChange={(value) => handleDealChange(index, "dealType", value)}
