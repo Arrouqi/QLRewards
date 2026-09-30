@@ -6,3 +6,4 @@
 - [Categories are English-only](categories-english-only.md) — never add Arabic to categories; new columns on shared tables break prod reads until the manual SQL migration runs.
 - [Auto-translate via MyMemory](auto-translate-mymemory.md) — free EN→AR API chosen after user declined managed AI billing; swap upstream only, client hook stays.
 - [Deal–branch linking](deal-branch-linking.md) — DB stores branch names; editors must link deals by stable client ids and map to names only at save, never by name.
+- [GitHub push authentication](github-push-auth.md) — Agent connector access and Git panel credentials can differ; CLI device login resolved Git push 403.
