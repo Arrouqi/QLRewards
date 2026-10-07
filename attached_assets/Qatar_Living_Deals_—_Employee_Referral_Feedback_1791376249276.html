@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Qatar Living Deals — Employee Referral Feedback</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #f4f7fd;
+    --card: #ffffff;
+    --card-head: #eef3fc;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #d9e0ec;
+    --primary: #2563eb;
+    --primary-soft: #dbe7fb;
+    --note-bg: #eaf1fd;
+    --note-text: #1e3a8a;
+    --shadow: 0 1px 3px rgba(15,23,42,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1424; --card: #151e33; --card-head: #1a2540; --text: #e7ecf6;
+      --muted: #94a3b8; --border: #2a3654; --primary: #3b82f6; --primary-soft: #1e2d52;
+      --note-bg: #16233f; --note-text: #b6c8f5; --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1424; --card: #151e33; --card-head: #1a2540; --text: #e7ecf6;
+    --muted: #94a3b8; --border: #2a3654; --primary: #3b82f6; --primary-soft: #1e2d52;
+    --note-bg: #16233f; --note-text: #b6c8f5; --shadow: none;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    font-size: 14px; line-height: 1.45;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 16px 56px; }
+  header { text-align: center; margin-bottom: 24px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft);
+    color: var(--primary); display: inline-flex; align-items: center; justify-content: center;
+  }
+  h1 { text-wrap: balance; font-size: 26px; font-weight: 700; margin: 14px 0 6px; letter-spacing: -.01em; }
+  header p { margin: 0; color: var(--muted); }
+
+  .tab {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--primary); color: #fff; border: 0; border-radius: 10px;
+    padding: 14px 16px; font: 600 13px/1 inherit; font-family: inherit; margin-bottom: 20px;
+    cursor: default;
+  }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px;
+  }
+  .card > h2 {
+    margin: 0; padding: 22px 20px; font-size: 15px; font-weight: 600;
+    background: var(--card-head); border-bottom: 1px solid var(--border);
+  }
+  .card .body { padding: 20px; display: grid; gap: 16px; }
+
+  .note {
+    background: var(--note-bg); color: var(--note-text); border-radius: 10px;
+    padding: 14px 14px; font-size: 12.5px; margin-bottom: 20px;
+  }
+
+  label, .q-title { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
+  .req { color: var(--text); }
+  input[type=text], input[type=number], input[type=date], input[type=time] {
+    width: 100%; height: 36px; padding: 0 12px; font: inherit; font-size: 12.5px; color: var(--text);
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow);
+  }
+  input::placeholder { color: var(--muted); }
+  input:focus-visible, .radio:focus-within { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .search { position: relative; }
+  .search svg { position: absolute; right: 12px; top: 10px; color: var(--muted); }
+
+  .question { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .question .q-title { margin-bottom: 8px; }
+  .radios { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .radio {
+    display: flex; align-items: center; justify-content: center; gap: 8px; height: 32px;
+    border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 12.5px;
+  }
+  .radio input { accent-color: var(--primary); width: 16px; height: 16px; margin: 0; }
+  .radio:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+
+  textarea {
+    width: 100%; min-height: 78px; padding: 10px 12px; font: inherit; font-size: 12.5px; color: var(--text);
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow);
+    resize: vertical;
+  }
+  textarea::placeholder { color: var(--muted); }
+  textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .field-label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 8px; }
+  .attach, .btn-outline {
+    display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 14px;
+    background: var(--card); color: var(--text); border: 1px solid var(--text); border-radius: 9px;
+    font: 600 12px inherit; font-family: inherit; cursor: pointer;
+  }
+  .btn-outline { height: 36px; padding: 0 18px; }
+  .attach:hover, .btn-outline:hover { background: var(--card-head); }
+  .attach:focus-visible, .btn-outline:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .file-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+  .file-list li {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    font-size: 12px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
+  }
+  .file-list button { background: none; border: 0; color: var(--primary); font: 600 12px inherit; font-family: inherit; cursor: pointer; }
+  .actions { display: flex; justify-content: flex-end; gap: 12px; padding: 4px 0; }
+  button.submit {
+    height: 36px; padding: 0 22px; border: 0; border-radius: 9px; background: var(--primary);
+    color: #fff; font: 600 12.5px inherit; font-family: inherit; cursor: pointer;
+  }
+  button.submit:hover { filter: brightness(1.08); }
+  button.submit:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+  .done { display: none; text-align: right; color: var(--primary); font-weight: 600; margin-top: 8px; }
+
+  @media (max-width: 520px) {
+    .row, .radios { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="logo" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </span>
+    <h1>Qatar Living Deals — Employee Referral Feedback</h1>
+    <p>Share your experience to help us improve.</p>
+  </header>
+
+  <div class="tab" role="tab" aria-selected="true">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+    Employee Referral Program
+  </div>
+
+  <form id="f" autocomplete="off">
+    <section class="card">
+      <h2>Shopper Information</h2>
+      <div class="body">
+        <div>
+          <label for="name">Name <span class="req">*</span></label>
+          <input id="name" type="text" placeholder="Your full name" required>
+        </div>
+        <div>
+          <label for="budget">Total Budget Used (QAR) <span class="req">*</span></label>
+          <input id="budget" type="number" min="0" placeholder="e.g. 250" required>
+        </div>
+      </div>
+    </section>
+
+    <div class="note">This form is for feedback on the merchant you visited during your referral program experience. Please provide short and concise responses.</div>
+
+    <section class="card">
+      <h2>Merchant Experience Summary</h2>
+      <div class="body">
+        <div>
+          <label for="merchant">Merchant Name <span class="req">*</span></label>
+          <div class="search">
+            <input id="merchant" type="text" placeholder="Select or type merchant name..." required>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </div>
+          <div class="hint">Pick from the list, or type a merchant name and select "Use … anyway" if not listed.</div>
+        </div>
+        <div>
+          <label for="loc">Location <span class="req">*</span></label>
+          <input id="loc" type="text" placeholder="Branch / area / city" required>
+        </div>
+        <div class="row">
+          <div>
+            <label for="date">Date <span class="req">*</span></label>
+            <input id="date" type="date" required>
+          </div>
+          <div>
+            <label for="time">Time <span class="req">*</span></label>
+            <input id="time" type="time" required>
+          </div>
+        </div>
+
+        <div class="question">
+          <span class="q-title">Are staff members aware of Qatar Living Deals?</span>
+          <div class="radios">
+            <label class="radio"><input type="radio" name="aware" value="Yes" required> Yes</label>
+            <label class="radio"><input type="radio" name="aware" value="No"> No</label>
+          </div>
+        </div>
+
+        <div class="question">
+          <span class="q-title">Are staff familiar with the offers available at their branch?</span>
+          <div class="radios">
+            <label class="radio"><input type="radio" name="offers" value="Yes" required> Yes</label>
+            <label class="radio"><input type="radio" name="offers" value="No"> No</label>
+          </div>
+        </div>
+
+        <div class="question">
+          <span class="q-title">Did the staff know how to process the claimed offer?</span>
+          <div class="radios">
+            <label class="radio"><input type="radio" name="process" value="Yes" required> Yes</label>
+            <label class="radio"><input type="radio" name="process" value="No"> No</label>
+          </div>
+        </div>
+
+        <div class="question">
+          <span class="q-title">Is the offer approved immediately by the staff?</span>
+          <div class="radios">
+            <label class="radio"><input type="radio" name="approved" value="Yes" required> Yes</label>
+            <label class="radio"><input type="radio" name="approved" value="No"> No</label>
+          </div>
+        </div>
+
+        <div>
+          <label for="comments">Comments (optional)</label>
+          <textarea id="comments" rows="4" placeholder="Any additional comments about this merchant..."></textarea>
+        </div>
+
+        <div>
+          <span class="field-label">Attach files (optional, max 6)</span>
+          <input id="files" type="file" multiple hidden>
+          <button type="button" class="attach" id="attachBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            Attach file
+          </button>
+          <ul class="file-list" id="fileList"></ul>
+          <div class="hint" id="fileHint" role="alert"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button class="btn-outline" type="reset" id="resetBtn">Reset</button>
+      <button class="submit" type="submit">Submit Feedback</button>
+    </div>
+    <div class="done" id="done" role="status">Thank you — your feedback has been submitted.</div>
+  </form>
+</div>
+<script>
+  var MAX_FILES = 6, chosen = [];
+  var input = document.getElementById('files'), list = document.getElementById('fileList'), hint = document.getElementById('fileHint');
+  function renderFiles() {
+    list.innerHTML = '';
+    chosen.forEach(function (f, i) {
+      var li = document.createElement('li');
+      var span = document.createElement('span'); span.textContent = f.name;
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = 'Remove';
+      b.addEventListener('click', function () { chosen.splice(i, 1); renderFiles(); });
+      li.appendChild(span); li.appendChild(b); list.appendChild(li);
+    });
+  }
+  document.getElementById('attachBtn').addEventListener('click', function () { input.click(); });
+  input.addEventListener('change', function () {
+    hint.textContent = '';
+    Array.prototype.forEach.call(input.files, function (f) {
+      if (chosen.length < MAX_FILES) chosen.push(f);
+      else hint.textContent = 'You can attach up to ' + MAX_FILES + ' files.';
+    });
+    input.value = '';
+    renderFiles();
+  });
+  document.getElementById('f').addEventListener('reset', function () {
+    chosen = []; renderFiles(); hint.textContent = '';
+    document.getElementById('done').style.display = 'none';
+  });
+  document.getElementById('f').addEventListener('submit', function (e) {
+    e.preventDefault();
+    document.getElementById('done').style.display = 'block';
+  });
+</script>
+</body>
+</html>
