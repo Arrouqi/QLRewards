@@ -2,6 +2,7 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertDealSchema, insertAdminUserSchema, insertCategorySchema, insertSubCategorySchema, insertTermSchema, insertEmailRecipientSchema, insertMerchantSchema, insertMerchantDealSchema, insertMerchantNoteSchema, publicDealSubmissionSchema, publicMerchantDealSchema, brandPayloadSchema, insertFeedbackSchema, insertFeedbackCommentSchema } from "@shared/schema";
+import { employeeFeedbackSchema } from "@shared/employeeFeedback";
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -405,8 +406,11 @@ export async function registerRoutes(
   // Public: submit a feedback (rate-limited)
   app.post("/api/feedbacks", feedbackSubmitRateLimit, async (req, res) => {
     try {
-      const data = insertFeedbackSchema.parse(req.body);
-      if (!data.feedbackType || !["mystery_shopper", "merchant_referral"].includes(data.feedbackType)) {
+      const payload = req.body.feedbackType === "employee_referral"
+        ? employeeFeedbackSchema.parse(req.body)
+        : req.body;
+      const data = insertFeedbackSchema.parse(payload);
+      if (!data.feedbackType || !["mystery_shopper", "merchant_referral", "employee_referral"].includes(data.feedbackType)) {
         return res.status(400).json({ error: "Invalid feedbackType" });
       }
       const ipAddress =

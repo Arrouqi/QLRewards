@@ -433,7 +433,7 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 
 export const feedbacks = pgTable("feedbacks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  feedbackType: text("feedback_type").notNull(), // 'mystery_shopper' | 'merchant_referral'
+  feedbackType: text("feedback_type").notNull(), // 'mystery_shopper' | 'merchant_referral' | 'employee_referral'
   status: text("status").notNull().default("new"), // 'new' | 'reviewed' | 'archived'
 
   // Shopper Information (Mystery Shopper) / Your Name (Merchant Referral)

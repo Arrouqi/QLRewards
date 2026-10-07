@@ -51,6 +51,7 @@ interface Feedback {
 }
 
 const TYPE_LABEL: Record<string, string> = {
+  employee_referral: "Employee Referral",
   mystery_shopper: "Mystery Shopper",
   merchant_referral: "Merchant Referral",
 };
@@ -139,7 +140,7 @@ export default function FeedbackManagement() {
   });
 
   const [tab, setTab] = useState<"analytics" | "submissions">("submissions");
-  const [overviewType, setOverviewType] = useState<"mystery_shopper" | "merchant_referral">("mystery_shopper");
+   const [overviewType, setOverviewType] = useState<"employee_referral" | "mystery_shopper" | "merchant_referral">("employee_referral");
 
   return (
     <AdminLayout>
@@ -150,7 +151,7 @@ export default function FeedbackManagement() {
               Feedbacks
             </h1>
             <p className="text-sm text-muted-foreground">
-              Review submissions from mystery shoppers and merchant referral participants.
+              Review employee referral feedback and previous mystery shopper and merchant referral submissions.
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -194,6 +195,18 @@ export default function FeedbackManagement() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground">Showing:</span>
               <div className="inline-flex rounded-md border bg-muted/30 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setOverviewType("employee_referral")}
+                  className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                    overviewType === "employee_referral"
+                      ? "bg-[#00426D] text-white"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid="button-overview-employee"
+                >
+                  Employee Referral
+                </button>
                 <button
                   type="button"
                   onClick={() => setOverviewType("mystery_shopper")}
@@ -251,6 +264,7 @@ export default function FeedbackManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All types</SelectItem>
+                  <SelectItem value="employee_referral">Employee Referral</SelectItem>
                   <SelectItem value="mystery_shopper">Mystery Shopper</SelectItem>
                   <SelectItem value="merchant_referral">Merchant Referral</SelectItem>
                 </SelectContent>

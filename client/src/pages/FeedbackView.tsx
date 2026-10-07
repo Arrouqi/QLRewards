@@ -115,6 +115,7 @@ const SATISFACTION_LABEL: Record<string, string> = {
 };
 
 const TYPE_LABEL: Record<string, string> = {
+  employee_referral: "Employee Referral",
   mystery_shopper: "Mystery Shopper",
   merchant_referral: "Merchant Referral",
 };

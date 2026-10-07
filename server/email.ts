@@ -1036,7 +1036,9 @@ export async function sendFeedbackNotification(feedback: any, recipientEmails: s
 
   const fromEmail = settings.fromEmail || "noreply@qatarliving.com";
   const fromName = settings.fromName || "Qatar Living Deals";
-  const typeLabel = feedback.feedbackType === "mystery_shopper" ? "Mystery Shopper" : "Merchant Referral";
+  const typeLabel = feedback.feedbackType === "employee_referral"
+    ? "Employee Referral"
+    : feedback.feedbackType === "mystery_shopper" ? "Mystery Shopper" : "Merchant Referral";
   const subject = `New ${typeLabel} Feedback Submission${feedback.shopperName ? ` - ${feedback.shopperName}` : ""}`;
 
   const rows: Array<[string, string]> = [
@@ -1046,7 +1048,7 @@ export async function sendFeedbackNotification(feedback: any, recipientEmails: s
     ["Location", feedback.merchantLocation || "—"],
     ["Date", feedback.visitDate || "—"],
     ["Time", feedback.visitTime || "—"],
-    ...(feedback.feedbackType === "mystery_shopper"
+    ...(feedback.feedbackType !== "merchant_referral"
       ? ([["Total Budget (QAR)", feedback.totalBudgetQar || "—"]] as Array<[string, string]>)
       : []),
     ["Submitted", new Date(feedback.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })],

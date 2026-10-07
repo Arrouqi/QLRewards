@@ -41,7 +41,7 @@ type FeedbackRow = {
   createdAt: string;
 };
 
-type FeedbackType = "mystery_shopper" | "merchant_referral";
+type FeedbackType = "employee_referral" | "mystery_shopper" | "merchant_referral";
 
 const YES_COLOR = "#16a34a";
 const NO_COLOR = "#dc2626";
@@ -176,7 +176,7 @@ export default function FeedbackOverview({ type }: Props) {
         <CardContent className="py-16 text-center">
           <MessageSquare className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
           <p className="text-muted-foreground" data-testid="text-no-data">
-            No {type === "mystery_shopper" ? "Mystery Shopper" : "Merchant Referral"} submissions yet.
+            No {type === "employee_referral" ? "Employee Referral" : type === "mystery_shopper" ? "Mystery Shopper" : "Merchant Referral"} submissions yet.
           </p>
         </CardContent>
       </Card>
@@ -194,10 +194,10 @@ export default function FeedbackOverview({ type }: Props) {
         <KpiCard label="Merchants" value={stats.uniqueMerchants} icon={<Users className="h-4 w-4" />} accent="#7c3aed" testId="kpi-merchants" />
       </div>
 
-      {type === "mystery_shopper" ? (
-        <MysteryShopperCharts rows={rows} />
-      ) : (
+      {type === "merchant_referral" ? (
         <MerchantReferralCharts rows={rows} />
+      ) : (
+        <MysteryShopperCharts rows={rows} includeLegacyRatings={type === "mystery_shopper"} />
       )}
 
       {/* Top merchants */}
@@ -225,7 +225,7 @@ export default function FeedbackOverview({ type }: Props) {
   );
 }
 
-function MysteryShopperCharts({ rows }: { rows: FeedbackRow[] }) {
+function MysteryShopperCharts({ rows, includeLegacyRatings = true }: { rows: FeedbackRow[]; includeLegacyRatings?: boolean }) {
   const yesNoQuestions: Array<{ key: keyof FeedbackRow; label: string }> = [
     { key: "staffAwareOfQld", label: "Staff aware of Qatar Living Deals" },
     { key: "staffFamiliarWithOffers", label: "Staff familiar with offers at their branch" },
@@ -250,6 +250,7 @@ function MysteryShopperCharts({ rows }: { rows: FeedbackRow[] }) {
         ))}
       </div>
 
+      {includeLegacyRatings && <>
       <SectionTitle>Quality Rating</SectionTitle>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {ratingQuestions.map((q) => (
@@ -263,6 +264,7 @@ function MysteryShopperCharts({ rows }: { rows: FeedbackRow[] }) {
           />
         ))}
       </div>
+      </>}
 
       <SectionTitle>Free-Text Response Rate</SectionTitle>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
