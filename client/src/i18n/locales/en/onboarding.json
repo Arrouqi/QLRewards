@@ -107,6 +107,7 @@
   },
   "branches": {
     "title": "Branches",
+    "branchNumber": "Branch {{num}}",
     "addBranch": "Add Branch",
     "downloadTemplate": "Download Template",
     "uploadTemplate": "Upload Excel",
@@ -125,6 +126,8 @@
     "branchFallback": "Branch {{num}}"
   },
   "deals": {
+    "dealBranches": "Branches where this deal applies",
+    "dealBranchesHint": "Choose at least one branch when the merchant has multiple branches. A single branch is assigned automatically.",
     "title": "Deals",
     "addDeal": "Add Deal",
     "downloadTemplate": "Download Template",
@@ -309,6 +312,7 @@
     "dealImportLimit": "Only rows within the 20-deal limit were imported."
   },
   "validation": {
+    "selectDealBranch": "Select at least one branch for each deal",
     "branchNameRequired": "Branch name is required",
     "branchPhoneRequired": "Branch manager phone number is required",
     "branchesRequired": "Add at least one branch",

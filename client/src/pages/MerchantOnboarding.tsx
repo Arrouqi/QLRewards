@@ -64,6 +64,7 @@ import {
 import { useLocation } from "wouter";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { useAutoTranslate } from "@/hooks/useAutoTranslate";
+import { mapDealBranchSelections } from "@/lib/dealBranchSelection";
 import * as XLSX from "xlsx";
 
 interface SubCategory {
@@ -179,6 +180,15 @@ const makeMerchantSchema = (t: TFn) => z.object({
   }),
   deals: z.array(makeDealSchema(t)).min(1, t("validation.dealsRequired")),
 }).superRefine((data, ctx) => {
+  if (data.branches.length > 1) {
+    data.deals.forEach((deal, index) => {
+      if (!deal.branches?.length) ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["deals", index, "branches"],
+        message: t("validation.selectDealBranch"),
+      });
+    });
+  }
   if (!data.crNumber || !/^[a-zA-Z0-9]{4,14}$/.test(data.crNumber)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["crNumber"], message: t("validation.crNumberFormat") });
   }
@@ -587,17 +597,18 @@ export default function MerchantOnboarding() {
     try {
       const formattedBranches = data.branches?.map(b => JSON.stringify(b)) || [];
 
-      const dealsWithBranchNames = data.deals?.map(d => ({
-        ...d,
-        branches: [],
-      }));
+      const dealsWithBranchNames = mapDealBranchSelections(
+        data.deals || [],
+        branchFields.map((branch, index) => ({ id: branch.id, name: data.branches[index]?.name ?? "" })),
+        t("validation.selectDealBranch"),
+      );
 
       const payload: any = {
         ...data,
         companyType: "individual",
         branches: formattedBranches,
         brands: [],
-        deals: dealsWithBranchNames || [],
+        deals: dealsWithBranchNames,
       };
 
       const response = await fetch("/api/merchants", {
@@ -1194,6 +1205,7 @@ export default function MerchantOnboarding() {
                     key={deal.id}
                     index={index}
                     form={form}
+                    branchFields={branchFields}
                     generalTerms={generalTerms}
                     isExpanded={expandedDeals.includes(index)}
                     onToggle={() => toggleDealExpansion(index)}
@@ -1752,6 +1764,7 @@ function DealImageUpload({ form, index }: { form: any; index: number }) {
 function DealFormSection({ 
   index, 
   form, 
+  branchFields,
   generalTerms,
   isExpanded, 
   onToggle, 
@@ -1759,12 +1772,18 @@ function DealFormSection({
 }: {
   index: number;
   form: any;
+  branchFields: { id: string }[];
   generalTerms: { id: number; type: string; text: string }[];
   isExpanded: boolean;
   onToggle: () => void;
   onRemove: () => void;
 }) {
   const { t } = useTranslation(["onboarding", "common"]);
+  const currentBranches = useWatch({ control: form.control, name: "branches" }) || [];
+  const branchOptions = branchFields.map((branch, branchIndex) => ({
+    id: branch.id,
+    name: currentBranches[branchIndex]?.name?.trim() || t("onboarding:branches.branchNumber", { num: branchIndex + 1 }),
+  }));
 
   const dealTypeValue = useWatch({ control: form.control, name: `deals.${index}.dealType` });
   const redemptionValue = useWatch({ control: form.control, name: `deals.${index}.redemption` });
@@ -1817,6 +1836,32 @@ function DealFormSection({
 
       {isExpanded && (
         <div className="p-4 space-y-6">
+          <FormField
+            control={form.control}
+            name={`deals.${index}.branches`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t("onboarding:deals.dealBranches")}</FormLabel>
+                <FormDescription>{t("onboarding:deals.dealBranchesHint")}</FormDescription>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {branchOptions.map((branch, branchIndex) => (
+                    <label htmlFor={`deal-${index}-branch-${branch.id}`} key={branch.id} className="flex items-center gap-3 rounded-md border p-3 cursor-pointer">
+                      <Checkbox
+                        id={`deal-${index}-branch-${branch.id}`}
+                        checked={(field.value || []).includes(branch.id)}
+                        onCheckedChange={(checked) => field.onChange(checked
+                          ? Array.from(new Set([...(field.value || []), branch.id]))
+                          : (field.value || []).filter((id: string) => id !== branch.id))}
+                        data-testid={`checkbox-deal-${index}-branch-${branchIndex}`}
+                      />
+                      <span className="text-sm">{branch.name}</span>
+                    </label>
+                  ))}
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <BilingualTabs
             idPrefix={`deal-title-${index}`}
             hasEnglishError={!!dealErrors.title}
