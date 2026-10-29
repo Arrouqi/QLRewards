@@ -19,6 +19,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
 import { BilingualTabs } from "@/components/BilingualTabs";
+import { moveDealIndex, moveDealState } from "@/lib/dealEditorOrder";
 
 interface SubCategory {
   id: string;
@@ -39,6 +40,7 @@ interface Term {
 }
 
 interface Deal {
+  _key?: string;
   id?: string;
   category: string;
   subCategory: string;
@@ -251,6 +253,7 @@ export default function MerchantEdit() {
         const parsedDeals = data.deals.map((d: any) => {
           const deal = typeof d === 'string' ? JSON.parse(d) : d;
           return {
+            _key: crypto.randomUUID(),
             id: deal.id,
             category: deal.category || "",
             subCategory: deal.subCategory || "",
@@ -392,6 +395,7 @@ export default function MerchantEdit() {
 
   const addNewDeal = () => {
     const newDeal: Deal = {
+      _key: crypto.randomUUID(),
       category: "",
       subCategory: "",
       dealType: "",
@@ -419,6 +423,30 @@ export default function MerchantEdit() {
   const removeDeal = (index: number) => {
     setDeals(prev => prev.filter((_, i) => i !== index));
     setExpandedDeals(prev => prev.filter(i => i !== index).map(i => i > index ? i - 1 : i));
+    const removeState = <T,>(state: Record<number, T>): Record<number, T> =>
+      Object.fromEntries(Object.entries(state).filter(([i]) => Number(i) !== index)
+        .map(([i, value]) => [Number(i) > index ? Number(i) - 1 : Number(i), value]));
+    setDiscountTypes(removeState);
+    setDealErrors(removeState);
+  };
+
+  const moveDeal = (from: number, to: number) => {
+    if (to < 0 || to >= deals.length || from === to) return;
+    setDeals(prev => {
+      const next = [...prev];
+      const [deal] = next.splice(from, 1);
+      next.splice(to, 0, deal);
+      return next;
+    });
+    setExpandedDeals(prev => prev.map(index => moveDealIndex(index, from, to)));
+    setDiscountTypes(prev => moveDealState(prev, from, to));
+    setDealErrors(prev => moveDealState(prev, from, to));
+    setActiveDealImageIndex(prev => prev === null ? null : moveDealIndex(prev, from, to));
+    setReplaceDealImage(prev => prev === null ? null : {
+      ...prev, dealIndex: moveDealIndex(prev.dealIndex, from, to),
+    });
+    setDraggedDealImage(null);
+    setDragOverDealImage(null);
   };
 
   const handleDealImageDragStart = (e: React.DragEvent, dealIndex: number, imgIndex: number) => {
@@ -459,6 +487,7 @@ export default function MerchantEdit() {
     const file = e.target.files?.[0];
     if (!file || !replaceDealImage) { e.target.value = ""; return; }
     const { dealIndex, imgIndex } = replaceDealImage;
+    const dealKey = deals[dealIndex]?._key;
     setReplaceDealImage(null);
     e.target.value = "";
     try {
@@ -479,8 +508,8 @@ export default function MerchantEdit() {
         body: JSON.stringify({ files: [base64] }),
       });
       const url = res.ok ? (await res.json()).urls[0] : base64;
-      setDeals(prev => prev.map((deal, i) => {
-        if (i !== dealIndex) return deal;
+      setDeals(prev => prev.map((deal) => {
+        if (deal._key !== dealKey) return deal;
         const imgs = [...(deal.images || [])];
         imgs[imgIndex] = url;
         return { ...deal, images: imgs };
@@ -491,6 +520,7 @@ export default function MerchantEdit() {
   };
 
   const handleDealImageAdd = async (index: number, file: File) => {
+    const dealKey = deals[index]?._key;
     try {
       const { file: compressed, error } = await compressImage(file, "deal");
       if (error) {
@@ -509,8 +539,8 @@ export default function MerchantEdit() {
         body: JSON.stringify({ files: [base64] }),
       });
       const url = res.ok ? (await res.json()).urls[0] : base64;
-      setDeals(prev => prev.map((deal, i) =>
-        i === index ? { ...deal, images: [...(deal.images || []), url] } : deal
+      setDeals(prev => prev.map((deal) =>
+        deal._key === dealKey ? { ...deal, images: [...(deal.images || []), url] } : deal
       ));
     } catch {
       toast({ title: `Deal ${index + 1} Image: Upload failed`, description: "Could not upload image. Please try again.", variant: "destructive" });
@@ -697,7 +727,7 @@ export default function MerchantEdit() {
         businessCategories: formData.businessCategories.split(",").map(c => c.trim()).filter(Boolean),
         // Deal selections hold branch _uids while editing; convert back to names
         // for the server payload (DB stores names). Keep unknown values as-is.
-        deals: deals.map((d) => {
+        deals: deals.map(({ _key, ...d }) => {
           let dealBranchUids: string[] = d.branches || [];
           // Auto-fill when exactly one applicable branch exists and none selected
           // (matches the "automatically selected" UI text).
@@ -1593,7 +1623,7 @@ export default function MerchantEdit() {
               <p className="text-slate-500 text-center py-4">No deals submitted with this application.</p>
             ) : (
               deals.map((deal, index) => (
-                <div key={index} className="border rounded-lg overflow-hidden">
+                <div key={deal._key || deal.id} className="border rounded-lg overflow-hidden" data-testid={`edit-deal-card-${index}`}>
                   <div 
                     className="flex items-center justify-between p-4 bg-slate-50 cursor-pointer"
                     onClick={() => toggleDealExpanded(index)}
@@ -1615,6 +1645,31 @@ export default function MerchantEdit() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        aria-label={`Move Deal ${index + 1} up`}
+                        title="Move deal up"
+                        disabled={index === 0 || isSaving}
+                        onClick={(e) => { e.stopPropagation(); moveDeal(index, index - 1); }}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        aria-label={`Move Deal ${index + 1} down`}
+                        title="Move deal down"
+                        disabled={index === deals.length - 1 || isSaving}
+                        onClick={(e) => { e.stopPropagation(); moveDeal(index, index + 1); }}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
