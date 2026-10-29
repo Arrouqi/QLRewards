@@ -107,6 +107,7 @@
   },
   "branches": {
     "title": "الفروع",
+    "branchNumber": "الفرع {{num}}",
     "addBranch": "إضافة فرع",
     "downloadTemplate": "تنزيل النموذج",
     "uploadTemplate": "رفع ملف Excel",
@@ -125,6 +126,8 @@
     "branchFallback": "الفرع {{num}}"
   },
   "deals": {
+    "dealBranches": "الفروع التي يسري فيها هذا العرض",
+    "dealBranchesHint": "اختر فرعاً واحداً على الأقل إذا كان للتاجر عدة فروع. يُضاف الفرع الوحيد تلقائياً.",
     "title": "العروض",
     "addDeal": "إضافة عرض",
     "downloadTemplate": "تنزيل النموذج",
@@ -309,6 +312,7 @@
     "dealImportLimit": "تم استيراد الصفوف الواقعة ضمن الحد الأقصى البالغ 20 عرضاً فقط."
   },
   "validation": {
+    "selectDealBranch": "اختر فرعاً واحداً على الأقل لكل عرض",
     "branchNameRequired": "اسم الفرع مطلوب",
     "branchPhoneRequired": "رقم هاتف مدير الفرع مطلوب",
     "branchesRequired": "أضف فرعاً واحداً على الأقل",
