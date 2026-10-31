@@ -1594,7 +1594,8 @@ export async function registerRoutes(
       }
       
       if (!isGroup && deals && Array.isArray(deals)) {
-        for (const deal of deals) {
+        for (let displayOrder = 0; displayOrder < deals.length; displayOrder++) {
+          const deal = deals[displayOrder];
           try {
             let imageUrls: string[] = [];
             if (deal.images && deal.images.length > 0) {
@@ -1612,6 +1613,7 @@ export async function registerRoutes(
             
             const dealData = {
               ...deal,
+              displayOrder,
               merchantId: merchant.id,
               images: imageUrls,
               branches: dealBranches,
@@ -1862,14 +1864,15 @@ export async function registerRoutes(
 
         // Pre-upload all images before making any DB changes
         const processedDeals: Array<{ deal: any; images: string[] }> = [];
-        for (const deal of dealUpdates) {
+        for (let displayOrder = 0; displayOrder < dealUpdates.length; displayOrder++) {
+          const deal = dealUpdates[displayOrder];
           let dealImages = deal.images || [];
           const hasNewImages = dealImages.some((img: string) => img && img.startsWith("data:"));
           if (hasNewImages) {
             const uploadedUrls = await uploadMultipleImages(dealImages, `merchant-${merchant.id}-deal`);
             dealImages = uploadedUrls;
           }
-          processedDeals.push({ deal, images: dealImages });
+          processedDeals.push({ deal: { ...deal, displayOrder }, images: dealImages });
         }
 
         // Validate new deals before any DB mutations
@@ -1904,6 +1907,7 @@ export async function registerRoutes(
         for (const { deal, images } of processedDeals) {
           if (deal.id) {
             await storage.updateMerchantDeal(deal.id, {
+              displayOrder: deal.displayOrder,
               category: deal.category,
               subCategory: deal.subCategory,
               dealType: deal.dealType,

@@ -448,7 +448,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMerchantDealsByMerchantId(merchantId: string): Promise<MerchantDeal[]> {
-    return await db.select().from(merchantDeals).where(eq(merchantDeals.merchantId, merchantId));
+    return await db.select().from(merchantDeals).where(eq(merchantDeals.merchantId, merchantId))
+      .orderBy(merchantDeals.displayOrder, merchantDeals.createdAt, merchantDeals.id);
   }
 
   async getMerchantDealById(id: string): Promise<MerchantDeal | undefined> {

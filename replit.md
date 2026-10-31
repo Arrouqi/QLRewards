@@ -184,6 +184,33 @@ FROM merchants WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC;
 UPDATE merchants SET deleted_at = NULL WHERE id = '<merchant-id>';
 ```
 
+#### Pending Production Migrations (Saved merchant deal ordering)
+GitHub Actions now runs this specific migration between build and deployment.
+Before merging, configure the `PRODUCTION_DATABASE_URL` GitHub Actions secret and
+approved database network access as described in `.github/DEAL_ORDER_DEPLOYMENT.md`.
+This is an explicit exception for this external-production migration, not an
+automatic runner for other pending migrations; never use db:push.
+The production application uses `rewards_external`.
+No records are deleted, and deal IDs, statuses and backoffice
+links remain unchanged. Existing tied positions use creation time and ID until
+the merchant's deal order is explicitly saved.
+```sql
+BEGIN;
+SET LOCAL search_path TO rewards_external;
+ALTER TABLE merchant_deals
+  ADD COLUMN IF NOT EXISTS display_order integer NOT NULL DEFAULT 0;
+COMMIT;
+```
+The workflow verifies the column before deployment (manual verification query):
+```sql
+SELECT column_name, data_type, column_default
+FROM information_schema.columns
+WHERE table_schema = 'rewards_external'
+  AND table_name = 'merchant_deals' AND column_name = 'display_order';
+```
+The staff controls are under **Merchant → Edit → Deals**. Use the up/down arrows
+then **Save Changes**. This does not change the order of live backoffice offers.
+
 #### Pending Production Migrations (Group Merchant feature)
 Run on production DB before deploying:
 ```sql
