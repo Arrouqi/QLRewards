@@ -40,6 +40,10 @@ export const deals = pgTable("deals", {
   offerEndDate: text("offer_end_date"),
   merchantUserId: text("merchant_user_id"),
   merchantBranchId: text("merchant_branch_id"),
+  backofficeOfferId: text("backoffice_offer_id"),
+  backofficeCreatedAt: timestamp("backoffice_created_at"),
+  lastBackofficeError: text("last_backoffice_error"),
+  lastBackofficeAttemptAt: timestamp("last_backoffice_attempt_at"),
   adminComment: text("admin_comment"),
   adminCommentHistory: text("admin_comment_history").array(),
   status: text("status").notNull().default("pending"),
@@ -47,6 +51,10 @@ export const deals = pgTable("deals", {
 });
 
 export const insertDealSchema = createInsertSchema(deals).omit({
+  backofficeOfferId: true,
+  backofficeCreatedAt: true,
+  lastBackofficeError: true,
+  lastBackofficeAttemptAt: true,
   id: true,
   status: true,
   createdAt: true,
@@ -235,6 +243,10 @@ export const merchants = pgTable("merchants", {
   whatsapp: text("whatsapp"),
   submittedBy: text("submitted_by"),
   offersCreated: integer("offers_created").notNull().default(0),
+  backofficeMerchantId: text("backoffice_merchant_id"),
+  backofficeCreatedAt: timestamp("backoffice_created_at"),
+  lastBackofficeError: text("last_backoffice_error"),
+  lastBackofficeAttemptAt: timestamp("last_backoffice_attempt_at"),
   status: text("status").notNull().default("pending"),
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -247,6 +259,10 @@ export const insertMerchantSchema = createInsertSchema(merchants, {
   businessCategories: z.array(z.string()).nullable().optional(),
   companyType: z.enum(["individual", "group"]).default("individual"),
 }).omit({
+  backofficeMerchantId: true,
+  backofficeCreatedAt: true,
+  lastBackofficeError: true,
+  lastBackofficeAttemptAt: true,
   id: true,
   status: true,
   submittedBy: true,
@@ -347,10 +363,18 @@ export const merchantDeals = pgTable("merchant_deals", {
   estimatedSavings: text("estimated_savings"),
   estimatedSavingsNote: text("estimated_savings_note"),
   estimatedSavingsNoteAr: text("estimated_savings_note_ar"),
+  backofficeOfferId: text("backoffice_offer_id"),
+  backofficeCreatedAt: timestamp("backoffice_created_at"),
+  lastBackofficeError: text("last_backoffice_error"),
+  lastBackofficeAttemptAt: timestamp("last_backoffice_attempt_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertMerchantDealSchema = createInsertSchema(merchantDeals).omit({
+  backofficeOfferId: true,
+  backofficeCreatedAt: true,
+  lastBackofficeError: true,
+  lastBackofficeAttemptAt: true,
   id: true,
   status: true,
   createdAt: true,

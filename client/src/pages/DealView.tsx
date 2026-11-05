@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/AdminLayout";
+import BackofficeAction from "@/components/BackofficeAction";
 import type { Deal } from "@shared/schema";
 
 export default function DealView() {
@@ -527,6 +528,10 @@ export default function DealView() {
             </div>
           </CardContent>
         </Card>
+
+        {["approved", "moderation"].includes(deal.status) && (
+          <BackofficeAction kind="offer" requestId={String(deal.id)} onCreated={fetchDeal} />
+        )}
 
         {deal.images && deal.images.length > 0 && (
           <Card>
