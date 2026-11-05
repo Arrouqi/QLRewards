@@ -272,3 +272,6 @@ ALTER TABLE sub_categories DROP COLUMN IF EXISTS name_ar;
 - Framer Motion
 - Embla Carousel
 - Vaul
+
+### Production merchant/deal creation release
+See `server/backoffice/PRODUCTION.md`. Before merging, apply only the reviewed backoffice migration in the external rewards_external schema, configure dedicated production backoffice credentials and explicit production target/write settings in Azure, and provide GitHub PRODUCTION_DATABASE_URL for the read-only preflight. The workflow blocks deployment if required columns are missing. It does not apply migrations. This release does not include deal sorting.

@@ -55,6 +55,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import AdminLayout from "@/components/AdminLayout";
+import BackofficeAction from "@/components/BackofficeAction";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 
@@ -1357,6 +1358,10 @@ export default function MerchantView() {
           </CardContent>
         </Card>
 
+        {merchant.status === "moderation" && (
+          <BackofficeAction kind="merchant" requestId={merchant.id} onCreated={fetchMerchant} />
+        )}
+
         {(merchant as any).companyType === "group" && Array.isArray((merchant as any).brands) && (merchant as any).brands.length > 0 && (
           <Card>
             <CardHeader>
@@ -1676,6 +1681,13 @@ export default function MerchantView() {
                           </div>
                         )}
                       </div>
+                      {deal.id && (
+                        <div className="mt-4">
+                          {merchant.status === "moderation" && (
+                            <BackofficeAction kind="offer" requestId={String(deal.id)} merchantStatus={merchant.status} />
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

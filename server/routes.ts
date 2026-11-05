@@ -11,6 +11,9 @@ import { sendNewDealNotification, sendModerationNotification, sendMerchantConfir
 import { uploadMultipleImages, migrateExistingImages } from "./azureStorage";
 import { parseUserAgent } from "./uaParser";
 import path from "path";
+import { registerBackofficeRoutes } from "./backoffice/routes";
+import { BackofficeService } from "./backoffice/service";
+import { backofficeRepository } from "./backoffice/repository";
 
 const PgSession = connectPgSimple(session);
 
@@ -89,6 +92,7 @@ export async function registerRoutes(
   );
 
   createDefaultAdminUser().catch(err => console.log("Admin user setup:", err.message));
+  registerBackofficeRoutes(app, requireAuth, new BackofficeService(backofficeRepository));
 
   async function logFormSubmission(
     formType: string,
@@ -1725,6 +1729,10 @@ export async function registerRoutes(
       
       // Lock companyType: never allow it to be changed via edit
       delete merchantData.companyType;
+      // Backoffice linkage and attempt history are server-managed only.
+      for (const field of ["backofficeMerchantId", "backofficeCreatedAt", "lastBackofficeError", "lastBackofficeAttemptAt"]) {
+        delete merchantData[field];
+      }
       const isGroup = existingMerchantForEdit.companyType === "group";
       
       const docFields = ['crDocument', 'establishmentCard', 'tradeLicense', 'menuPriceList', 'taxCardDocument', 'logo', 'coverImage'];
@@ -2857,6 +2865,9 @@ export async function registerRoutes(
   });
 
   app.get("/api/admin/system-settings/:key", requireAuth, requireAdmin, async (req, res) => {
+    if (/^(?:production:)?qa_(?:merchant_details|offer_details|offer_transfers):/.test(req.params.key) || req.params.key.startsWith("backoffice_link_environment:")) {
+      return res.status(403).json({ error: "Use the protected merchant or offer QA details endpoint." });
+    }
     try {
       const value = await storage.getSystemSetting(req.params.key);
       res.json({ key: req.params.key, value: value || null });
@@ -2866,6 +2877,9 @@ export async function registerRoutes(
   });
 
   app.put("/api/admin/system-settings/:key", requireAuth, requireAdmin, async (req, res) => {
+    if (/^(?:production:)?qa_(?:merchant_details|offer_details|offer_transfers):/.test(req.params.key) || req.params.key.startsWith("backoffice_link_environment:")) {
+      return res.status(403).json({ error: "Use the protected merchant or offer QA details endpoint." });
+    }
     try {
       const { value } = req.body;
       if (typeof value !== "string") {
