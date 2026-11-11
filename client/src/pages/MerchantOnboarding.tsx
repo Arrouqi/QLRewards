@@ -1834,8 +1834,7 @@ function DealFormSection({
         </Button>
       </div>
 
-      {isExpanded && (
-        <div className="p-4 space-y-6">
+        <div className="border-b p-4 bg-blue-50/40" data-testid={`deal-branch-assignment-${index}`}>
           <FormField
             control={form.control}
             name={`deals.${index}.branches`}
@@ -1862,6 +1861,9 @@ function DealFormSection({
               </FormItem>
             )}
           />
+        </div>
+      {isExpanded && (
+        <div className="p-4 space-y-6">
           <BilingualTabs
             idPrefix={`deal-title-${index}`}
             hasEnglishError={!!dealErrors.title}
